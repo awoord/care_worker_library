@@ -1,0 +1,470 @@
+:root {
+        --ink: #2c2825;
+        --paper: #fdfbf8;
+        --cream: #f5f0e8;
+        --accent: #b85c4a;
+        --accent-light: #f2e4e1;
+        --gold: #9a7b3c;
+        --mid: #7a7068;
+        --border: #e0d8ce;
+}
+
+* {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+}
+
+body {
+        background: #e8e3db;
+        color: var(--ink);
+        font-family: "Noto Sans JP", sans-serif;
+        font-size: 15px;
+        line-height: 1.55;
+        text-rendering: optimizeLegibility;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        counter-reset: word-row;
+}
+
+/* ══════════════════════════════
+   A4 用紙相当の読み取り領域
+══════════════════════════════ */
+.page {
+        width: 210mm;
+        max-width: 100%;
+        margin: 0 auto 8mm;
+        padding: 10mm 12mm;
+        background: var(--paper);
+}
+
+.table-caption {
+        caption-side: top;
+        text-align: left;
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--mid);
+        letter-spacing: 0.04em;
+        padding: 0 0 10px;
+}
+
+/* ══════════════════════════════
+   テーブル（上段：flex 1行／下段：例文ブロック）
+══════════════════════════════ */
+.word-table {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+        border: 1px solid var(--border);
+}
+
+.word-main-thead {
+        padding: 0;
+        vertical-align: bottom;
+        border-bottom: 2px solid var(--border);
+        background: var(--cream);
+}
+
+.word-main-header.word-main-flex {
+        background: var(--cream);
+        color: var(--ink);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        padding: 10px 8px;
+        white-space: nowrap;
+}
+
+.word-main-header .flex-cell {
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--ink);
+}
+
+.hdr-check {
+        display: block;
+        font-size: 12px;
+        font-weight: 400;
+        color: var(--mid);
+        line-height: 1;
+        transform: translateY(1px);
+}
+
+tbody.word-group {
+        counter-increment: word-row;
+        break-inside: avoid;
+        page-break-inside: avoid;
+}
+
+/* 上段セル（中身は flex で高さ統一） */
+.word-table tbody.word-group tr.word-row-main td.word-row-main-cell {
+        vertical-align: top;
+        padding: 8px 8px 9px;
+        border-bottom: none;
+        background: var(--paper);
+}
+
+.word-table tbody.word-group:nth-child(even) tr.word-row-main td.word-row-main-cell {
+        background: rgba(252, 250, 246, 0.9);
+}
+
+.word-table tbody.word-group:nth-child(even) tr.word-row-example td {
+        background: rgba(245, 240, 232, 0.65);
+}
+
+.word-table tbody.word-group tr.word-row-example td {
+        vertical-align: top;
+        padding: 0 8px 12px;
+        border-bottom: 2px solid var(--border);
+        font-size: 13.5px;
+        line-height: 1.58;
+        background: var(--paper);
+}
+
+/* メインフレックス：全カラムを stretch で同じ高さに */
+.word-main-flex {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: nowrap;
+        align-items: stretch;
+        column-gap: 5px;
+        width: 100%;
+        min-height: 3.25rem;
+}
+
+.word-main-flex > .flex-cell {
+        display: flex;
+        align-items: center;
+        min-width: 0;
+        padding: 6px 4px;
+        font-size: 13.5px;
+        line-height: 1.55;
+        hyphens: none;
+}
+
+.word-main-flex > .flex-cell.col-meaning,
+.word-main-flex > .flex-cell.col-en {
+        align-items: center;
+}
+
+.word-main-header.word-main-flex > .flex-cell.col-meaning,
+.word-main-header.word-main-flex > .flex-cell.col-en {
+        align-items: flex-end;
+        white-space: normal;
+}
+
+/* カラム幅 */
+.word-main-flex > .flex-cell.col-check {
+        flex: 0 0 2rem;
+        justify-content: center;
+        padding-left: 2px;
+        padding-right: 2px;
+}
+
+.word-main-flex > .flex-cell.col-no {
+        flex: 0 0 2.25rem;
+        justify-content: center;
+        font-family: "DM Mono", monospace;
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--mid);
+}
+
+.word-table tbody .word-main-flex .col-no::before {
+        content: counter(word-row);
+}
+
+.word-main-flex > .flex-cell.col-word {
+        flex: 0 1 auto;
+        max-width: 22%;
+        min-width: min(5.5rem, 100%);
+        justify-content: flex-start;
+        padding-right: 2px;
+}
+
+.word-main-flex > .flex-cell.col-freq {
+        flex: 0 0 auto;
+        justify-content: center;
+        padding-left: 2px;
+}
+
+.word-main-flex > .flex-cell.col-meaning {
+        flex: 1 1 28%;
+        justify-content: flex-start;
+        color: var(--ink);
+        font-weight: 500;
+}
+
+.word-main-flex > .flex-cell.col-en {
+        flex: 1 1 22%;
+        justify-content: flex-start;
+        font-family: "DM Mono", monospace;
+        font-size: 11.5px;
+        color: #8e857e;
+        line-height: 1.45;
+}
+
+label.flex-cell.col-check {
+        cursor: pointer;
+        margin: 0;
+}
+
+.word-check {
+        width: 0.95rem;
+        height: 0.95rem;
+        margin: 0;
+        flex-shrink: 0;
+        accent-color: var(--accent);
+        cursor: pointer;
+}
+
+.table-word {
+        font-family: "Noto Serif JP", serif;
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--ink);
+        line-height: 1.35;
+        letter-spacing: 0.02em;
+}
+
+.table-word ruby rt {
+        font-size: 9px;
+        color: var(--mid);
+        padding-bottom: 0.15em;
+        font-family: "Noto Sans JP", sans-serif;
+}
+
+.table-freq {
+        display: inline-block;
+        background: var(--accent-light);
+        color: var(--gold);
+        font-family: "DM Mono", monospace;
+        font-size: 11px;
+        font-weight: 700;
+        padding: 3px 8px;
+        border-radius: 999px;
+        white-space: nowrap;
+        line-height: 1.2;
+}
+
+/* 例文ブロック */
+.col-example {
+        padding-left: 8px !important;
+        padding-right: 8px !important;
+}
+
+.example-block {
+        display: block;
+        width: 100%;
+        margin: 0;
+        padding: 10px 12px;
+        background: var(--cream);
+        border-radius: 4px;
+        border: 1px solid rgba(224, 216, 206, 0.85);
+        color: var(--mid);
+        font-size: 13px;
+        line-height: 1.62;
+        text-align: left;
+}
+
+/* 品詞ラベル（英訳列） */
+.pos-v,
+.pos-n,
+.pos-adj,
+.pos-adv,
+.pos-nv {
+        font-size: 10px;
+        margin-right: 4px;
+        color: #9c928a;
+}
+
+.example-block .card-keyword {
+        color: var(--accent);
+        font-weight: 800;
+}
+
+.example-block .card-source {
+        display: inline;
+        font-size: 11px;
+        font-weight: inherit;
+        white-space: nowrap;
+}
+
+/* ══════════════════════════════
+   印刷
+══════════════════════════════ */
+@media print {
+        @page {
+                margin: 0;
+                size: A4 portrait;
+        }
+
+        body {
+                margin: 0 !important;
+                padding: 0 !important;
+                background: white !important;
+                font-size: 13px;
+        }
+
+        .page {
+                width: 210mm !important;
+                margin: 0 !important;
+                padding: 10mm 12mm !important;
+                background: white !important;
+        }
+
+        .word-table {
+                border: 1px solid var(--border) !important;
+        }
+
+        .word-main-thead,
+        .word-main-header.word-main-flex {
+                background: var(--cream) !important;
+        }
+
+        .example-block {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+        }
+
+        .word-check {
+                print-color-adjust: exact;
+                -webkit-print-color-adjust: exact;
+        }
+}
+
+/* ══════════════════════════════
+   狭い画面
+══════════════════════════════ */
+@media (max-width: 768px) {
+        body {
+                font-size: 14px;
+        }
+
+        .page {
+                width: 100%;
+                margin: 0;
+                padding: 14px;
+        }
+
+        .word-table {
+                display: block;
+                border: none;
+        }
+
+        .word-table thead {
+                display: none;
+        }
+
+        .word-table tbody.word-group {
+                display: block;
+                margin-bottom: 18px;
+                border: 1px solid var(--border);
+                border-radius: 10px;
+                overflow: hidden;
+                background: var(--paper);
+        }
+
+        .word-table tbody.word-group tr {
+                display: block;
+                width: 100%;
+        }
+
+        .word-table tbody.word-group tr td {
+                display: block;
+                width: 100% !important;
+                border: none;
+                border-bottom: 1px solid var(--border);
+                border-radius: 0;
+        }
+
+        .word-table tbody.word-group tr td:last-child {
+                border-bottom: none;
+        }
+
+        .word-main-flex {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 0;
+                min-height: 0;
+        }
+
+        .word-main-flex > .flex-cell {
+                width: 100%;
+                padding: 10px 12px;
+                border-bottom: 1px solid rgba(224, 216, 206, 0.6);
+                justify-content: flex-start;
+                align-items: flex-start;
+        }
+
+        .word-main-flex > .flex-cell:last-child {
+                border-bottom: none;
+        }
+
+        .word-main-flex > .flex-cell::before {
+                display: block;
+                font-size: 10px;
+                font-weight: 700;
+                color: #b2a79d;
+                letter-spacing: 0.06em;
+                margin-bottom: 4px;
+        }
+
+        .word-main-flex > .flex-cell.col-check::before {
+                content: "チェック";
+        }
+
+        .word-main-flex > .flex-cell.col-no::before {
+                content: "#";
+        }
+
+        .word-main-flex > .flex-cell.col-word::before {
+                content: "語";
+        }
+
+        .word-main-flex > .flex-cell.col-freq::before {
+                content: "頻度";
+        }
+
+        .word-main-flex > .flex-cell.col-meaning::before {
+                content: "意味";
+        }
+
+        .word-main-flex > .flex-cell.col-en::before {
+                content: "英訳";
+        }
+
+        .word-table tbody .word-main-flex .col-no::before {
+                content: "#" counter(word-row);
+                font-size: 14px;
+        }
+
+        .word-table tbody.word-group:nth-child(even) tr.word-row-main td,
+        .word-table tbody.word-group:nth-child(even) tr.word-row-example td {
+                background: transparent;
+        }
+
+        .word-table tbody.word-group tr.word-row-example td {
+                padding: 12px !important;
+        }
+
+        .word-table tbody.word-group tr.word-row-example td.col-example::before {
+                display: block;
+                font-size: 10px;
+                font-weight: 700;
+                color: #b2a79d;
+                letter-spacing: 0.06em;
+                margin-bottom: 6px;
+                content: "例文";
+        }
+
+        .example-block {
+                border-radius: 6px;
+        }
+
+        .col-freq {
+                text-align: left;
+        }
+}

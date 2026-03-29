@@ -1,0 +1,141 @@
+:root {
+    --ink: #2c2825;
+    --paper: #fdfbf8;
+    --cream: #f5f0e8;
+    --accent: #b85c4a;
+    --gold: #9a7b3c;
+    --mid: #7a7068;
+    --border: #e0d8ce;
+    --text-main: 1.1rem; /* 見出し語サイズ */
+    --text-sub: 0.95rem; /* 説明・例文サイズ */
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background: #e8e3db;
+    color: var(--ink);
+    font-family: "Noto Sans JP", sans-serif;
+    line-height: 1.5;
+}
+
+/* A4 用紙設定 */
+.page {
+    width: 210mm;
+    margin: 0 auto;
+    padding: 15mm 15mm;
+    background: var(--paper);
+    min-height: 297mm;
+}
+
+.table-caption {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--mid);
+    margin-bottom: 15px;
+    letter-spacing: 0.05em;
+}
+
+/* カード全体の制御 */
+.word-card {
+    margin-bottom: 12px; /* カード間の余白 */
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 12px;
+    break-inside: avoid; /* PDF化で単語が途切れないようにする */
+}
+
+/* メイン行：Gridレイアウト */
+.word-main-row {
+    display: grid;
+    grid-template-columns: 25px 35px 120px 70px 1fr 140px;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 0;
+}
+  
+/* 情報の優先順位：見出し語を目立たせる */
+.col-word {
+    font-family: "Noto Serif JP", serif;
+    font-size: var(--text-main);
+    font-weight: 700;
+}
+
+.col-word ruby rt {
+    font-size: 0.55rem;
+    font-family: "Noto Sans JP", sans-serif;
+    color: var(--mid);
+}
+
+/* 番号とチェックは控えめに */
+.col-no {
+    font-family: "DM Mono", monospace;
+    color: var(--mid);
+    font-weight: 500;
+    text-align: center;
+}
+
+.word-check {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--accent);
+    margin-left:10px;
+}
+
+/* 頻度表示 */
+.table-freq {
+    font-size: 10px;
+    color: var(--gold);
+    background: #fcf4e8;
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+
+/* 意味の階層 */
+.col-meaning {
+    font-size: var(--text-sub);
+    font-weight: 500;
+}
+
+/* 英語表記は一歩下げる */
+.col-en {
+    font-family: "DM Mono", monospace;
+    font-size: 12px;
+    color: var(--mid);
+    text-align: right;
+}
+
+/* 例文エリア：余白を広げ視認性を確保 */
+.word-example-row {
+    margin-top: 4px;
+}
+
+.example-block {
+    background: var(--cream);
+    padding: 12px 18px; /* パディングの微調整 */
+    border-radius: 6px;
+    font-size: var(--text-sub);
+    color: var(--mid);
+    line-height: 1.7;
+}
+
+/* 例文内の強調 */
+.card-keyword {
+    color: var(--accent);
+    font-weight: 700; /* 色だけでなく太字で強調 */
+}
+
+.card-source {
+    font-size: 11px;
+    margin-left: 8px;
+    opacity: 0.7;
+}
+
+/* 印刷用設定 */
+@media print {
+    body { background: white; }
+    .page { margin: 0; box-shadow: none; }
+}

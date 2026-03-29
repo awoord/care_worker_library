@@ -1,0 +1,82 @@
+[
+        {
+                "word": "選ぶ",
+                "count": 875,
+                "meaning": "多くの選択肢の中から、基準に合うものを一つ決めること。",
+                "english": "to choose / to select",
+                "example": "次の記述のうち、最も適切なものを一つ選ぶこと。",
+                "source": "35-1"
+        },
+        {
+                "word": "適切",
+                "count": 765,
+                "meaning": "状況や目的に対して、ふさわしく合っていること。",
+                "english": "appropriate / proper",
+                "example": "利用者の意向を尊重した適切なケアプランを作成する。",
+                "source": "34-12"
+        },
+        {
+                "word": "最も",
+                "count": 683,
+                "meaning": "程度が一番高いこと。最大、最高。",
+                "english": "most / extremely",
+                "example": "事例を読んで、最も優先度の高い支援内容を答えなさい。",
+                "source": "33-5"
+        },
+        {
+                "word": "記述",
+                "count": 418,
+                "meaning": "物事の内容を、言葉や文章で書き記すこと。",
+                "english": "description / statement",
+                "example": "介護保険制度に関する次の記述のうち、正しいものを答えよ。",
+                "source": "32-8"
+        },
+        {
+                "word": "利用者",
+                "count": 358,
+                "meaning": "介護サービスや福祉施設などを、実際に使っている本人。",
+                "english": "user / client",
+                "example": "利用者の日常生活動作（ADL）の状態を評価する。",
+                "source": "31-20"
+        },
+        {
+                "word": "利用",
+                "count": 167,
+                "meaning": "物やサービス、制度などを役立てるために使うこと。",
+                "english": "use / utilization",
+                "example": "介護保険サービスを利用するための申請手続きを行う。",
+                "source": "34-5"
+        },
+        {
+                "word": "勧める",
+                "count": 133,
+                "meaning": "相手にある行動をとるように促したり、勧誘したりすること。",
+                "english": "to recommend / to suggest",
+                "example": "水分摂取が不足している利用者に、お茶を飲むよう勧める。",
+                "source": "33-18"
+        },
+        {
+                "word": "対応",
+                "count": 109,
+                "meaning": "相手や状況に応じて、ふさわしい行動をとること。",
+                "english": "response / dealing with",
+                "example": "認知症の周辺症状（BPSD）に対して、適切な対応を検討する。",
+                "source": "35-22"
+        },
+        {
+                "word": "使用",
+                "count": 97,
+                "meaning": "道具や手段として使うこと。（「利用」よりも具体的な「道具」に使いがち）",
+                "english": "use / employment",
+                "example": "車いすを使用する際の安全確認を徹底する。",
+                "source": "32-45"
+        },
+        {
+                "word": "支援",
+                "count": 94,
+                "meaning": "本人の力を引き出し、目的を達成できるように助けること。",
+                "english": "support / assistance",
+                "example": "自立支援の観点に基づき、本人ができることは見守る。",
+                "source": "31-3"
+        }
+]

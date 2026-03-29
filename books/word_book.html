@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="">
     <meta name="keywords" content="">
-    <title>単語リスト</title>
+    <title>単語リスト（10語）</title>
     <link
         href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@700&family=Noto+Sans+JP:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap"
         rel="stylesheet">
@@ -16,9 +16,8 @@
 <body>
     <main class="page" aria-label="単語リスト（表レイアウト）">
         <table class="word-table">
-            <caption class="table-caption">読解単語リスト（試作・表形式）</caption>
+            <caption class="table-caption">読解単語リスト（extracted_words.csv 先頭10語）</caption>
             <thead>
-            <tbody>
                 <tr>
                     <th class="word-main-thead" scope="colgroup" colspan="6">
                         <div class="word-main-flex word-main-header" role="row">
@@ -26,7 +25,15 @@
                                     aria-hidden="true">□</span></span>
                             <span class="flex-cell col-no" role="columnheader">#</span>
                             <span class="flex-cell col-word" role="columnheader">語</span>
-                            <span class="flex-cell            <tbody class=" word-group">
+                            <span class="flex-cell col-freq" role="columnheader">頻度</span>
+                            <span class="flex-cell col-meaning" role="columnheader">意味</span>
+                            <span class="flex-cell col-en" role="columnheader">英訳</span>
+                        </div>
+                    </th>
+                </tr>
+            </thead>
+
+            <tbody class="word-group">
                 <tr class="word-row-main">
                     <td class="word-row-main-cell" colspan="6">
                         <div class="word-main-flex" role="row">
@@ -34,7 +41,7 @@
                                 <input type="checkbox" class="word-check" name="word-1" value="1"
                                     aria-label="1 選ぶ をマーク">
                             </label>
-                            <div class="flex-cell col-no" aria-hidden="true"></div>
+                            <div class="flex-cell col-no">1</div>
                             <div class="flex-cell col-word">
                                 <div class="table-word"><ruby>選<rt>えら</rt></ruby>ぶ</div>
                             </div>
@@ -47,28 +54,22 @@
                 <tr class="word-row-example">
                     <td class="col-example" colspan="6">
                         <div class="example-block">
-                            近所のスーパーで食材を自分で<span class="card-keyword">選び</span>、購入したいと思っている。<span
-                                class="card-source">[30-30]</span>
+                            高齢者が靴下・靴を<span class="card-keyword">選ぶ</span>ときの介護福祉職の対応として、最も適切なものを1つ選びなさい。<span
+                                class="card-source">[36-98]</span>
                         </div>
                     </td>
                 </tr>
-            </tbody> col-freq" role="columnheader">頻度</span>
-            <span class="flex-cell col-meaning" role="columnheader">意味</span>
-            <span class="flex-cell col-en" role="columnheader">英訳</span>
-            </div>
-            </th>
-            </tr>
-            </thead>
+            </tbody>
 
             <tbody class="word-group">
                 <tr class="word-row-main">
                     <td class="word-row-main-cell" colspan="6">
                         <div class="word-main-flex" role="row">
                             <label class="flex-cell col-check">
-                                <input type="checkbox" class="word-check" name="word-2" value="1"
+                                <input type="checkbox" class="word-check" name="word-2" value="2"
                                     aria-label="2 適切 をマーク">
                             </label>
-                            <div class="flex-cell col-no" aria-hidden="true"></div>
+                            <div class="flex-cell col-no">2</div>
                             <div class="flex-cell col-word">
                                 <div class="table-word"><ruby>適切<rt>てきせつ</rt></ruby></div>
                             </div>
@@ -81,26 +82,27 @@
                 <tr class="word-row-example">
                     <td class="col-example" colspan="6">
                         <div class="example-block">
-                            対応として、最も<span class="card-keyword">適切</span>なものを1つ選びなさい。<span
-                                class="card-source">[30-30]</span>
+                            ストレス対処行動の一つである問題焦点型コーピングに当てはまる行動として、<span
+                                class="card-keyword">適切</span>なものを1つ選びなさい。<span class="card-source">[35-3]</span>
                         </div>
                     </td>
                 </tr>
             </tbody>
+
             <tbody class="word-group">
                 <tr class="word-row-main">
                     <td class="word-row-main-cell" colspan="6">
                         <div class="word-main-flex" role="row">
                             <label class="flex-cell col-check">
-                                <input type="checkbox" class="word-check" name="word-3" value="1"
+                                <input type="checkbox" class="word-check" name="word-3" value="3"
                                     aria-label="3 最も をマーク">
                             </label>
-                            <div class="flex-cell col-no" aria-hidden="true"></div>
+                            <div class="flex-cell col-no">3</div>
                             <div class="flex-cell col-word">
-                                <div class="table-word"><ruby>最<rt>もっと</rt></ruby>も</div>
+                                <div class="table-word"><ruby>最も<rt>もっとも</rt></ruby></div>
                             </div>
                             <div class="flex-cell col-freq"><span class="table-freq">★★★</span></div>
-                            <div class="flex-cell col-meaning">一番（いちばん）</div>
+                            <div class="flex-cell col-meaning">程度がいちばん高い、最上級の比較</div>
                             <div class="flex-cell col-en"><span class="pos-adv">[副]</span> most</div>
                         </div>
                     </td>
@@ -108,53 +110,55 @@
                 <tr class="word-row-example">
                     <td class="col-example" colspan="6">
                         <div class="example-block">
-                            代弁することを表す用語として、<span class="card-keyword">最も</span>適切なものを1つ選びなさい。<span
-                                class="card-source">[30-30]</span>
+                            利用者の意思を代弁することを表す用語として，<span class="card-keyword">最も</span>適切なものを1つ選びなさい。<span
+                                class="card-source">[32-2]</span>
                         </div>
                     </td>
                 </tr>
             </tbody>
+
             <tbody class="word-group">
                 <tr class="word-row-main">
                     <td class="word-row-main-cell" colspan="6">
                         <div class="word-main-flex" role="row">
                             <label class="flex-cell col-check">
-                                <input type="checkbox" class="word-check" name="word-4" value="1"
+                                <input type="checkbox" class="word-check" name="word-4" value="4"
                                     aria-label="4 記述 をマーク">
                             </label>
-                            <div class="flex-cell col-no" aria-hidden="true"></div>
+                            <div class="flex-cell col-no">4</div>
                             <div class="flex-cell col-word">
                                 <div class="table-word"><ruby>記述<rt>きじゅつ</rt></ruby></div>
                             </div>
                             <div class="flex-cell col-freq"><span class="table-freq">★★</span></div>
-                            <div class="flex-cell col-meaning">書いてあること</div>
-                            <div class="flex-cell col-en"><span class="pos-n">[名]</span> description</div>
+                            <div class="flex-cell col-meaning">文章で書き表した内容、または書くこと</div>
+                            <div class="flex-cell col-en"><span class="pos-n">[名]</span> description / statement</div>
                         </div>
                     </td>
                 </tr>
                 <tr class="word-row-example">
                     <td class="col-example" colspan="6">
                         <div class="example-block">
-                            次の<span class="card-keyword">記述</span>のうち，最も適切なものを1つ選びなさい。<span
-                                class="card-source">[30-30]</span>
+                            利用者の生活の質（ＱＯＬ）を高めるための介護実践に関する次の<span class="card-keyword">記述</span>のうち、最も適切なものを1つ選びなさい。<span
+                                class="card-source">[35-1]</span>
                         </div>
                     </td>
                 </tr>
             </tbody>
+
             <tbody class="word-group">
                 <tr class="word-row-main">
                     <td class="word-row-main-cell" colspan="6">
                         <div class="word-main-flex" role="row">
                             <label class="flex-cell col-check">
-                                <input type="checkbox" class="word-check" name="word-5" value="1"
+                                <input type="checkbox" class="word-check" name="word-5" value="5"
                                     aria-label="5 利用者 をマーク">
                             </label>
-                            <div class="flex-cell col-no" aria-hidden="true"></div>
+                            <div class="flex-cell col-no">5</div>
                             <div class="flex-cell col-word">
                                 <div class="table-word"><ruby>利用者<rt>りようしゃ</rt></ruby></div>
                             </div>
                             <div class="flex-cell col-freq"><span class="table-freq">★★</span></div>
-                            <div class="flex-cell col-meaning">介護サービスなどを使っている人</div>
+                            <div class="flex-cell col-meaning">介護・福祉サービスなどを実際に使っている本人</div>
                             <div class="flex-cell col-en"><span class="pos-n">[名]</span> user / client</div>
                         </div>
                     </td>
@@ -162,105 +166,111 @@
                 <tr class="word-row-example">
                     <td class="col-example" colspan="6">
                         <div class="example-block">
-                            <span class="card-keyword">利用者</span>の意思を代弁する用語として、適切なものを選びなさい。<span
-                                class="card-source">[30-30]</span>
+                            <span class="card-keyword">利用者</span>の生活の質（ＱＯＬ）を高めるための介護実践に関する次の記述のうち、最も適切なものを1つ選びなさい。<span
+                                class="card-source">[35-1]</span>
                         </div>
                     </td>
                 </tr>
             </tbody>
+
             <tbody class="word-group">
                 <tr class="word-row-main">
                     <td class="word-row-main-cell" colspan="6">
                         <div class="word-main-flex" role="row">
                             <label class="flex-cell col-check">
-                                <input type="checkbox" class="word-check" name="word-6" value="1"
+                                <input type="checkbox" class="word-check" name="word-6" value="6"
                                     aria-label="6 利用 をマーク">
                             </label>
-                            <div class="flex-cell col-no" aria-hidden="true"></div>
+                            <div class="flex-cell col-no">6</div>
                             <div class="flex-cell col-word">
                                 <div class="table-word"><ruby>利用<rt>りよう</rt></ruby></div>
                             </div>
                             <div class="flex-cell col-freq"><span class="table-freq">★</span></div>
-                            <div class="flex-cell col-meaning">使うこと</div>
-                            <div class="flex-cell col-en"><span class="pos-nv">[名]</span> use</div>
+                            <div class="flex-cell col-meaning">サービス・制度・施設などを役立てて使うこと</div>
+                            <div class="flex-cell col-en"><span class="pos-nv">[名]</span> use / utilization</div>
                         </div>
                     </td>
                 </tr>
                 <tr class="word-row-example">
                     <td class="col-example" colspan="6">
                         <div class="example-block">
-                            Ａさんは，訪問介護を<span class="card-keyword">利用</span>している。<span class="card-source">[30-30]</span>
+                            自宅で生活しているＡさん（87歳、男性、要介護3）は、7年前に脳伷塞（cerebral infarction）で左片麻痺（ひだりかたまひ）となり、訪問介護（ホームヘルプサービス）を<span
+                                class="card-keyword">利用</span>していた。<span class="card-source">[33-2]</span>
                         </div>
                     </td>
                 </tr>
             </tbody>
+
             <tbody class="word-group">
                 <tr class="word-row-main">
                     <td class="word-row-main-cell" colspan="6">
                         <div class="word-main-flex" role="row">
                             <label class="flex-cell col-check">
-                                <input type="checkbox" class="word-check" name="word-7" value="1"
+                                <input type="checkbox" class="word-check" name="word-7" value="7"
                                     aria-label="7 勧める をマーク">
                             </label>
-                            <div class="flex-cell col-no" aria-hidden="true"></div>
+                            <div class="flex-cell col-no">7</div>
                             <div class="flex-cell col-word">
                                 <div class="table-word"><ruby>勧<rt>すす</rt></ruby>める</div>
                             </div>
                             <div class="flex-cell col-freq"><span class="table-freq">★</span></div>
-                            <div class="flex-cell col-meaning">相手にとってよいと思うことを「してみては」と伝える</div>
-                            <div class="flex-cell col-en"><span class="pos-v">[動]</span> recommend</div>
+                            <div class="flex-cell col-meaning">相手にとってよいと思う行動を促す、すすめる</div>
+                            <div class="flex-cell col-en"><span class="pos-v">[動]</span> recommend / advise</div>
                         </div>
                     </td>
                 </tr>
                 <tr class="word-row-example">
                     <td class="col-example" colspan="6">
                         <div class="example-block">
-                            福祉事務所に相談するように<span class="card-keyword">勧める</span>。<span class="card-source">[30-30]</span>
+                            誤嚥（ごえん）による緊急搬送の後、医師は妻に、「今後も自宅で生活を続けるならば、胃ろうを<span
+                                class="card-keyword">勧める</span>」と話した。<span class="card-source">[33-2]</span>
                         </div>
                     </td>
                 </tr>
             </tbody>
+
             <tbody class="word-group">
                 <tr class="word-row-main">
                     <td class="word-row-main-cell" colspan="6">
                         <div class="word-main-flex" role="row">
                             <label class="flex-cell col-check">
-                                <input type="checkbox" class="word-check" name="word-8" value="1"
+                                <input type="checkbox" class="word-check" name="word-8" value="8"
                                     aria-label="8 対応 をマーク">
                             </label>
-                            <div class="flex-cell col-no" aria-hidden="true"></div>
+                            <div class="flex-cell col-no">8</div>
                             <div class="flex-cell col-word">
                                 <div class="table-word"><ruby>対応<rt>たいおう</rt></ruby></div>
                             </div>
-                            <div class="flex-cell col-freq"><span class="table-freq">★★★</span></div>
-                            <div class="flex-cell col-meaning">相手や状況に合わせて何かをすること</div>
-                            <div class="flex-cell col-en"><span class="pos-n">[名]</span> response / support</div>
+                            <div class="flex-cell col-freq"><span class="table-freq">★</span></div>
+                            <div class="flex-cell col-meaning">相手や事態に合わせてとる処置・接し方</div>
+                            <div class="flex-cell col-en"><span class="pos-n">[名]</span> response / handling</div>
                         </div>
                     </td>
                 </tr>
                 <tr class="word-row-example">
                     <td class="col-example" colspan="6">
                         <div class="example-block">
-                            利用者の急な体調の変化に対して、迅速に<span class="card-keyword">対応</span>する。<span
-                                class="card-source">[30-30]</span>
+                            介護福祉職のＡさんへの<span class="card-keyword">対応</span>として、最も適切なものを1つ選びなさい。<span
+                                class="card-source">[35-2]</span>
                         </div>
                     </td>
                 </tr>
             </tbody>
+
             <tbody class="word-group">
                 <tr class="word-row-main">
                     <td class="word-row-main-cell" colspan="6">
                         <div class="word-main-flex" role="row">
                             <label class="flex-cell col-check">
-                                <input type="checkbox" class="word-check" name="word-9" value="1"
+                                <input type="checkbox" class="word-check" name="word-9" value="9"
                                     aria-label="9 使用 をマーク">
                             </label>
-                            <div class="flex-cell col-no" aria-hidden="true"></div>
+                            <div class="flex-cell col-no">9</div>
                             <div class="flex-cell col-word">
                                 <div class="table-word"><ruby>使用<rt>しよう</rt></ruby></div>
                             </div>
-                            <div class="flex-cell col-freq"><span class="table-freq">★★</span></div>
-                            <div class="flex-cell col-meaning">道具や物を使うこと</div>
+                            <div class="flex-cell col-freq"><span class="table-freq">★</span></div>
+                            <div class="flex-cell col-meaning">道具・薬・機器などを用いること</div>
                             <div class="flex-cell col-en"><span class="pos-n">[名]</span> use / usage</div>
                         </div>
                     </td>
@@ -268,26 +278,27 @@
                 <tr class="word-row-example">
                     <td class="col-example" colspan="6">
                         <div class="example-block">
-                            車椅子を<span class="card-keyword">使用</span>する際は、必ずブレーキを確認する。<span
-                                class="card-source">[30-30]</span>
+                            高齢者の睡眠薬の<span class="card-keyword">使用</span>に関する次の記述のうち、最も適切なものを1つ選びなさい。<span
+                                class="card-source">[35-28]</span>
                         </div>
                     </td>
                 </tr>
             </tbody>
+
             <tbody class="word-group">
                 <tr class="word-row-main">
                     <td class="word-row-main-cell" colspan="6">
                         <div class="word-main-flex" role="row">
                             <label class="flex-cell col-check">
-                                <input type="checkbox" class="word-check" name="word-10" value="1"
+                                <input type="checkbox" class="word-check" name="word-10" value="10"
                                     aria-label="10 支援 をマーク">
                             </label>
-                            <div class="flex-cell col-no" aria-hidden="true"></div>
+                            <div class="flex-cell col-no">10</div>
                             <div class="flex-cell col-word">
                                 <div class="table-word"><ruby>支援<rt>しえん</rt></ruby></div>
                             </div>
-                            <div class="flex-cell col-freq"><span class="table-freq">★★★</span></div>
-                            <div class="flex-cell col-meaning">困っている人を助けること、支えること</div>
+                            <div class="flex-cell col-freq"><span class="table-freq">★</span></div>
+                            <div class="flex-cell col-meaning">自立や課題解決を助けること、支えること</div>
                             <div class="flex-cell col-en"><span class="pos-n">[名]</span> support / assistance</div>
                         </div>
                     </td>
@@ -295,143 +306,8 @@
                 <tr class="word-row-example">
                     <td class="col-example" colspan="6">
                         <div class="example-block">
-                            利用者が自立した生活を送れるよう、適切な<span class="card-keyword">支援</span>を行う。<span
-                                class="card-source">[30-30]</span>
-                        </div>
-                    </td>
-                </tr>
-            </tbody>
-            <tbody class="word-group">
-                <tr class="word-row-main">
-                    <td class="word-row-main-cell" colspan="6">
-                        <div class="word-main-flex" role="row">
-                            <label class="flex-cell col-check">
-                                <input type="checkbox" class="word-check" name="word-11" value="1"
-                                    aria-label="11 必要 をマーク">
-                            </label>
-                            <div class="flex-cell col-no" aria-hidden="true"></div>
-                            <div class="flex-cell col-word">
-                                <div class="table-word"><ruby>必要<rt>ひつよう</rt></ruby></div>
-                            </div>
-                            <div class="flex-cell col-freq"><span class="table-freq">★★</span></div>
-                            <div class="flex-cell col-meaning">なくてはならないこと、どうしてもいること</div>
-                            <div class="flex-cell col-en"><span class="pos-adj">[形]</span> necessary / required</div>
-                        </div>
-                    </td>
-                </tr>
-                <tr class="word-row-example">
-                    <td class="col-example" colspan="6">
-                        <div class="example-block">
-                            介助が<span class="card-keyword">必要</span>な程度に応じて、ケアプランを作成する。<span
-                                class="card-source">[30-30]</span>
-                        </div>
-                    </td>
-                </tr>
-            </tbody>
-            <tbody class="word-group">
-                <tr class="word-row-main">
-                    <td class="word-row-main-cell" colspan="6">
-                        <div class="word-main-flex" role="row">
-                            <label class="flex-cell col-check">
-                                <input type="checkbox" class="word-check" name="word-12" value="1"
-                                    aria-label="12 相談 をマーク">
-                            </label>
-                            <div class="flex-cell col-no" aria-hidden="true"></div>
-                            <div class="flex-cell col-word">
-                                <div class="table-word"><ruby>相談<rt>そうだん</rt></ruby></div>
-                            </div>
-                            <div class="flex-cell col-freq"><span class="table-freq">★★</span></div>
-                            <div class="flex-cell col-meaning">困ったときに意見を聞いたり話し合ったりすること</div>
-                            <div class="flex-cell col-en"><span class="pos-n">[名]</span> consultation / advice</div>
-                        </div>
-                    </td>
-                </tr>
-                <tr class="word-row-example">
-                    <td class="col-example" colspan="6">
-                        <div class="example-block">
-                            今後の生活について不安があるときは、専門職に<span class="card-keyword">相談</span>する。<span
-                                class="card-source">[30-30]</span>
-                        </div>
-                    </td>
-                </tr>
-            </tbody>
-            <tbody class="word-group">
-                <tr class="word-row-main">
-                    <td class="word-row-main-cell" colspan="6">
-                        <div class="word-main-flex" role="row">
-                            <label class="flex-cell col-check">
-                                <input type="checkbox" class="word-check" name="word-13" value="1"
-                                    aria-label="13 正しい をマーク">
-                            </label>
-                            <div class="flex-cell col-no" aria-hidden="true"></div>
-                            <div class="flex-cell col-word">
-                                <div class="table-word"><ruby>正<rt>ただ</rt></ruby>しい</div>
-                            </div>
-                            <div class="flex-cell col-freq"><span class="table-freq">★★★</span></div>
-                            <div class="flex-cell col-meaning">まちがいがない、ルールに合っている</div>
-                            <div class="flex-cell col-en"><span class="pos-adj">[形]</span> correct / right</div>
-                        </div>
-                    </td>
-                </tr>
-                <tr class="word-row-example">
-                    <td class="col-example" colspan="6">
-                        <div class="example-block">
-                            事故を防ぐために、<span class="card-keyword">正しい</span>手順で移乗介助を行う。<span
-                                class="card-source">[30-30]</span>
-                        </div>
-                    </td>
-                </tr>
-            </tbody>
-            <tbody class="word-group">
-                <tr class="word-row-main">
-                    <td class="word-row-main-cell" colspan="6">
-                        <div class="word-main-flex" role="row">
-                            <label class="flex-cell col-check">
-                                <input type="checkbox" class="word-check" name="word-14" value="1"
-                                    aria-label="14 確認 をマーク">
-                            </label>
-                            <div class="flex-cell col-no" aria-hidden="true"></div>
-                            <div class="flex-cell col-word">
-                                <div class="table-word"><ruby>確認<rt>かくにん</rt></ruby></div>
-                            </div>
-                            <div class="flex-cell col-freq"><span class="table-freq">★★</span></div>
-                            <div class="flex-cell col-meaning">間違いがないか、もう一度よく見ること</div>
-                            <div class="flex-cell col-en"><span class="pos-n">[名]</span> confirmation / check</div>
-                        </div>
-                    </td>
-                </tr>
-                <tr class="word-row-example">
-                    <td class="col-example" colspan="6">
-                        <div class="example-block">
-                            食事の前に、利用者の名前と献立を<span class="card-keyword">確認</span>する。<span
-                                class="card-source">[30-30]</span>
-                        </div>
-                    </td>
-                </tr>
-            </tbody>
-            <tbody class="word-group">
-                <tr class="word-row-main">
-                    <td class="word-row-main-cell" colspan="6">
-                        <div class="word-main-flex" role="row">
-                            <label class="flex-cell col-check">
-                                <input type="checkbox" class="word-check" name="word-15" value="1"
-                                    aria-label="15 説明 をマーク">
-                            </label>
-                            <div class="flex-cell col-no" aria-hidden="true"></div>
-                            <div class="flex-cell col-word">
-                                <div class="table-word"><ruby>説明<rt>せつめい</rt></ruby></div>
-                            </div>
-                            <div class="flex-cell col-freq"><span class="table-freq">★★</span></div>
-                            <div class="flex-cell col-meaning">相手にわかるように話をすること</div>
-                            <div class="flex-cell col-en"><span class="pos-n">[名]</span> explanation</div>
-                        </div>
-                    </td>
-                </tr>
-                <tr class="word-row-example">
-                    <td class="col-example" colspan="6">
-                        <div class="example-block">
-                            これから行う介助の内容について、利用者に分かりやすく<span class="card-keyword">説明</span>する。<span
-                                class="card-source">[30-30]</span>
+                            ストレングス（strength）の視点に基づく利用者<span class="card-keyword">支援</span>の説明として、最も適切なものを1つ選びなさい。<span
+                                class="card-source">[35-49]</span>
                         </div>
                     </td>
                 </tr>

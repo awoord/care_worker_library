@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ja">
+    <head>
+        <meta charset="UTF-8">
+        <style>
+        body { font-family: sans-serif; line-height: 1.6; }
+        .page { page-break-after: always; }
+        .word-card {
+            border-bottom: 1px solid #ccc;
+            padding: 10px;
+            margin-bottom: 5px;
+            page-break-inside: avoid; /* 単語がページを跨がない設定 */
+        }
+        .header { display: flex; justify-content: space-between; align-items: baseline; }
+        .word { font-size: 1.4em; font-weight: bold; color: #2c3e50; }
+        .count { font-size: 0.8em; color: #7f8c8d; }
+        .meaning { font-weight: bold; color: #c0392b; }
+        .english { color: #2980b9; font-style: italic; }
+        .example { background: #f9f9f9; padding: 5px; border-left: 3px solid #bdc3c7; font-size: 0.9em; }
+        .source { text-align: right; font-size: 0.7em; color: #95a5a6; }
+        </style>
+    </head>
+    <body>
+        <div class="page">
+            <h1>介護福祉士 頻出単語帳</h1>
+            {% for word in words %}
+                <div class="word-card">
+                    <div class="header">
+                        <span class="word">{{ word.word }}</span>
+                        <span class="count">出現回数: {{ word.count }}回</span>
+                    </div>
+                    <div>
+                        <span class="meaning">{{ word.meaning }}</span> / <span class="english">{{ word.english }}</span>
+                    </div>
+                    <div class="example">{{ word.example }}</div>
+                    <div class="source">出典: {{ word.source }}</div>
+                </div>
+            {% endfor %}
+        </div>
+    </body>
+</html>

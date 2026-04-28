@@ -1,0 +1,2435 @@
+[
+  {
+    "word": "選ぶ",
+    "count": 875,
+    "meaning": "いくつかの中から、一つを決めること。",
+    "english": "choose",
+    "pos": "動",
+    "example": "高齢者が靴下・靴を選ぶときの介護福祉職の対応として、最も適切なものを1つ選びなさい。",
+    "source": "36-98"
+  },
+  {
+    "word": "適切",
+    "count": 765,
+    "meaning": "その場の様子に合っていて、よいと思えること。",
+    "english": "appropriate",
+    "pos": "形",
+    "example": "社会福祉の理念を発展させた人物に関する次の記述のうち、適切なものを1つ選びなさい。",
+    "source": "38-1"
+  },
+  {
+    "word": "最も",
+    "count": 683,
+    "meaning": "いちばん程度が高いこと。とくに、という意味でも使う。",
+    "english": "most",
+    "pos": "副",
+    "example": "介護施設における介護ロボットに関する次の記述のうち、最も適切なものを1つ選びなさい。",
+    "source": "38-3"
+  },
+  {
+    "word": "記述",
+    "count": 418,
+    "meaning": "文章で書かれた内容。または、書いて説明すること。",
+    "english": "description",
+    "pos": "名",
+    "example": "社会福祉の理念を発展させた人物に関する次の記述のうち、適切なものを1つ選びなさい。",
+    "source": "38-1"
+  },
+  {
+    "word": "利用者",
+    "count": 358,
+    "meaning": "介護や福祉のサービスを、実際に使っている人。",
+    "english": "user",
+    "pos": "名",
+    "example": "導入することによって、利用者の自立支援や生活の質の向上が期待される。",
+    "source": "38-3"
+  },
+  {
+    "word": "利用",
+    "count": 167,
+    "meaning": "サービスやしくみなどを使うこと。",
+    "english": "usage",
+    "pos": "名",
+    "example": "訪問介護（ホームヘルプサービス）と訪問看護を利用している。",
+    "source": "38-2"
+  },
+  {
+    "word": "勧める",
+    "count": 133,
+    "meaning": "相手に、そうした方がよいと言うこと。",
+    "english": "recommend",
+    "pos": "動",
+    "example": "店までの移動に不安があるため、同行援護を勧める。",
+    "source": "38-6"
+  },
+  {
+    "word": "対応",
+    "count": 109,
+    "meaning": "相手や様子に合わせて、行動すること。",
+    "english": "handling",
+    "pos": "名",
+    "example": "その様子を見たＢ介護福祉職は、Ａさんの状況に対応するために。",
+    "source": "38-32"
+  },
+  {
+    "word": "使用",
+    "count": 97,
+    "meaning": "道具やものを、実際に使うこと。",
+    "english": "use",
+    "pos": "名",
+    "example": "なじみの店で自分が選んだタオルしか使用しない。",
+    "source": "38-6"
+  },
+  {
+    "word": "支援",
+    "count": 94,
+    "meaning": "困っている人を、助けること。",
+    "english": "support",
+    "pos": "名",
+    "example": "導入することによって、利用者の自立支援や生活の質の向上が期待される。",
+    "source": "38-3"
+  },
+  {
+    "word": "必要",
+    "count": 93,
+    "meaning": "なくてはならないこと。欠かせないこと。",
+    "english": "need",
+    "pos": "名",
+    "example": "ただ、介護の技術をもっと学ぶ必要があるといつも感じていた。",
+    "source": "38-25"
+  },
+  {
+    "word": "相談",
+    "count": 91,
+    "meaning": "悩みや問題を、ほかの人に話して意見を聞くこと。",
+    "english": "consultation",
+    "pos": "名",
+    "example": "Ａさんの両親から、サービス管理責任者に、「強いこだわりがあるので、いつも行く店で本人にタオルを選ばせてほしい。何か良いサービスはありませんか」と相談があった。",
+    "source": "38-6"
+  },
+  {
+    "word": "正しい",
+    "count": 89,
+    "meaning": "間違いがなく、事実に合っていること。",
+    "english": "correct",
+    "pos": "形",
+    "example": "民法の親族に関する次の記述のうち、正しいものを1つ選びなさい。",
+    "source": "38-13"
+  },
+  {
+    "word": "確認",
+    "count": 71,
+    "meaning": "本当にそうかどうか、よく見て調べること。",
+    "english": "check",
+    "pos": "名",
+    "example": "作業療法士が、自宅の玄関の段差を確認する。",
+    "source": "38-9"
+  },
+  {
+    "word": "説明",
+    "count": 68,
+    "meaning": "わかりやすく、理由や内容を話すこと。",
+    "english": "explanation",
+    "pos": "名",
+    "example": "次の記述のうち、短期目標に関する説明として、最も適切なものを1つ選びなさい。",
+    "source": "38-107"
+  },
+  {
+    "word": "入所",
+    "count": 67,
+    "meaning": "施設に入って、そこで生活を始めること。",
+    "meaning_ruby": "<ruby>施設<rt>しせつ</rt></ruby>に<ruby>入<rt>はい</rt></ruby>って、そこで<ruby>生活<rt>せいかつ</rt></ruby>を<ruby>始<rt>はじ</rt></ruby>めること。",
+    "english": "admission",
+    "pos": "名",
+    "example": "Ａさん（80歳、女性、要介護3）は中途障害の全盲である。介護老人福祉施設に入所している。",
+    "source": "38-32"
+  },
+  {
+    "word": "高齢者",
+    "count": 67,
+    "meaning": "年をとった人。多くは65歳以上を指す。",
+    "english": "seniors",
+    "pos": "名",
+    "example": "次の記述のうち、「令和4（2022）年  国民生活基礎調査」（厚生労働省）における、高齢者に関する調査結果として、適切なものを1つ選びなさい。",
+    "source": "38-14"
+  },
+  {
+    "word": "障害",
+    "count": 66,
+    "meaning": "からだや心に、はたらきにくい部分があること。",
+    "english": "disability",
+    "pos": "名",
+    "example": "次のうち、障害があるためスプーンがうまく握れない人に自助具を作成する職種として、最も適切なものを1つ選びなさい。",
+    "source": "38-100"
+  },
+  {
+    "word": "状態",
+    "count": 62,
+    "meaning": "今、どんな様子かということ。",
+    "english": "condition",
+    "pos": "名",
+    "example": "長男が繰り返しトイレの場所を教えているが、状態は変わらない。",
+    "source": "38-51"
+  },
+  {
+    "word": "施設",
+    "count": 59,
+    "meaning": "介護や福祉のための建物。",
+    "english": "facility",
+    "pos": "名",
+    "example": "介護施設における介護ロボットに関する次の記述のうち、最も適切なものを1つ選びなさい。",
+    "source": "38-3"
+  },
+  {
+    "word": "症状",
+    "count": 55,
+    "meaning": "病気のときに、からだにあらわれる様子。",
+    "english": "symptom",
+    "pos": "名",
+    "example": "最近、症状が進行し、サービス担当者会議で、Ａさんは「人工呼吸器はつけないでください」と訴えた。",
+    "source": "38-2"
+  },
+  {
+    "word": "作成",
+    "count": 54,
+    "meaning": "新しくつくること。書いたり計画したりして形にすること。",
+    "english": "creation",
+    "pos": "名",
+    "example": "介護サービスを利用するため、Ａさんのケアプランを作成する。",
+    "source": "38-20"
+  },
+  {
+    "word": "最近",
+    "count": 54,
+    "meaning": "このごろ。少し前から今までのあいだ。",
+    "english": "recently",
+    "pos": "副",
+    "example": "最近、症状が進行し、サービス担当者会議で、Ａさんは「人工呼吸器はつけないでください」と訴えた。",
+    "source": "38-2"
+  },
+  {
+    "word": "低下",
+    "count": 50,
+    "meaning": "レベルや数値が、さがること。",
+    "english": "decline",
+    "pos": "名",
+    "example": "次の記述のうち、歩行が不安定になり、移動の意欲が低下している利用者に対する介護として、最も適切なものを1つ選びなさい。",
+    "source": "38-38"
+  },
+  {
+    "word": "様子",
+    "count": 49,
+    "meaning": "外から見えるものやこと。",
+    "english": "look",
+    "pos": "名",
+    "example": "人の世話になることに慣れていない様子もあるが、最期まで自宅で暮らすことを望んでいる。",
+    "source": "38-8"
+  },
+  {
+    "word": "促す",
+    "count": 49,
+    "meaning": "してほしいと、やさしくすすめること。",
+    "english": "urge",
+    "pos": "動",
+    "example": "高齢者本人による相談が原則のため、Ａさん自身が相談に来るように促す。",
+    "source": "38-20"
+  },
+  {
+    "word": "診断",
+    "count": 49,
+    "meaning": "医者が、病名や様子を決めること。",
+    "english": "diagnosis",
+    "pos": "名",
+    "example": "主治医は検査結果を踏まえ、Ａさんを脳梗塞と診断した。",
+    "source": "38-2"
+  },
+  {
+    "word": "参加",
+    "count": 48,
+    "meaning": "集まりや活動に加わること。",
+    "english": "participation",
+    "pos": "名",
+    "example": "事故防止のため、地域のお祭りへの参加は控える。",
+    "source": "38-10"
+  },
+  {
+    "word": "場合",
+    "count": 44,
+    "meaning": "そういうとき。そういうときのこと。",
+    "english": "case",
+    "pos": "名",
+    "example": "養護者による虐待が疑われる障害者を発見した場合、都道府県へ通報する義務がある。",
+    "source": "38-19"
+  },
+  {
+    "word": "優先",
+    "count": 43,
+    "meaning": "ほかより先に大切にすること。",
+    "english": "priority",
+    "pos": "名",
+    "example": "個別対応より標準化を優先する。",
+    "source": "38-5"
+  },
+  {
+    "word": "希望",
+    "count": 41,
+    "meaning": "そうなってほしいと思う気持ち。",
+    "english": "hope",
+    "pos": "名",
+    "example": "妻と自宅で過ごしたいと希望し、訪問介護（ホームヘルプサービス）と訪問看護を利用している。",
+    "source": "38-2"
+  },
+  {
+    "word": "控える",
+    "count": 41,
+    "meaning": "しないようにする。少なめにする。",
+    "english": "refrain",
+    "pos": "動",
+    "example": "事故防止のため、地域のお祭りへの参加は控える。",
+    "source": "38-10"
+  },
+  {
+    "word": "用いる",
+    "count": 39,
+    "meaning": "使う。材料や方法として取り入れる。",
+    "english": "employ",
+    "pos": "動",
+    "example": "洗浄する時は、43℃のお湯を用いる。",
+    "source": "38-48"
+  },
+  {
+    "word": "実施",
+    "count": 38,
+    "meaning": "計画どおりに行うこと。やってみること。",
+    "english": "implementation",
+    "pos": "名",
+    "example": "3年に1回の実施が義務づけられている。",
+    "source": "38-12"
+  },
+  {
+    "word": "示す",
+    "count": 37,
+    "meaning": "見せてわかるようにする。表す。",
+    "english": "show",
+    "pos": "動",
+    "example": "腹部の清拭の方法を図に示す。",
+    "source": "38-49"
+  },
+  {
+    "word": "居室",
+    "count": 37,
+    "meaning": "施設や家の中で、人が生活する部屋。",
+    "english": "room",
+    "pos": "名",
+    "example": "生活支援員がＡさんの居室を確認すると、趣味で集めているアニメグッズや衣服が増えていて、きれいにしていた自室内に散乱していた。",
+    "source": "38-112"
+  },
+  {
+    "word": "内容",
+    "count": 37,
+    "meaning": "中身。話や書類に書いてあること。",
+    "english": "content",
+    "pos": "名",
+    "example": "次の記述のうち、介護保険制度における一人暮らしの要支援者を支えるサービスの内容として、適切なものを1つ選びなさい。",
+    "source": "38-7"
+  },
+  {
+    "word": "生じる",
+    "count": 35,
+    "meaning": "起こる。新しくできる。",
+    "english": "occur",
+    "pos": "動",
+    "example": "食物が入り誤嚥｛ごえん｝が生じる部位として、適切なものを1つ選びなさい。",
+    "source": "36-24"
+  },
+  {
+    "word": "変更",
+    "count": 33,
+    "meaning": "内容や予定を、別のものにかえること。",
+    "english": "alteration",
+    "pos": "名",
+    "example": "弁当のメニューを変更すること",
+    "source": "38-111"
+  },
+  {
+    "word": "排泄",
+    "count": 33,
+    "meaning": "トイレに行って、尿や便を出すこと。",
+    "english": "excretion",
+    "pos": "名",
+    "example": "入所時、Ａさんは、尿意や便意はあり、自分でトイレに行って排泄｛はいせつ｝できていた。",
+    "example_ruby": "<ruby>入所時<rt>にゅうしょじ</rt></ruby>、Ａさんは、<ruby>尿意<rt>にょうい</rt></ruby>や<ruby>便意<rt>べんい</rt></ruby>はあり、<ruby>自分<rt>じぶん</rt></ruby>でトイレに<ruby>行<rt>い</rt></ruby>って<ruby>排泄<rt>はいせつ</rt></ruby>できていた。",
+    "source": "38-51"
+  },
+  {
+    "word": "助言",
+    "count": 32,
+    "meaning": "ほかの人に、よい考えや進め方を言うこと。",
+    "english": "advice",
+    "pos": "名",
+    "example": "次の記述のうち、サービス管理責任者の助言として、最も適切なものを1つ選びなさい。",
+    "source": "38-6"
+  },
+  {
+    "word": "該当",
+    "count": 32,
+    "meaning": "条件に当てはまること。",
+    "english": "match",
+    "pos": "名",
+    "example": "次のうち、Ａさんの生活を支える自助に該当するものとして、最も適切なものを1つ選びなさい。",
+    "source": "38-15"
+  },
+  {
+    "word": "提案",
+    "count": 32,
+    "meaning": "案を出すこと。すすめること。",
+    "english": "proposal",
+    "pos": "名",
+    "example": "次のうち、Ａさんの妻に対する訪問介護員（ホームヘルパー）の提案として、最も適切なものを1つ選びなさい。",
+    "source": "38-2"
+  },
+  {
+    "word": "状況",
+    "count": 31,
+    "meaning": "今、どうなっているかということ。",
+    "english": "situation",
+    "pos": "名",
+    "example": "次の記述のうち、このような状況にあるＡさんが、支援を必要としているときの対応として、最も適切なものを1つ選びなさい。",
+    "source": "38-25"
+  },
+  {
+    "word": "基づく",
+    "count": 31,
+    "meaning": "何かをもとにして考える・決めること。",
+    "english": "base",
+    "pos": "動",
+    "example": "アセスメントに基づく利用者の具体的な生活課題から検討する。",
+    "source": "38-107"
+  },
+  {
+    "word": "活用",
+    "count": 31,
+    "meaning": "うまく使うこと。",
+    "english": "utilization",
+    "pos": "名",
+    "example": "結果は労務管理を行う介護主任へ提供され、面接指導に活用する。",
+    "source": "38-12"
+  },
+  {
+    "word": "設定",
+    "count": 30,
+    "meaning": "値や目標などを決めておくこと。",
+    "english": "setting",
+    "pos": "名",
+    "example": "成功体験を積み重ねることができるように、達成可能な歩行の目標距離を設定する。",
+    "source": "38-38"
+  },
+  {
+    "word": "検討",
+    "count": 29,
+    "meaning": "よく考えること。",
+    "english": "review",
+    "pos": "名",
+    "example": "後日、カンファレンスが開かれ、短期目標についての見直しが検討された。",
+    "source": "38-113"
+  },
+  {
+    "word": "判断",
+    "count": 29,
+    "meaning": "考えて、どちらがよいか決めること。",
+    "english": "judgment",
+    "pos": "名",
+    "example": "使用方法は、職員個人の判断で行う。",
+    "source": "38-3"
+  },
+  {
+    "word": "担当",
+    "count": 28,
+    "meaning": "その仕事や役割を引き受けること。",
+    "english": "charge",
+    "pos": "名",
+    "example": "指定居宅サービスの担当が、Ａさんのケアプランを作成する。",
+    "source": "38-10"
+  },
+  {
+    "word": "提供",
+    "count": 28,
+    "meaning": "相手に物やサービスを与えること。",
+    "english": "supply",
+    "pos": "名",
+    "example": "避難所では、介護が必要な被災者に対して食料や毛布を提供する。",
+    "source": "38-4"
+  },
+  {
+    "word": "地域",
+    "count": 28,
+    "meaning": "ある範囲の土地や、その場所の社会。",
+    "english": "community",
+    "pos": "名",
+    "example": "「近所の方の力も借りて、この地域で暮らしていけるように考えていきましょう」",
+    "source": "38-8"
+  },
+  {
+    "word": "影響",
+    "count": 27,
+    "meaning": "ほかからの働きかけで、結果が変わること。",
+    "english": "influence",
+    "pos": "名",
+    "example": "国際連合の障害者の権利に関する条約の影響を受け、我が国の障害者福祉のあり方も見直されてきた。",
+    "source": "38-17"
+  },
+  {
+    "word": "自立",
+    "count": 26,
+    "meaning": "ほかに頼らず、自分で生活できること。",
+    "english": "independence",
+    "pos": "名",
+    "example": "導入することによって、利用者の自立支援や生活の質の向上が期待される。",
+    "source": "38-3"
+  },
+  {
+    "word": "実現",
+    "count": 25,
+    "meaning": "計画や希望どおりになること。",
+    "english": "realization",
+    "pos": "名",
+    "example": "利用者が望む暮らしを実現することが、ケアプランの中心になる。",
+    "source": "38-106"
+  },
+  {
+    "word": "困難",
+    "count": 25,
+    "meaning": "うまくいかず、つらいこと。",
+    "english": "difficulty",
+    "pos": "名",
+    "example": "日中を中心に意思疎通の困難さがみられ、介護を必要とする状態となった。",
+    "source": "38-118"
+  },
+  {
+    "word": "同意",
+    "count": 24,
+    "meaning": "その内容に賛成して、よいと認めること。",
+    "english": "consent",
+    "pos": "名",
+    "example": "利用者に支援内容を説明して同意を得る。",
+    "source": "38-108"
+  },
+  {
+    "word": "伴う",
+    "count": 24,
+    "meaning": "一緒に起こる。ついてくる。",
+    "english": "accompany",
+    "pos": "動",
+    "example": "次のうち、後遺症によって片麻痺｛かたまひ｝や言語障害を伴うことがある疾患や病態として、最も適切なものを1つ選びなさい。",
+    "source": "38-93"
+  },
+  {
+    "word": "設置",
+    "count": 23,
+    "meaning": "施設や機械などを、ある場所につくること。",
+    "english": "establishment",
+    "pos": "名",
+    "example": "都道府県は、身体障害者更生相談所を設置しなければならない。",
+    "source": "38-18"
+  },
+  {
+    "word": "目標",
+    "count": 23,
+    "meaning": "目指したい到達点。",
+    "english": "goal",
+    "pos": "名",
+    "example": "次の記述のうち、短期目標に関する説明として、最も適切なものを1つ選びなさい。",
+    "source": "38-107"
+  },
+  {
+    "word": "役割",
+    "count": 23,
+    "meaning": "その立場で果たすべき役目や仕事。",
+    "english": "role",
+    "pos": "名",
+    "example": "在宅復帰に向けたカンファレンスでは、多職種の役割を確認し、支援の方向性を共有する。",
+    "source": "38-9"
+  },
+  {
+    "word": "評価",
+    "count": 22,
+    "meaning": "よさ・悪さや程度を、ルールに合わせて見ること。",
+    "english": "evaluation",
+    "pos": "名",
+    "example": "利用者との信頼関係を評価するため、面接の様子を記録に残す。",
+    "source": "38-29"
+  },
+  {
+    "word": "応じる",
+    "count": 22,
+    "meaning": "頼みや相談に、返事や行動で答えること。",
+    "english": "respond",
+    "pos": "動",
+    "example": "地域包括支援センターの職員が相談に応じること",
+    "source": "38-15"
+  },
+  {
+    "word": "訴える",
+    "count": 22,
+    "meaning": "気持ちや痛みなどを、言葉に出して伝えること。",
+    "english": "express",
+    "pos": "動",
+    "example": "Ａさんが、「背中が重く感じて、眠れない」と介護福祉職に訴えた。",
+    "source": "38-57"
+  },
+  {
+    "word": "変化",
+    "count": 22,
+    "meaning": "様子が、別の様子に変わること。",
+    "english": "change",
+    "pos": "名",
+    "example": "家族が不安になるため、体調の変化は伝えないようにする。",
+    "source": "38-58"
+  },
+  {
+    "word": "進行",
+    "count": 22,
+    "meaning": "病気や事態が、時間とともに深まること。",
+    "english": "progression",
+    "pos": "名",
+    "example": "最近、症状が進行し、サービス担当者会議で、Ａさんは「人工呼吸器はつけないでください」と訴えた。",
+    "source": "38-2"
+  },
+  {
+    "word": "依頼",
+    "count": 21,
+    "meaning": "してほしいと、ほかの人に頼むこと。",
+    "english": "request",
+    "pos": "名",
+    "example": "次の記述のうち、Ｂ介護福祉職が同じテーブルの利用者に協力を依頼した内容として、最も適切なものを1つ選びなさい。",
+    "source": "38-32"
+  },
+  {
+    "word": "理由",
+    "count": 21,
+    "meaning": "そうなるわけ。なぜそうかという根拠。",
+    "english": "reason",
+    "pos": "名",
+    "example": "娘が理由を聞くと、「クイズの時間になると利用者のＢさんに、自分が答えたいのに名前を聞かれないのが不快だ」と話した。",
+    "source": "38-110"
+  },
+  {
+    "word": "方法",
+    "count": 21,
+    "meaning": "物事を行う手順ややり方。",
+    "english": "method",
+    "pos": "名",
+    "example": "その後、コミュニケーション方法を工夫し、Ａさんに姿勢の傾きを直す方法を説明した。",
+    "source": "38-123"
+  },
+  {
+    "word": "避ける",
+    "count": 21,
+    "meaning": "近づかないようにする。しないようにする。",
+    "english": "avoid",
+    "pos": "動",
+    "example": "胃ろうチューブの抜去予防のため、歩行は避けるように勧める。",
+    "source": "38-105"
+  },
+  {
+    "word": "発症",
+    "count": 20,
+    "meaning": "病気が、はじめて現れること。",
+    "english": "onset",
+    "pos": "名",
+    "example": "「感染症法」に基づいて、結核（tuberculosis）を発症した在宅の高齢者に。",
+    "source": "36-17"
+  },
+  {
+    "word": "準備",
+    "count": 20,
+    "meaning": "あらかじめ用意しておくこと。",
+    "english": "preparation",
+    "pos": "名",
+    "example": "洗面器には、40℃程度のお湯を準備する。",
+    "source": "37-94"
+  },
+  {
+    "word": "意向",
+    "count": 20,
+    "meaning": "そうしたいという気持ち。",
+    "english": "intention",
+    "pos": "名",
+    "example": "通所介護（デイサービス）以外のサービスを利用することへの意向を、じっくり聞き取る。",
+    "source": "38-111"
+  },
+  {
+    "word": "継続",
+    "count": 20,
+    "meaning": "途切れず、同じような様子や同じことを続けること。",
+    "english": "continuation",
+    "pos": "名",
+    "example": "通所介護（デイサービス）の利用継続に関する娘の意見を尊重する。",
+    "source": "38-111"
+  },
+  {
+    "word": "報告",
+    "count": 20,
+    "meaning": "起こったことや様子を、人に伝えること。",
+    "english": "report",
+    "pos": "名",
+    "example": "個別支援計画の取り組みの報告を、サービス担当者会議で行う。",
+    "source": "38-109"
+  },
+  {
+    "word": "職員",
+    "count": 20,
+    "meaning": "施設や事業所で働く人たち。",
+    "english": "staff",
+    "pos": "名",
+    "example": "次の記述のうち、地域包括支援センターの職員の対応として、最も適切なものを1つ選びなさい。",
+    "source": "38-20"
+  },
+  {
+    "word": "改善",
+    "count": 19,
+    "meaning": "よりよい様子に直すこと。",
+    "english": "improvement",
+    "pos": "名",
+    "example": "移動の目的を伝えるよりも、歩行機能の改善を優先する。",
+    "source": "38-38"
+  },
+  {
+    "word": "特徴",
+    "count": 19,
+    "meaning": "ほかとちがって見わけやすい様子。",
+    "english": "feature",
+    "pos": "名",
+    "example": "認知症では、同じ話題を短時間に繰り返すといった特徴がみられることがある。",
+    "source": "38-74"
+  },
+  {
+    "word": "職種",
+    "count": 18,
+    "meaning": "職業の種類。",
+    "english": "profession",
+    "pos": "名",
+    "example": "次のうち、障害があるためスプーンがうまく握れない人に自助具を作成する職種として、最も適切なものを1つ選びなさい。",
+    "source": "38-100"
+  },
+  {
+    "word": "入居",
+    "count": 18,
+    "meaning": "アパートや施設などに入って住むこと。",
+    "english": "residency",
+    "pos": "名",
+    "example": "共同生活援助（グループホーム）へ入居した。",
+    "source": "38-113"
+  },
+  {
+    "word": "総合的",
+    "count": 18,
+    "meaning": "いくつかの側面をまとめて、全体として見るさま。",
+    "english": "comprehensive",
+    "pos": "形",
+    "example": "話の内容を総合的にまとめて返し、利用者の気持ちを整理した。",
+    "source": "37-74"
+  },
+  {
+    "word": "連携",
+    "count": 18,
+    "meaning": "別々の者同士が、目的のために協力して動くこと。",
+    "english": "coordination",
+    "pos": "名",
+    "example": "他職種が望む連携を実現すること",
+    "source": "38-106"
+  },
+  {
+    "word": "対象",
+    "count": 17,
+    "meaning": "ある取り組みやしくみの目当てになる人や物。",
+    "english": "target",
+    "pos": "名",
+    "example": "要介護高齢者を対象とする。",
+    "source": "38-5"
+  },
+  {
+    "word": "結果",
+    "count": 17,
+    "meaning": "物事が終わったあとに出るさまや答え。",
+    "english": "outcome",
+    "pos": "名",
+    "example": "近隣の大学病院を受診した結果、手足の震え、小刻みな歩行、顔のこわばりなどがみられ。",
+    "source": "38-114"
+  },
+  {
+    "word": "誤る",
+    "count": 17,
+    "meaning": "間違える。正しくないことをする。",
+    "english": "err",
+    "pos": "動",
+    "example": "特に国語の授業のノートを見ると、黒板を書き写そうとしているが、文字の大きさもふぞろいで。",
+    "source": "33-69"
+  },
+  {
+    "word": "調整",
+    "count": 17,
+    "meaning": "バランスや関係を、うまく合わせること。",
+    "english": "adjustment",
+    "pos": "名",
+    "example": "ベッドライトの光源は、利用者の目に直接あたるように調整する。",
+    "source": "38-36"
+  },
+  {
+    "word": "観察",
+    "count": 17,
+    "meaning": "よく見て、様子や変化をつかむこと。",
+    "english": "observation",
+    "pos": "名",
+    "example": "看護師と共に足や背中を観察すると、皮膚が乾燥していて、引っ掻｛か｝いたような傷があった。",
+    "source": "38-80"
+  },
+  {
+    "word": "発達",
+    "count": 16,
+    "meaning": "からだや心が、段階を追って成長すること。",
+    "english": "development",
+    "pos": "名",
+    "example": "障害が発達期にあらわれる。",
+    "source": "38-92"
+  },
+  {
+    "word": "解決",
+    "count": 16,
+    "meaning": "問題を取り除き、落ち着いた様子にすること。",
+    "english": "resolution",
+    "pos": "名",
+    "example": "家族からの苦情は、介護福祉職が、その場で解決する。",
+    "source": "38-10"
+  },
+  {
+    "word": "予防",
+    "count": 16,
+    "meaning": "悪いことが起きないよう、あらかじめ防ぐこと。",
+    "english": "prevention",
+    "pos": "名",
+    "example": "安全対策担当者を置き、事故発生予防のための委員会を定期的に開催する。",
+    "source": "38-10"
+  },
+  {
+    "word": "同居",
+    "count": 16,
+    "meaning": "同じ家に住むこと。",
+    "english": "cohabitation",
+    "pos": "名",
+    "example": "心配した娘が同居を勧めたが、Ａさんは。",
+    "source": "38-110"
+  },
+  {
+    "word": "発言",
+    "count": 16,
+    "meaning": "人前や会議などで、言葉を出すこと。",
+    "english": "remark",
+    "pos": "名",
+    "example": "次のうち、このときのＡさんの発言を促すための介護福祉職の応答として。",
+    "source": "38-33"
+  },
+  {
+    "word": "保護",
+    "count": 16,
+    "meaning": "害や危険から守ること。生活を支えること。",
+    "english": "protection",
+    "pos": "名",
+    "example": "障害者を弱者として保護する捉え方が広まった。",
+    "source": "38-94"
+  },
+  {
+    "word": "意思",
+    "count": 15,
+    "meaning": "自分で決めようとする気持ち。考え。",
+    "english": "will",
+    "pos": "名",
+    "example": "「会議で話されていたＡさんの意思が大切なので、尊重しませんか」",
+    "source": "38-2"
+  },
+  {
+    "word": "指示",
+    "count": 15,
+    "meaning": "してほしいことを、はっきり伝えること。",
+    "english": "direction",
+    "pos": "名",
+    "example": "施設長から再発防止に向けた対応を指示する。",
+    "source": "38-28"
+  },
+  {
+    "word": "申請",
+    "count": 15,
+    "meaning": "役所などに「お願いします」と申し出ること。",
+    "english": "application",
+    "pos": "名",
+    "example": "申請に基づいて保護を行う。",
+    "source": "38-24"
+  },
+  {
+    "word": "規定",
+    "count": 15,
+    "meaning": "法律やルールで、前もって決めたこと。",
+    "english": "rule",
+    "pos": "名",
+    "example": "三親等内の血族を家族と規定している。",
+    "source": "38-13"
+  },
+  {
+    "word": "負担",
+    "count": 15,
+    "meaning": "責任や仕事、心身の重さを引き受けること。",
+    "english": "burden",
+    "pos": "名",
+    "example": "父親の介護負担が大きくなったため。",
+    "source": "38-120"
+  },
+  {
+    "word": "経過",
+    "count": 15,
+    "meaning": "時間がたつこと。病気のなりゆき。",
+    "english": "course",
+    "pos": "名",
+    "example": "Ｄ介護付き有料老人ホームに転居してから3年が経過した。",
+    "source": "38-119"
+  },
+  {
+    "word": "認める",
+    "count": 14,
+    "meaning": "事実だと認じる。認めてよいと決めることする。",
+    "english": "acknowledge",
+    "pos": "動",
+    "example": "Ａさんは、「自分の仕事ぶりを上司に認めてほしいという気持ちはない。",
+    "source": "38-77"
+  },
+  {
+    "word": "環境",
+    "count": 14,
+    "meaning": "人や物を取りまく、まわりの様子。",
+    "english": "environment",
+    "pos": "名",
+    "example": "介護老人福祉施設における、快適な室内環境に関する次の記述のうち。",
+    "source": "38-36"
+  },
+  {
+    "word": "疾患",
+    "count": 14,
+    "meaning": "病気。医学で使う言い方。",
+    "english": "disease",
+    "pos": "名",
+    "example": "次の記述のうち、高齢者の疾患や症状の特徴として、適切なものを1つ選びなさい。",
+    "source": "38-79"
+  },
+  {
+    "word": "課題",
+    "count": 14,
+    "meaning": "これから取り組むべき問題。",
+    "english": "issue",
+    "pos": "名",
+    "example": "地域ケア会議において、関係者と地域課題について話し合う。",
+    "source": "38-20"
+  },
+  {
+    "word": "注意",
+    "count": 14,
+    "meaning": "気をつけること。",
+    "english": "attention",
+    "pos": "名",
+    "example": "非接触型体温計による測定では、環境温度に注意する。",
+    "source": "38-101"
+  },
+  {
+    "word": "事業所",
+    "count": 14,
+    "meaning": "サービスや仕事を行う場所。",
+    "english": "office",
+    "pos": "名",
+    "example": "介護予防通所リハビリテーション事業所のＢ介護福祉職は、息子から。",
+    "source": "38-115"
+  },
+  {
+    "word": "望む",
+    "count": 14,
+    "meaning": "そうなってほしいと思う。",
+    "english": "wish",
+    "pos": "動",
+    "example": "利用者が望む暮らしを実現すること",
+    "source": "38-106"
+  },
+  {
+    "word": "領域",
+    "count": 13,
+    "meaning": "分野。一定の範囲。",
+    "english": "field",
+    "pos": "名",
+    "example": "＜領域：こころとからだのしくみ＞",
+    "source": "38-86"
+  },
+  {
+    "word": "意識",
+    "count": 13,
+    "meaning": "はっきり気づいている心のはたらき。",
+    "english": "awareness",
+    "pos": "名",
+    "example": "意識レベルは、まず身体を揺さぶって反応をみる。",
+    "source": "38-101"
+  },
+  {
+    "word": "配慮",
+    "count": 13,
+    "meaning": "相手の事情を考えて気をくばること。",
+    "english": "consideration",
+    "pos": "名",
+    "example": "食事摂取に配慮するように指導されている。",
+    "source": "38-47"
+  },
+  {
+    "word": "形成",
+    "count": 13,
+    "meaning": "形づくること。つくりあげること。",
+    "english": "formation",
+    "pos": "名",
+    "example": "利用者との信頼関係を形成するため",
+    "source": "38-29"
+  },
+  {
+    "word": "摂取",
+    "count": 13,
+    "meaning": "食べたり飲んだりして体に取り入れること。",
+    "english": "intake",
+    "pos": "名",
+    "example": "食物繊維の摂取を促す。",
+    "source": "38-71"
+  },
+  {
+    "word": "図る",
+    "count": 13,
+    "meaning": "うまくいくように計画して行う。",
+    "english": "plan",
+    "pos": "動",
+    "example": "利用者の生活の効率化を図ることを目標にする。",
+    "source": "38-35"
+  },
+  {
+    "word": "意見",
+    "count": 13,
+    "meaning": "あることについての考え。",
+    "english": "opinion",
+    "pos": "名",
+    "example": "通所介護（デイサービス）の利用継続に関する娘の意見",
+    "source": "38-111"
+  },
+  {
+    "word": "重視",
+    "count": 13,
+    "meaning": "大切だと考えて重くみること。",
+    "english": "emphasis",
+    "pos": "名",
+    "example": "傾聴よりも励ますことを重視する。",
+    "source": "38-59"
+  },
+  {
+    "word": "認定",
+    "count": 12,
+    "meaning": "決められた条件に合うと、正式に認めること。",
+    "english": "certification",
+    "pos": "名",
+    "example": "Ａさんは要支援2の認定を受けて、介護予防通所リハビリテーションの利用を始めた。",
+    "source": "38-114"
+  },
+  {
+    "word": "交流",
+    "count": 12,
+    "meaning": "人どうしが行き来して関わること。",
+    "english": "interaction",
+    "pos": "名",
+    "example": "もっとほかの人と交流したいが、自宅で生活しながら利用できると安心だ。",
+    "source": "38-116"
+  },
+  {
+    "word": "留意点",
+    "count": 12,
+    "meaning": "特に気をつけるべき点。",
+    "english": "reminder",
+    "pos": "名",
+    "example": "次の記述のうち、バイタルサインを測定するときの留意点として。",
+    "source": "38-101"
+  },
+  {
+    "word": "記載",
+    "count": 12,
+    "meaning": "文書に書きのせること。",
+    "english": "entry",
+    "pos": "名",
+    "example": "利用者の1年後の状態を記載する。",
+    "source": "38-107"
+  },
+  {
+    "word": "誘導",
+    "count": 12,
+    "meaning": "安全な方向へ導くこと。",
+    "english": "guidance",
+    "pos": "名",
+    "example": "視覚障害者の歩行時の誘導に関する次の記述のうち、最も適切なものを1つ選びなさい。",
+    "source": "38-40"
+  },
+  {
+    "word": "制限",
+    "count": 12,
+    "meaning": "行えることの範囲をせまくすること。",
+    "english": "restriction",
+    "pos": "名",
+    "example": "フォーマルな社会資源の活用を優先し、民生委員のかかわりを制限する。",
+    "source": "38-20"
+  },
+  {
+    "word": "可能性",
+    "count": 12,
+    "meaning": "そうなる見こみ。ありうること。",
+    "english": "possibility",
+    "pos": "名",
+    "example": "Ａさんに生じている可能性がある疾患として。",
+    "source": "38-80"
+  },
+  {
+    "word": "維持",
+    "count": 12,
+    "meaning": "今のよい様子を保ち続けること。",
+    "english": "maintenance",
+    "pos": "名",
+    "example": "下肢筋力を維持するために、毎日同じ運動をする。",
+    "source": "38-115"
+  },
+  {
+    "word": "訓練",
+    "count": 11,
+    "meaning": "できるようになるために練習すること。",
+    "english": "training",
+    "pos": "名",
+    "example": "福祉用具専門相談員が、下肢の機能訓練をする。",
+    "source": "38-9"
+  },
+  {
+    "word": "意欲",
+    "count": 11,
+    "meaning": "すすんでやろうとする気持ち。",
+    "english": "willingness",
+    "pos": "名",
+    "example": "歩行が不安定で、移動の意欲が低下している。",
+    "source": "38-38"
+  },
+  {
+    "word": "向上",
+    "count": 11,
+    "meaning": "今よりよくなること。",
+    "english": "advancement",
+    "pos": "名",
+    "example": "利用者の自立支援や生活の質の向上が期待される。",
+    "source": "38-3"
+  },
+  {
+    "word": "能力",
+    "count": 10,
+    "meaning": "何かをうまく行う力。",
+    "english": "ability",
+    "pos": "名",
+    "example": "判断能力が十分ある者には、後見人をつけられない。",
+    "source": "38-21"
+  },
+  {
+    "word": "共有",
+    "count": 10,
+    "meaning": "みんなで同じ情報や考えを持つこと。",
+    "english": "sharing",
+    "pos": "名",
+    "example": "状況をユニット内のメンバーと共有する。",
+    "source": "37-4"
+  },
+  {
+    "word": "不要",
+    "count": 10,
+    "meaning": "必要がないこと。",
+    "english": "unnecessary",
+    "pos": "形",
+    "example": "導入によって、職員の巡回は不要になる。",
+    "source": "38-3"
+  },
+  {
+    "word": "指導",
+    "count": 10,
+    "meaning": "わかるように教え導くこと。",
+    "english": "instruction",
+    "pos": "名",
+    "example": "結果は面接指導に活用する。",
+    "source": "38-12"
+  },
+  {
+    "word": "機能",
+    "count": 10,
+    "meaning": "はたらき。役割。",
+    "english": "function",
+    "pos": "名",
+    "example": "咀嚼機能が低下した利用者の食事介護。",
+    "source": "38-46"
+  },
+  {
+    "word": "積極的",
+    "count": 10,
+    "meaning": "自分から進んで行う様子。",
+    "english": "proactive",
+    "pos": "形",
+    "example": "積極的に趣味活動に参加するように勧める。",
+    "source": "35-98"
+  },
+  {
+    "word": "段階",
+    "count": 10,
+    "meaning": "順に進む過程の区切り。",
+    "english": "stage",
+    "pos": "名",
+    "example": "この心理的特徴に該当する段階を選びなさい。",
+    "source": "38-90"
+  },
+  {
+    "word": "防止",
+    "count": 10,
+    "meaning": "起こらないように防ぐこと。",
+    "english": "blocking",
+    "pos": "名",
+    "example": "事故防止のため、地域のお祭りへの参加は控える。",
+    "source": "38-10"
+  },
+  {
+    "word": "展開",
+    "count": 10,
+    "meaning": "広がりながら進んでいくこと。",
+    "english": "expansion",
+    "pos": "名",
+    "example": "障害者福祉の歴史的展開として、適切なもの。",
+    "source": "38-17"
+  },
+  {
+    "word": "信頼関係",
+    "count": 10,
+    "meaning": "相手を信じられる関係。",
+    "english": "trust",
+    "pos": "名",
+    "example": "自己開示の目的として、利用者との信頼関係を形成するため。",
+    "source": "38-29"
+  },
+  {
+    "word": "解釈",
+    "count": 10,
+    "meaning": "ことばや行動の意味を読み取ること。",
+    "english": "interpretation",
+    "pos": "名",
+    "example": "行動を解釈するために必要な情報。",
+    "source": "36-109"
+  },
+  {
+    "word": "確保",
+    "count": 10,
+    "meaning": "必要なものを、きちんと手に入れて保つこと。",
+    "english": "assurance",
+    "pos": "名",
+    "example": "食事をしやすい姿勢を確保するための介護。",
+    "source": "38-45"
+  },
+  {
+    "word": "自信",
+    "count": 10,
+    "meaning": "自分にはできると思える気持ち。",
+    "english": "confidence",
+    "pos": "名",
+    "example": "Ａさんが自信をなくした理由。",
+    "source": "38-112"
+  },
+  {
+    "word": "超える",
+    "count": 10,
+    "meaning": "ある目安より大きくなる。上回る。",
+    "english": "exceed",
+    "pos": "動",
+    "example": "母子世帯数と父子世帯数を合算すると、高齢者世帯数を超える。",
+    "source": "34-7"
+  },
+  {
+    "word": "最期",
+    "count": 10,
+    "meaning": "人生の終わりの時。",
+    "english": "passing",
+    "pos": "名",
+    "example": "最期まで自宅で生活したい。",
+    "source": "38-2"
+  },
+  {
+    "word": "視点",
+    "count": 9,
+    "meaning": "物事を見る立場や見方。",
+    "english": "viewpoint",
+    "pos": "名",
+    "example": "介護福祉職がアドボカシーの視点から行う対応。",
+    "source": "37-1"
+  },
+  {
+    "word": "権利",
+    "count": 9,
+    "meaning": "法律や社会で認められた、できること。",
+    "english": "right",
+    "pos": "名",
+    "example": "障害のある人を権利侵害から守る社会。",
+    "source": "38-91"
+  },
+  {
+    "word": "組織",
+    "count": 9,
+    "meaning": "役割を分けて活動する集まり。",
+    "english": "organization",
+    "pos": "名",
+    "example": "介護福祉職の健康を守る組織的なマネジメント。",
+    "source": "36-5"
+  },
+  {
+    "word": "促進",
+    "count": 9,
+    "meaning": "物事が進むようにうながすこと。",
+    "english": "promotion",
+    "pos": "名",
+    "example": "連携を促進すること。",
+    "source": "38-27"
+  },
+  {
+    "word": "反応",
+    "count": 9,
+    "meaning": "刺激や呼びかけに対する返り方。",
+    "english": "reaction",
+    "pos": "名",
+    "example": "誰からも反応はなく、Ａさんは下を向いてしまった。",
+    "source": "38-32"
+  },
+  {
+    "word": "推進",
+    "count": 9,
+    "meaning": "計画や活動を前に進めること。",
+    "english": "drive",
+    "pos": "名",
+    "example": "知的障害者の地域移行が推進された。",
+    "source": "38-17"
+  },
+  {
+    "word": "受け入れる",
+    "count": 9,
+    "meaning": "相手の考えや現実を認めて引き受ける。",
+    "english": "accept",
+    "pos": "動",
+    "example": "認知症を長男が受け入れる過程と考えた場合。",
+    "source": "38-90"
+  },
+  {
+    "word": "苦情",
+    "count": 9,
+    "meaning": "困ったことや不満を伝えること。",
+    "english": "complaint",
+    "pos": "名",
+    "example": "家族からの苦情は、その場で解決する。",
+    "source": "38-10"
+  },
+  {
+    "word": "圧迫",
+    "count": 9,
+    "meaning": "強くおして力を加えること。",
+    "english": "compression",
+    "pos": "名",
+    "example": "呼吸が確認できない場合は、すぐに圧迫を始める。",
+    "source": "37-59"
+  },
+  {
+    "word": "養護者",
+    "count": 9,
+    "meaning": "高齢者や障害者を日常的に世話する人。",
+    "word_ruby": "<ruby>養護者<rt>ようごしゃ</rt></ruby>",
+    "english": "caregiver",
+    "pos": "名",
+    "example": "養護者による虐待が疑われる障害者を発見した場合。",
+    "source": "38-19"
+  },
+  {
+    "word": "不安定",
+    "count": 9,
+    "meaning": "安定せず、ぐらつきやすい様子。",
+    "english": "unstable",
+    "pos": "形",
+    "example": "歩行が不安定になり、移動の意欲が低下している。",
+    "source": "38-38"
+  },
+  {
+    "word": "努める",
+    "count": 9,
+    "meaning": "よくなるように、努力して行う。",
+    "english": "strive",
+    "pos": "動",
+    "example": "介護技術の向上に努めること。",
+    "source": "38-27"
+  },
+  {
+    "word": "軽減",
+    "count": 9,
+    "meaning": "負担や痛みなどを軽くすること。",
+    "english": "reduction",
+    "pos": "名",
+    "example": "参加者の緊張感を軽減することができる。",
+    "source": "37-82"
+  },
+  {
+    "word": "価値観",
+    "count": 9,
+    "meaning": "何を大切だと思うかの考え方。",
+    "english": "values",
+    "pos": "名",
+    "example": "利用者の価値観よりも、介護福祉士の価値観を優先する。",
+    "source": "34-28"
+  },
+  {
+    "word": "通報",
+    "count": 9,
+    "meaning": "警察や市役所などに知らせること。",
+    "english": "alert",
+    "pos": "名",
+    "example": "緊急時にすぐに通報できる公共サービスを利用している。",
+    "source": "38-15"
+  },
+  {
+    "word": "分析",
+    "count": 9,
+    "meaning": "分けてよく調べ、どうなっているか・なぜそうかまでわかるようにすること。",
+    "english": "analysis",
+    "pos": "名",
+    "example": "自己を深く分析し、客観的に理解するため。",
+    "source": "38-29"
+  },
+  {
+    "word": "管理",
+    "count": 9,
+    "meaning": "うまく回るように整え、見守ること。",
+    "english": "management",
+    "pos": "名",
+    "example": "金銭管理のために、日常生活自立支援事業を利用する。",
+    "source": "38-7"
+  },
+  {
+    "word": "励ます",
+    "count": 8,
+    "meaning": "元気が出るように声をかける。",
+    "english": "encourage",
+    "pos": "動",
+    "example": "傾聴よりも励ますことを重視する。",
+    "source": "38-59"
+  },
+  {
+    "word": "定める",
+    "count": 8,
+    "meaning": "決まりとして決定する。",
+    "english": "set",
+    "pos": "動",
+    "example": "国の定める基準によって測定された需要をもとに保護を行う。",
+    "source": "38-24"
+  },
+  {
+    "word": "関心",
+    "count": 8,
+    "meaning": "そのことに注意が向き、気になる気持ち。",
+    "english": "interest",
+    "pos": "名",
+    "example": "高齢になると性への関心がなくなる。",
+    "source": "38-77"
+  },
+  {
+    "word": "限定",
+    "count": 8,
+    "meaning": "範囲を決めて、それだけにすること。",
+    "english": "limit",
+    "pos": "名",
+    "example": "生活範囲は、区画されたスペースに限定する。",
+    "source": "38-4"
+  },
+  {
+    "word": "沿う",
+    "count": 8,
+    "meaning": "進め方や線に合わせて進むこと。",
+    "english": "follow",
+    "pos": "動",
+    "example": "事前に作成しておいた日課表に沿って活動する。",
+    "source": "34-35"
+  },
+  {
+    "word": "防ぐ",
+    "count": 8,
+    "meaning": "悪いことが起きないようにする。",
+    "english": "prevent",
+    "pos": "動",
+    "example": "視覚的環境からの影響を防ぐために、カーテンを変更する。",
+    "source": "38-115"
+  },
+  {
+    "word": "関連",
+    "count": 8,
+    "meaning": "互いに関わりがあること。",
+    "english": "relation",
+    "pos": "名",
+    "example": "環境因子と心身機能の関連を表す記述。",
+    "source": "32-21"
+  },
+  {
+    "word": "行為",
+    "count": 8,
+    "meaning": "実際にするふるまい。",
+    "english": "act",
+    "pos": "名",
+    "example": "喀痰吸引や経管栄養は、医行為から除外された。",
+    "source": "36-82"
+  },
+  {
+    "word": "複数",
+    "count": 8,
+    "meaning": "2つ以上あること。",
+    "english": "multiple",
+    "pos": "名",
+    "example": "複数の疾患を持ちやすい。",
+    "source": "38-79"
+  },
+  {
+    "word": "カンファレンス",
+    "count": 8,
+    "meaning": "関係者で情報を共有し話し合う会議。",
+    "english": "conference",
+    "pos": "名",
+    "example": "後日、カンファレンスが開かれ、短期目標が見直された。",
+    "source": "38-113"
+  },
+  {
+    "word": "定期的",
+    "count": 8,
+    "meaning": "決まった間隔でくり返すさま。",
+    "english": "regular",
+    "pos": "形",
+    "example": "定期的に市の窓口や地域包括支援センターに相談している。",
+    "source": "38-15"
+  },
+  {
+    "word": "原則",
+    "count": 8,
+    "meaning": "基本となる決まり。",
+    "english": "principle",
+    "pos": "名",
+    "example": "要介護認定の有効期限は、原則として3か月である。",
+    "source": "38-16"
+  },
+  {
+    "word": "実践",
+    "count": 8,
+    "meaning": "実際に行ってみること。",
+    "english": "practice",
+    "pos": "名",
+    "example": "他職種が立案した介護計画をチームで実践する。",
+    "source": "38-108"
+  },
+  {
+    "word": "踏まえる",
+    "count": 8,
+    "meaning": "ある事実をもとに考える。",
+    "english": "build on",
+    "pos": "動",
+    "example": "障害者虐待防止法の視点を踏まえて、言葉をかける。",
+    "source": "32-16"
+  },
+  {
+    "word": "達成",
+    "count": 8,
+    "meaning": "目標をやりとげること。",
+    "english": "achievement",
+    "pos": "名",
+    "example": "達成可能な歩行の目標距離を設定する。",
+    "source": "38-38"
+  },
+  {
+    "word": "訪ねる",
+    "count": 8,
+    "meaning": "人や場所のところへ行く。",
+    "english": "visit",
+    "pos": "動",
+    "example": "心配した生活支援員が居室を訪ねると、Ａさんが、「昨日も、遊びに来た隣室の友人が、散らかっている部屋を見て笑った。前はきれいにできていたのに」と自信をなくしている様子であった。",
+    "source": "38-112"
+  },
+  {
+    "word": "照明",
+    "count": 8,
+    "meaning": "明るく照らすための光や器具。",
+    "english": "lighting",
+    "pos": "名",
+    "example": "寝ている間も、照明は明るくしておく。",
+    "source": "38-56"
+  },
+  {
+    "word": "表現",
+    "count": 8,
+    "meaning": "考えや気持ちを言葉や態度で示すこと。",
+    "english": "expression",
+    "pos": "名",
+    "example": "自分の立場に立って感情を言葉で表現して伝える。",
+    "source": "34-28"
+  },
+  {
+    "word": "尊厳",
+    "count": 7,
+    "meaning": "人として大切にされる価値。",
+    "english": "dignity",
+    "pos": "名",
+    "example": "死期が迫った段階で、自然な最期を迎えたいと願っている。",
+    "source": "34-58"
+  },
+  {
+    "word": "日課",
+    "count": 7,
+    "meaning": "毎日くり返し行う習慣。",
+    "english": "routine",
+    "pos": "名",
+    "example": "Ｂさんはテレビを見ることが日課である。",
+    "source": "37-102"
+  },
+  {
+    "word": "認識",
+    "count": 7,
+    "meaning": "物事を見て理解すること。",
+    "english": "recognition",
+    "pos": "名",
+    "example": "軽度の認知症の人に、会話で日付などを認識してもらう。",
+    "source": "34-89"
+  },
+  {
+    "word": "意図",
+    "count": 7,
+    "meaning": "こうしようと考える目的。",
+    "english": "intent",
+    "pos": "名",
+    "example": "このときの介護福祉職の対応の意図に当てはまるもの。",
+    "source": "37-4"
+  },
+  {
+    "word": "除外",
+    "count": 7,
+    "meaning": "対象から外して含めないこと。",
+    "english": "exclusion",
+    "pos": "名",
+    "example": "障害者は対象から除外されている。",
+    "source": "38-23"
+  },
+  {
+    "word": "出現",
+    "count": 7,
+    "meaning": "それまでなかったものが、あらわれること。",
+    "english": "emergence",
+    "pos": "名",
+    "example": "症状の出現がみられた。",
+    "source": "38-90"
+  },
+  {
+    "word": "疑う",
+    "count": 7,
+    "meaning": "本当かどうか、あやしいと思う。",
+    "english": "suspect",
+    "pos": "動",
+    "example": "養護者による虐待が疑われる障害者を発見した場合。",
+    "source": "38-19"
+  },
+  {
+    "word": "重度",
+    "count": 7,
+    "meaning": "病気のときに出る様子や障害の程度が重いこと。",
+    "english": "severity",
+    "pos": "名",
+    "example": "ＡＤＬの障害は、重度期以降に認められる。",
+    "source": "38-84"
+  },
+  {
+    "word": "高める",
+    "count": 7,
+    "meaning": "今より高い様子にする。",
+    "english": "increase",
+    "pos": "動",
+    "example": "音の選択的聴取の力を高めるために。",
+    "source": "38-87"
+  },
+  {
+    "word": "看取る",
+    "count": 7,
+    "meaning": "人の最期までそばで世話をして見届ける。",
+    "english": "stay with",
+    "pos": "動",
+    "example": "夫を自宅で看取った。",
+    "source": "34-58"
+  },
+  {
+    "word": "発見",
+    "count": 7,
+    "meaning": "新しく見つけること。",
+    "english": "discovery",
+    "pos": "名",
+    "example": "虐待を発見した障害者福祉施設従事者が通報した場合。",
+    "source": "38-19"
+  },
+  {
+    "word": "口頭",
+    "count": 7,
+    "meaning": "声に出して伝えること。",
+    "english": "speech",
+    "pos": "名",
+    "example": "入浴介助時の報告は、職員間の口頭による伝達に統一する。",
+    "source": "38-10"
+  },
+  {
+    "word": "現象",
+    "count": 7,
+    "meaning": "実際に起こり、見てわかるできごと。",
+    "english": "phenomenon",
+    "pos": "名",
+    "example": "階段を上ると息切れしやすくなる現象に関係する機能。",
+    "source": "38-78"
+  },
+  {
+    "word": "説得",
+    "count": 7,
+    "meaning": "理由を伝えて、相手に納得してもらうこと。",
+    "english": "persuasion",
+    "pos": "名",
+    "example": "現状を受け入れるように説得する。",
+    "source": "33-102"
+  },
+  {
+    "word": "提唱",
+    "count": 7,
+    "meaning": "新しい考えを人に示して広めること。",
+    "english": "advocacy",
+    "pos": "名",
+    "example": "ニィリエは、ノーマライゼーションの8つの原理を提唱した。",
+    "source": "38-1"
+  },
+  {
+    "word": "変性",
+    "count": 7,
+    "meaning": "からだの細かい部分の様子が、病気で変わること。",
+    "english": "degeneration",
+    "pos": "名",
+    "example": "網膜が変性する。",
+    "source": "33-100"
+  },
+  {
+    "word": "把握",
+    "count": 7,
+    "meaning": "全体をつかんで理解すること。",
+    "english": "grasp",
+    "pos": "名",
+    "example": "心理的な負担の程度を把握するためのものである。",
+    "source": "38-12"
+  },
+  {
+    "word": "徐々に",
+    "count": 7,
+    "meaning": "少しずつ。だんだん。",
+    "english": "gradually",
+    "pos": "副",
+    "example": "ノーマライゼーションの理念が徐々に浸透した。",
+    "source": "38-94"
+  },
+  {
+    "word": "統一",
+    "count": 7,
+    "meaning": "ばらばらのものを一つにそろえること。",
+    "english": "unification",
+    "pos": "名",
+    "example": "報告は、職員間の口頭による伝達に統一する。",
+    "source": "38-10"
+  },
+  {
+    "word": "制定",
+    "count": 7,
+    "meaning": "法律やしくみを定めて作ること。",
+    "english": "enactment",
+    "pos": "名",
+    "example": "身体障害者福祉法の制定につながった。",
+    "source": "38-94"
+  },
+  {
+    "word": "期待",
+    "count": 7,
+    "meaning": "そうなるだろうと望みを持つこと。",
+    "english": "expectation",
+    "pos": "名",
+    "example": "利用者の自立支援や生活の質の向上が期待される。",
+    "source": "38-3"
+  },
+  {
+    "word": "落ち込む",
+    "count": 7,
+    "meaning": "気持ちが沈んで元気がなくなる。",
+    "english": "feel down",
+    "pos": "動",
+    "example": "大声でどなってしまい、その後で落ち込むようになった。",
+    "source": "38-90"
+  },
+  {
+    "word": "選択",
+    "count": 7,
+    "meaning": "いくつかから一つを選ぶこと。",
+    "english": "selection",
+    "pos": "名",
+    "example": "福祉用具の選択に迷うときは、社会福祉士に依頼する。",
+    "source": "36-104"
+  },
+  {
+    "word": "方向性",
+    "count": 7,
+    "meaning": "物事を進める向きや進め方。",
+    "english": "orientation",
+    "pos": "名",
+    "example": "介護計画を見直すときの方向性として、最も適切なもの。",
+    "source": "38-119"
+  },
+  {
+    "word": "話し合う",
+    "count": 7,
+    "meaning": "おたがいに意見を出して相談する。",
+    "english": "discuss",
+    "pos": "動",
+    "example": "地域ケア会議において、関係者と地域課題について話し合う。",
+    "source": "38-20"
+  },
+  {
+    "word": "測定",
+    "count": 7,
+    "meaning": "長さや値をはかること。",
+    "english": "measurement",
+    "pos": "名",
+    "example": "バイタルサインを測定するときの留意点。",
+    "source": "38-101"
+  },
+  {
+    "word": "専念する",
+    "count": 6,
+    "meaning": "一つのことだけに力を集中する。",
+    "english": "devote",
+    "pos": "動",
+    "example": "高次脳機能障害の治療とリハビリに専念している。",
+    "source": "37-18"
+  },
+  {
+    "word": "制度",
+    "count": 6,
+    "meaning": "決まりにそって動く、社会のしくみ。",
+    "english": "system",
+    "pos": "名",
+    "example": "介護保険制度における介護サービス利用。",
+    "source": "38-16"
+  },
+  {
+    "word": "感覚",
+    "count": 6,
+    "meaning": "見たり聞いたり触れたりして感じるはたらき。",
+    "english": "sense",
+    "pos": "名",
+    "example": "感覚障害。",
+    "source": "38-95"
+  },
+  {
+    "word": "指摘",
+    "count": 6,
+    "meaning": "問題点などを示して伝えること。",
+    "english": "critique",
+    "pos": "名",
+    "example": "できないことを指摘する。",
+    "source": "38-97"
+  },
+  {
+    "word": "悲嘆",
+    "count": 6,
+    "meaning": "深い悲しみ。大切なものを失った悲しみ。",
+    "english": "grief",
+    "pos": "名",
+    "example": "悲嘆が長期化した場合は、専門医等へ相談する。",
+    "source": "38-59"
+  },
+  {
+    "word": "初期",
+    "count": 6,
+    "meaning": "はじめの時期。",
+    "english": "beginning",
+    "pos": "名",
+    "example": "記憶障害は、初期から認められる。",
+    "source": "38-84"
+  },
+  {
+    "word": "現れる",
+    "count": 6,
+    "meaning": "見える形で出てくる。",
+    "english": "appear",
+    "pos": "動",
+    "example": "障害が発達期にあらわれる。",
+    "source": "38-92"
+  },
+  {
+    "word": "留意",
+    "count": 6,
+    "meaning": "特に気をつけること。",
+    "english": "caution",
+    "pos": "名",
+    "example": "バイタルサインを測定するときの留意点。",
+    "source": "38-101"
+  },
+  {
+    "word": "事前",
+    "count": 6,
+    "meaning": "何かをする前。あらかじめ。",
+    "english": "advance",
+    "pos": "名",
+    "example": "会議の資料を、事前に口頭で説明した。",
+    "source": "37-57"
+  },
+  {
+    "word": "望ましい",
+    "count": 6,
+    "meaning": "そうであるのがよい。",
+    "english": "desirable",
+    "pos": "形",
+    "example": "トイレは、感染予防のために和式便器が望ましい。",
+    "source": "38-4"
+  },
+  {
+    "word": "策定",
+    "count": 6,
+    "meaning": "計画や進め方を決めて作ること。",
+    "english": "formulation",
+    "pos": "名",
+    "example": "業務継続計画の策定が義務づけられている。",
+    "source": "37-72"
+  },
+  {
+    "word": "理念",
+    "count": 6,
+    "meaning": "いちばん大事にする考え方。",
+    "english": "ideal",
+    "pos": "名",
+    "example": "ノーマライゼーションの理念が徐々に浸透した。",
+    "source": "38-94"
+  },
+  {
+    "word": "発語",
+    "count": 6,
+    "meaning": "ことばを声に出して話すこと。",
+    "english": "utterance",
+    "pos": "名",
+    "example": "構音障害のあるＢさんは、現在発語訓練を実施中である。",
+    "source": "37-77"
+  },
+  {
+    "word": "作用",
+    "count": 6,
+    "meaning": "あるものが他に与えるはたらき。",
+    "english": "effect",
+    "pos": "名",
+    "example": "入浴の作用を生かした、高齢者への入浴の介護。",
+    "source": "37-92"
+  },
+  {
+    "word": "援助",
+    "count": 6,
+    "meaning": "助けること。必要な支えを行うこと。",
+    "english": "assistance",
+    "pos": "名",
+    "example": "必要な援助を行い、社会福祉の増進に努める者。",
+    "source": "36-70"
+  },
+  {
+    "word": "改正",
+    "count": 6,
+    "meaning": "法律やしくみをよりよく直すこと。",
+    "english": "revision",
+    "pos": "名",
+    "example": "社会福祉法等の改正に関する記述。",
+    "source": "34-10"
+  },
+  {
+    "word": "苦しい",
+    "count": 6,
+    "meaning": "つらい。楽ではない。",
+    "english": "painful",
+    "pos": "形",
+    "example": "胸が苦しいなど、ほかの訴えはない。",
+    "source": "36-26"
+  },
+  {
+    "word": "筋力",
+    "count": 6,
+    "meaning": "筋肉の力。",
+    "english": "strength",
+    "pos": "名",
+    "example": "下肢筋力を維持するために、同じ運動をする。",
+    "source": "38-115"
+  },
+  {
+    "word": "言動",
+    "count": 6,
+    "meaning": "言うことと行うこと。",
+    "english": "behavior",
+    "pos": "名",
+    "example": "言動の背景要因を分析して理解する。",
+    "source": "34-87"
+  },
+  {
+    "word": "自力",
+    "count": 6,
+    "meaning": "他人に頼らず、自分の力で行うこと。",
+    "english": "oneself",
+    "pos": "名",
+    "example": "福祉用具の使用は避けて、自力での歩行を目指す。",
+    "source": "38-38"
+  },
+  {
+    "word": "担う",
+    "count": 6,
+    "meaning": "役目や責任を引き受けて行うこと。",
+    "english": "bear",
+    "pos": "動",
+    "example": "高齢者が、孫の遊び相手の役割を担う。",
+    "source": "33-4"
+  },
+  {
+    "word": "生活習慣",
+    "count": 6,
+    "meaning": "日常生活でくり返す行動の習慣。",
+    "english": "lifestyle",
+    "pos": "名",
+    "example": "生活習慣は、生活してきた環境から理解する。",
+    "source": "36-68"
+  },
+  {
+    "word": "収集",
+    "count": 6,
+    "meaning": "必要な情報や物を集めること。",
+    "english": "collection",
+    "pos": "名",
+    "example": "介護福祉職が、初回の面談で情報を収集するときの留意点。",
+    "source": "36-106"
+  },
+  {
+    "word": "方針",
+    "count": 6,
+    "meaning": "物事を進めるための基本的な考え。",
+    "english": "policy",
+    "pos": "名",
+    "example": "施設の方針として、新たにケアを取り入れることになった。",
+    "source": "38-119"
+  },
+  {
+    "word": "諦める",
+    "count": 6,
+    "meaning": "できないと決めて、やめること。",
+    "english": "give up",
+    "pos": "動",
+    "example": "合唱コンクールへの参加を諦めるように話す。",
+    "source": "35-2"
+  },
+  {
+    "word": "処分",
+    "count": 6,
+    "meaning": "不要なものを捨てること。",
+    "english": "disposal",
+    "pos": "名",
+    "example": "死後の財産処分のために、終身サポート事業を利用する。",
+    "source": "38-7"
+  },
+  {
+    "word": "満足度",
+    "count": 6,
+    "meaning": "どれだけ満足しているかの程度。",
+    "english": "satisfaction",
+    "pos": "名",
+    "example": "目標達成時の介護福祉職の満足度を記載する。",
+    "source": "38-107"
+  },
+  {
+    "word": "立案",
+    "count": 6,
+    "meaning": "計画を、はっきり考えて作ること。",
+    "english": "planning",
+    "pos": "名",
+    "example": "他職種が立案した介護計画をチームで実践する。",
+    "source": "38-108"
+  },
+  {
+    "word": "判定",
+    "count": 6,
+    "meaning": "ルールに合わせて、どれに当てはまるか決めること。",
+    "english": "ruling",
+    "pos": "名",
+    "example": "障害支援区分の判定。",
+    "source": "38-109"
+  },
+  {
+    "word": "導入",
+    "count": 6,
+    "meaning": "新しい方法や機器を取り入れること。",
+    "english": "introduction",
+    "pos": "名",
+    "example": "導入することによって、生活の質の向上が期待される。",
+    "source": "38-3"
+  },
+  {
+    "word": "動機",
+    "count": 6,
+    "meaning": "行動を起こすきっかけとなる気持ち。",
+    "english": "motive",
+    "pos": "名",
+    "example": "本人が具体的に何をすべきかがわかると、動機づけが強まる。",
+    "source": "33-82"
+  },
+  {
+    "word": "操作",
+    "count": 6,
+    "meaning": "機械や道具を動かして使うこと。",
+    "english": "operation",
+    "pos": "名",
+    "example": "電動車いすを自分で操作することが可能になる。",
+    "source": "33-128"
+  },
+  {
+    "word": "区別",
+    "count": 5,
+    "meaning": "違いを見分けて分けること。",
+    "english": "distinction",
+    "pos": "名",
+    "example": "弱視で物の区別がつきにくい人の支援。",
+    "source": "35-98"
+  },
+  {
+    "word": "明確",
+    "count": 5,
+    "meaning": "はっきりしていて、わかりやすいこと。",
+    "english": "clear",
+    "pos": "形",
+    "example": "利用者の生活課題を明確にすること。",
+    "source": "33-68"
+  },
+  {
+    "word": "指定",
+    "count": 5,
+    "meaning": "条件に合うものとして正式に定めること。",
+    "english": "designation",
+    "pos": "名",
+    "example": "共生型サービスとして、指定を受けることができる。",
+    "source": "38-23"
+  },
+  {
+    "word": "義務",
+    "count": 5,
+    "meaning": "必ずしなければならない責任。",
+    "english": "obligation",
+    "pos": "名",
+    "example": "虐待が疑われる障害者を発見した場合、通報する義務がある。",
+    "source": "38-19"
+  },
+  {
+    "word": "抑制",
+    "count": 5,
+    "meaning": "おさえて、強く出ないようにすること。",
+    "english": "inhibition",
+    "pos": "名",
+    "example": "腸の動きを抑制する。",
+    "source": "33-82"
+  },
+  {
+    "word": "分泌",
+    "count": 5,
+    "meaning": "体内で作られた液が外へ出ること。",
+    "english": "secretion",
+    "pos": "名",
+    "example": "唾液の分泌が増加する。",
+    "source": "38-67"
+  },
+  {
+    "word": "就寝",
+    "count": 5,
+    "meaning": "夜、寝ること。",
+    "english": "bedtime",
+    "pos": "名",
+    "example": "入浴は、就寝の1〜2時間前に行う。",
+    "source": "38-56"
+  },
+  {
+    "word": "知識",
+    "count": 5,
+    "meaning": "学んで身につけた内容。",
+    "english": "knowledge",
+    "pos": "名",
+    "example": "副作用の知識をもって、服薬の介護を行う。",
+    "source": "36-73"
+  },
+  {
+    "word": "敏感",
+    "count": 5,
+    "meaning": "小さな変化にも反応しやすいこと。",
+    "english": "sensitive",
+    "pos": "形",
+    "example": "痛みに敏感になる。",
+    "source": "38-79"
+  },
+  {
+    "word": "喪失",
+    "count": 5,
+    "meaning": "失って、なくすこと。",
+    "english": "loss",
+    "pos": "名",
+    "example": "高齢者は生殖機能の喪失と同時にセクシュアリティを喪失する。",
+    "source": "38-77"
+  },
+  {
+    "word": "特徴的",
+    "count": 5,
+    "meaning": "とくにほかより目立つこと。",
+    "english": "characteristic",
+    "pos": "形",
+    "example": "認知機能が変動することが特徴的である。",
+    "source": "38-84"
+  },
+  {
+    "word": "目安",
+    "count": 5,
+    "meaning": "決めることや行動のよりどころ。",
+    "english": "guide",
+    "pos": "名",
+    "example": "一口量は、ティースプーンに軽く一杯を目安にする。",
+    "source": "38-46"
+  },
+  {
+    "word": "意思決定",
+    "count": 5,
+    "meaning": "考えて、自分で決めること。",
+    "english": "decision",
+    "pos": "名",
+    "example": "障害のある人の意思決定を支援する社会。",
+    "source": "38-91"
+  },
+  {
+    "word": "契約",
+    "count": 5,
+    "meaning": "約束を交わして取り決めること。",
+    "english": "contract",
+    "pos": "名",
+    "example": "障害者の福祉制度が利用契約制度となった。",
+    "source": "38-17"
+  },
+  {
+    "word": "受容",
+    "count": 5,
+    "meaning": "そのまま受け入れること。",
+    "english": "acceptance",
+    "pos": "名",
+    "example": "認知症を長男が受け入れる過程と考えた場合。",
+    "source": "38-90"
+  },
+  {
+    "word": "調節",
+    "count": 5,
+    "meaning": "ちょうどよい様子に整えること。",
+    "english": "regulation",
+    "pos": "名",
+    "example": "体温を調節する。",
+    "source": "38-41"
+  },
+  {
+    "word": "定義",
+    "count": 5,
+    "meaning": "ことばの意味をはっきり決めること。",
+    "english": "definition",
+    "pos": "名",
+    "example": "コンプライアンスの意味として、最も適切なもの。",
+    "source": "38-27"
+  },
+  {
+    "word": "尊重",
+    "count": 5,
+    "meaning": "相手の考えや立場を大切にすること。",
+    "english": "respect",
+    "pos": "名",
+    "example": "Ａさんの意思が大切なので、尊重しませんか。",
+    "source": "38-2"
+  },
+  {
+    "word": "勤務",
+    "count": 5,
+    "meaning": "職場で働くこと。",
+    "english": "work",
+    "pos": "名",
+    "example": "施設で介護福祉職として勤務し、一人暮らしをしている。",
+    "source": "38-77"
+  },
+  {
+    "word": "応答",
+    "count": 5,
+    "meaning": "呼びかけに答えること。",
+    "english": "reply",
+    "pos": "名",
+    "example": "会話を自分に向けたものと思って、応答した。",
+    "source": "38-32"
+  },
+  {
+    "word": "失禁",
+    "count": 5,
+    "meaning": "尿や便をもらしてしまうこと。",
+    "english": "incontinence",
+    "pos": "名",
+    "example": "長期目標を『失禁をしない』と設定した。",
+    "source": "36-111"
+  },
+  {
+    "word": "病態",
+    "count": 5,
+    "meaning": "病気の様子や進み方。",
+    "english": "pathology",
+    "pos": "名",
+    "example": "疾患や病態として、最も適切なものを選びなさい。",
+    "source": "38-93"
+  },
+  {
+    "word": "強化",
+    "count": 5,
+    "meaning": "今より強くすること。",
+    "english": "strengthening",
+    "pos": "名",
+    "example": "管理体制を強化すること。",
+    "source": "38-27"
+  },
+  {
+    "word": "就労",
+    "count": 5,
+    "meaning": "仕事について働くこと。",
+    "english": "employment",
+    "pos": "名",
+    "example": "日中は就労継続支援Ｂ型事業所に通っている。",
+    "source": "38-112"
+  },
+  {
+    "word": "傾く",
+    "count": 5,
+    "meaning": "まっすぐでなく、かたむくこと。",
+    "english": "tilt",
+    "pos": "動",
+    "example": "すぐに右肩が下がり、上半身は右へ傾いた姿勢になる。",
+    "source": "38-123"
+  },
+  {
+    "word": "処方",
+    "count": 5,
+    "meaning": "医師が薬の種類や量を決めること。",
+    "english": "prescription",
+    "pos": "名",
+    "example": "薬を処方されても、服薬管理ができない。",
+    "source": "38-83"
+  },
+  {
+    "word": "原理",
+    "count": 5,
+    "meaning": "物事の基本となるしくみや考え。",
+    "english": "mechanism",
+    "pos": "名",
+    "example": "ノーマライゼーションの8つの原理を提唱した。",
+    "source": "38-1"
+  },
+  {
+    "word": "製品",
+    "count": 5,
+    "meaning": "材料を使って作られた品物。",
+    "english": "product",
+    "pos": "名",
+    "example": "製品を箱に入れる単純作業を任されていた。",
+    "source": "33-112"
+  },
+  {
+    "word": "同行",
+    "count": 5,
+    "meaning": "一緒に行くこと。",
+    "english": "accompaniment",
+    "pos": "名",
+    "example": "店までの移動に不安があるため、同行援護を勧める。",
+    "source": "38-6"
+  },
+  {
+    "word": "整備",
+    "count": 5,
+    "meaning": "必要なものを整えて、使えるようにすること。",
+    "english": "upkeep",
+    "pos": "名",
+    "example": "地域の実情に応じた支援体制の整備について協議を行う。",
+    "source": "34-114"
+  },
+  {
+    "word": "任せる",
+    "count": 5,
+    "meaning": "自分でせず、相手にゆだねる。",
+    "english": "entrust",
+    "pos": "動",
+    "example": "ごみ出しを近所の人に任せること。",
+    "source": "38-110"
+  },
+  {
+    "word": "著しい",
+    "count": 5,
+    "meaning": "程度が非常にはっきり大きい。",
+    "english": "remarkable",
+    "pos": "形",
+    "example": "障害者に対する著しい暴言が当てはまる虐待の類型。",
+    "source": "35-51"
+  },
+  {
+    "word": "自助",
+    "count": 5,
+    "meaning": "自分の力で自分を助けること。",
+    "english": "self-help",
+    "pos": "名",
+    "example": "Ａさんの生活を支える自助に該当するもの。",
+    "source": "38-15"
+  },
+  {
+    "word": "養育者",
+    "count": 5,
+    "meaning": "子どもを育てる立場の人。",
+    "english": "parent",
+    "pos": "名",
+    "example": "養育者がいないと不安な様子になり、再会すると安心して遊ぶ。",
+    "source": "34-79"
+  },
+  {
+    "word": "背景",
+    "count": 5,
+    "meaning": "そのことが起きたうしろにある事情。",
+    "english": "background",
+    "pos": "名",
+    "example": "言動の背景要因を分析して、認知症の人を理解するツール。",
+    "source": "34-87"
+  },
+  {
+    "word": "実習生",
+    "count": 4,
+    "meaning": "現場で学んでいる学生。",
+    "english": "trainee",
+    "pos": "名",
+    "example": "悩んだ実習生は、実習指導者に相談をした。",
+    "source": "37-2"
+  },
+  {
+    "word": "監督",
+    "count": 4,
+    "meaning": "全体を見て、必要なことを言って進め方を伝えること。",
+    "english": "supervision",
+    "pos": "名",
+    "example": "都道府県・指定都市・中核市が指定、監督を行うサービス。",
+    "source": "36-12"
+  }
+]

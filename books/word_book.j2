@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="介護福祉士国家試験 頻出語リスト">
+    <meta name="keywords" content="介護福祉士国家試験, 頻出語, リスト">
     <title>{{ title }}</title>
     <link
         href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@700&family=Noto+Sans+JP:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap"
@@ -11,7 +13,14 @@
 </head>
 <body>
     <main class="page" aria-label="単語リスト">
-        <h1 class="list-caption">{{ title }}</h1>
+        <header class="list-header">
+            <h1 class="list-caption">{{ title }}</h1>
+            <div class="freq-legend" role="note" aria-label="頻度の目安">
+                <p>★★★「最頻出語：本試験で特によく出る最重要語」</p>
+                <p>★★「頻出語：出題頻度が高く優先して覚えたい語」</p>
+                <p>★「基礎・準頻出語：理解しておきたい土台の語」</p>
+            </div>
+        </header>
 
         {% for e in entries %}
         <section class="word-group" id="w-{{ e.index }}">
@@ -23,11 +32,15 @@
                     </label>
                     <div class="flex-cell col-no" aria-hidden="true"></div>
                     <div class="flex-cell col-word">
-                        <div class="table-word">{{ e.word }}</div>
+                        <div class="table-word">{{ e.word_ruby | safe }}</div>
                     </div>
-                    <div class="flex-cell col-freq"><span class="table-freq">{{ e.stars }}</span></div>
-                    <div class="flex-cell col-meaning">{{ e.meaning }}</div>
-                    <div class="flex-cell col-en">{{ e.english }}</div>
+                    <div class="flex-cell col-meaning">
+                        <span class="col-meaning-inner">{{ e.meaning_html | safe }}</span>
+                    </div>
+                    <div class="flex-cell col-en">
+                        <span class="col-en-pos" aria-hidden="true">[{{ e.pos }}]</span>
+                        <span class="col-en-text">{{ e.english }}</span>
+                    </div>
                 </div>
             </div>
             <div class="word-row-example">

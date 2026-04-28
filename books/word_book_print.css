@@ -39,13 +39,39 @@ body {
     background: var(--paper);
 }
 
+.list-header {
+    margin-bottom: 0;
+}
+
 .list-caption {
     font-size: 12px;
     font-weight: 700;
     color: var(--mid);
     letter-spacing: 0.04em;
     padding: 0 0 10px;
+    margin-bottom: 0;
+}
+
+.freq-legend {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--mid);
+    line-height: 1.55;
+    letter-spacing: 0.02em;
+    padding: 0 0 12px;
     border-bottom: 2px solid var(--border);
+    margin-bottom: 0;
+}
+
+.freq-legend p {
+    margin: 0.2em 0;
+}
+
+.freq-legend p:first-child {
+    margin-top: 0;
+}
+
+.freq-legend p:last-child {
     margin-bottom: 0;
 }
 
@@ -76,6 +102,8 @@ body {
 
 .word-row-main {
     padding: 8px 8px 9px;
+    /* 意味が長く1行のまま幅を超えるときに横スクロール */
+    overflow-x: auto;
 }
 
 .word-row-example {
@@ -84,15 +112,13 @@ body {
     background: var(--paper);
 }
 
-.word-group:nth-child(even) .word-row-example {
-    background: rgba(245, 240, 232, 0.65);
-}
 
 .word-main-flex {
     display: flex;
     flex-direction: row;
     flex-wrap: nowrap;
-    align-items: stretch;
+    /* 行内で最も高い列に合わせ、他列は縦方向に中央で揃える */
+    align-items: center;
     column-gap: 5px;
     width: 100%;
     min-height: 3.25rem;
@@ -101,16 +127,12 @@ body {
 .word-main-flex > .flex-cell {
     display: flex;
     align-items: center;
+    align-self: auto;
     min-width: 0;
     padding: 6px 4px;
     font-size: 13.5px;
     line-height: 1.55;
     hyphens: none;
-}
-
-.word-main-flex > .flex-cell.col-meaning,
-.word-main-flex > .flex-cell.col-en {
-    align-items: center;
 }
 
 .word-main-flex > .flex-cell.col-check {
@@ -135,32 +157,75 @@ body {
 
 .word-main-flex > .flex-cell.col-word {
     flex: 0 1 auto;
-    max-width: 22%;
+    max-width: 18%;
     min-width: min(5.5rem, 100%);
     justify-content: flex-start;
     padding-right: 2px;
 }
 
-.word-main-flex > .flex-cell.col-freq {
-    flex: 0 0 auto;
-    justify-content: center;
-    padding-left: 2px;
-}
-
+/* 意味：内容の幅だけ取り、その直後に品詞＋英訳を置く（右端まで伸ばさない） */
 .word-main-flex > .flex-cell.col-meaning {
-    flex: 1 1 28%;
+    display: flex;
+    align-items: center;
     justify-content: flex-start;
+    flex: 0 1 auto;
+    min-width: 0;
     color: var(--ink);
     font-weight: 500;
+    line-height: 1.55;
+    text-align: left;
+}
+
+.word-main-flex > .flex-cell.col-meaning .col-meaning-inner {
+    display: block;
+    min-width: min-content;
+    white-space: nowrap;
+    word-break: keep-all;
+    overflow-wrap: normal;
+    line-height: 1.55;
+}
+
+.word-main-flex > .flex-cell.col-meaning ruby {
+    line-height: 1;
+}
+
+.word-main-flex > .flex-cell.col-meaning ruby rt {
+    line-height: 1;
 }
 
 .word-main-flex > .flex-cell.col-en {
-    flex: 1 1 22%;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    column-gap: 0.45em;
+    flex: 0 0 auto;
+    /* 定義のあとに余白を取ってから左揃えで配置（親の column-gap に加算） */
+    margin-left: 0.65rem;
     justify-content: flex-start;
+    text-align: left;
     font-family: "DM Mono", monospace;
     font-size: 11.5px;
     color: #8e857e;
     line-height: 1.45;
+}
+
+.word-main-flex > .flex-cell.col-en .col-en-pos,
+.word-main-flex > .flex-cell.col-en .col-en-text {
+    font-family: inherit;
+    font-size: inherit;
+    font-weight: inherit;
+    color: inherit;
+    line-height: inherit;
+}
+
+.word-main-flex > .flex-cell.col-en .col-en-pos {
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.word-main-flex > .flex-cell.col-en .col-en-text {
+    min-width: 0;
 }
 
 label.flex-cell.col-check {
@@ -184,19 +249,6 @@ label.flex-cell.col-check {
     color: var(--ink);
     line-height: 1.35;
     letter-spacing: 0.02em;
-}
-
-.table-freq {
-    display: inline-block;
-    background: var(--accent-light);
-    color: var(--gold);
-    font-family: "DM Mono", monospace;
-    font-size: 11px;
-    font-weight: 700;
-    padding: 3px 8px;
-    border-radius: 999px;
-    white-space: nowrap;
-    line-height: 1.2;
 }
 
 .example-block {
@@ -223,6 +275,18 @@ label.flex-cell.col-check {
     font-size: 11px;
     font-weight: inherit;
     white-space: nowrap;
+}
+
+/* ルビ（ふりがな） */
+ruby {
+    ruby-position: over;
+}
+
+ruby rt {
+    font-size: 0.6em;
+    line-height: 1.1;
+    color: var(--mid);
+    font-family: "Noto Sans JP", sans-serif;
 }
 
 @media print {
@@ -258,6 +322,10 @@ label.flex-cell.col-check {
     .word-check {
         print-color-adjust: exact;
         -webkit-print-color-adjust: exact;
+    }
+
+    .word-row-main {
+        overflow-x: visible !important;
     }
 }
 
@@ -300,6 +368,13 @@ label.flex-cell.col-check {
         align-items: flex-start;
     }
 
+    .word-main-flex > .flex-cell.col-en {
+        margin-left: 0;
+        margin-top: 6px;
+        justify-content: flex-start;
+        text-align: left;
+    }
+
     .word-main-flex > .flex-cell:last-child {
         border-bottom: none;
     }
@@ -310,9 +385,5 @@ label.flex-cell.col-check {
 
     .word-row-example .example-block {
         border-radius: 6px;
-    }
-
-    .col-freq {
-        text-align: left;
     }
 }

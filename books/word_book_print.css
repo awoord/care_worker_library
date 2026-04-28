@@ -357,9 +357,9 @@ ruby rt {
         display: grid;
         grid-template-columns: auto auto 1fr;
         grid-template-areas:
-            "check no en"
-            "word word word"
-            "meaning meaning meaning";
+            "check no word"
+            "meaning meaning meaning"
+            "en en en";
         column-gap: 10px;
         row-gap: 8px;
         align-items: center;
@@ -388,11 +388,11 @@ ruby rt {
 
     .word-main-flex > .flex-cell.col-en {
         grid-area: en;
-        justify-content: flex-end;
+        justify-content: flex-start;
         align-items: center;
         margin-left: 0;
         font-size: 11px;
-        text-align: right;
+        text-align: left;
     }
 
     .word-main-flex > .flex-cell.col-word {

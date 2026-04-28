@@ -25,6 +25,11 @@ def _is_kanji(ch: str) -> bool:
     return "\u4e00" <= ch <= "\u9fff" or ch == "\u3005"
 
 
+def _is_kana(ch: str) -> bool:
+    """ひらがな・カタカナ・長音。"""
+    return ("\u3041" <= ch <= "\u3096") or ("\u30a1" <= ch <= "\u30f6") or ch == "ー"
+
+
 # 試験問題の「親｛読み｝」（全角ブレース）。親は漢字と送りの「っ」のみ（長文全体を1つの親にしない）。
 _BRACE_READING_RE = re.compile(r"([\u3005\u4e00-\u9fff\u3063]+)｛([^｝]+)｝")
 
@@ -73,16 +78,87 @@ def _ruby_pykakasi_segment(plain: str) -> str:
     )
 
 
+_RUBY_BLOCK_RE = re.compile(r"<ruby>([^<]+)<rt>([^<]+)</rt></ruby>")
+
+
+def _split_mixed_base_ruby(base: str, reading: str) -> str | None:
+    """親文字が漢字+かな混在の <ruby> を、漢字部分のみルビに分解する。"""
+    if not any(_is_kanji(ch) for ch in base) or not any(_is_kana(ch) for ch in base):
+        return None
+
+    out: list[str] = []
+    pos = 0
+    n = len(base)
+    i = 0
+    while i < n:
+        ch = base[i]
+        if _is_kana(ch):
+            if pos >= len(reading) or reading[pos] != ch:
+                return None
+            out.append(html.escape(ch))
+            pos += 1
+            i += 1
+            continue
+
+        if not _is_kanji(ch):
+            return None
+
+        j = i
+        while j < n and _is_kanji(base[j]):
+            j += 1
+        kanji_part = base[i:j]
+
+        next_kana = None
+        k = j
+        while k < n:
+            if _is_kana(base[k]):
+                next_kana = base[k]
+                break
+            if _is_kanji(base[k]):
+                break
+            return None
+        if next_kana is None:
+            yomi = reading[pos:]
+            pos = len(reading)
+        else:
+            next_pos = reading.find(next_kana, pos)
+            if next_pos < 0:
+                return None
+            yomi = reading[pos:next_pos]
+            pos = next_pos
+        if not yomi:
+            return None
+        out.append(f"<ruby>{html.escape(kanji_part)}<rt>{html.escape(yomi)}</rt></ruby>")
+        i = j
+
+    if pos != len(reading):
+        return None
+    return "".join(out)
+
+
+def _normalize_mixed_base_ruby(fragment: str) -> str:
+    """<ruby>話し合う<rt>はなしあう</rt></ruby> を分解形に正規化する。"""
+
+    def repl(m: re.Match[str]) -> str:
+        base, reading = m.group(1), m.group(2)
+        split = _split_mixed_base_ruby(base, reading)
+        return split if split is not None else m.group(0)
+
+    return _RUBY_BLOCK_RE.sub(repl, fragment)
+
+
 def wrap_keyword_ruby(html: str, word: str) -> str:
     """見出し語に対応する <ruby>…</ruby> だけを card-keyword で包む。
 
-    優先順位: 親文字 == 見出し語 → 親が見出し語の一部（例: 選ぶ×親「選」）。
+    優先順位: 親文字 == 見出し語 → 漢字親＋直後の送り仮名までが見出し語（著しい 等）
+    → 親が見出し語の一部（例: 選ぶ×親「選」）。
     親に見出し語が「含まれるだけ」の場合（例: 障害×「知的障害」）は赤くしない。
     """
     if not word:
         return html
     exact: list[tuple[int, int, int]] = []
     prefix: list[tuple[int, int, int]] = []
+    spanning: list[tuple[int, int, int]] = []
     for m in re.finditer(r"<ruby>([^<]+)<rt>", html):
         base = m.group(1)
         start = m.start()
@@ -93,8 +169,21 @@ def wrap_keyword_ruby(html: str, word: str) -> str:
             exact.append((len(base), start, end))
         elif base in word:
             prefix.append((len(base), start, end))
+    om = _OKURIGANA_HEADWORD_TAIL.match(word)
+    if om:
+        km, oku = om.group(1), om.group(2)
+        if oku and all(_is_kanji(c) for c in km):
+            for m in re.finditer(
+                "<ruby>" + re.escape(km) + r"<rt>[^<]*</rt></ruby>", html
+            ):
+                start = m.start()
+                end = m.end()
+                if html[end : end + len(oku)] == oku:
+                    spanning.append((len(word), start, end + len(oku)))
     if exact:
         _, start, end = max(exact, key=lambda x: x[0])
+    elif spanning:
+        _, start, end = max(spanning, key=lambda x: x[0])
     elif prefix:
         _, start, end = max(prefix, key=lambda x: x[0])
     else:
@@ -105,16 +194,12 @@ def wrap_keyword_ruby(html: str, word: str) -> str:
 
 def example_html_with_keyword(example: str, word: str) -> str:
     """例文にルビを付与し、見出し語に対応する <ruby> ブロックを強調する。"""
-    frag = _coalesce_ruby_okurigana_for_word(add_ruby(example), word)
-    return wrap_keyword_ruby(frag, word)
+    return wrap_keyword_ruby(add_ruby(example), word)
 
 
 def example_html_from_pre_rubied(example_ruby: str, word: str) -> str:
     """OpenAI 済みの example_ruby をそのまま使い、見出し語の <ruby> のみ強調する。"""
-    frag = _coalesce_ruby_okurigana_for_word(
-        _apply_post_ruby_corrections(example_ruby), word
-    )
-    return wrap_keyword_ruby(frag, word)
+    return wrap_keyword_ruby(_apply_post_ruby_corrections(example_ruby), word)
 
 
 # pykakasi が「要介護」を「要介（ようすけ）」＋「護（ご）」と誤分割するための補正。
@@ -128,12 +213,38 @@ _RUBY_WRONG_YOUSEIENSHA = (
     "<ruby>要<rt>よう</rt></ruby><ruby>支援<rt>しえん</rt></ruby><ruby>者<rt>もの</rt></ruby>"
 )
 _RUBY_RIGHT_YOUSEIENSHA = "<ruby>要支援者<rt>ようしえんしゃ</rt></ruby>"
+# 「養育者」を「養育」＋「者（もの）」と誤る。
+_RUBY_WRONG_YOIKUSHA = (
+    "<ruby>養育<rt>よういく</rt></ruby><ruby>者<rt>もの</rt></ruby>"
+)
+_RUBY_RIGHT_YOIKUSHA = "<ruby>養育者<rt>よういくしゃ</rt></ruby>"
+# 「社会福祉士」を「社会福祉」＋「士（さむらい）」と誤る。
+_RUBY_WRONG_SHAKAIFUKUSHISHI = (
+    "<ruby>社会福祉<rt>しゃかいふくし</rt></ruby><ruby>士<rt>さむらい</rt></ruby>"
+)
+_RUBY_RIGHT_SHAKAIFUKUSHISHI = "<ruby>社会福祉士<rt>しゃかいふくしし</rt></ruby>"
 # 「最も」を「最」＋「もっと」＋「も」と誤る。
 _RUBY_WRONG_MOTTOMO = "<ruby>最<rt>もっと</rt></ruby>も"
-_RUBY_RIGHT_MOTTOMO = "<ruby>最も<rt>もっとも</rt></ruby>"
+_RUBY_RIGHT_MOTTOMO = "<ruby>最<rt>もっと</rt></ruby>も"
 # 単独の「人」は文脈では「ひと」が多いが、pykakasi は「にん」になりがち。「人として」だけ「にん」に戻す。
 _RUBY_JIN_HITO_TOSHITE = "<ruby>人<rt>ひと</rt></ruby>として"
 _RUBY_JIN_NIN_TOSHITE = "<ruby>人<rt>にん</rt></ruby>として"
+# 「少し前」は時間の「まえ」。pykakasi が「ぜん」とすることがある。
+_RUBY_WRONG_SUKOSHI_MAE_ZEN = "<ruby>少<rt>すこ</rt></ruby>し<ruby>前<rt>ぜん</rt></ruby>"
+_RUBY_RIGHT_SUKOSHI_MAE = "<ruby>少<rt>すこ</rt></ruby>し<ruby>前<rt>まえ</rt></ruby>"
+# 文脈依存の「方」「力」誤読補正
+_RUBY_WRONG_KINJO_NO_HO_NO_RIKI = (
+    "<ruby>近所<rt>きんじょ</rt></ruby>の<ruby>方<rt>ほう</rt></ruby>の<ruby>力<rt>りき</rt></ruby>"
+)
+_RUBY_RIGHT_KINJO_NO_KATA_NO_CHIKARA = (
+    "<ruby>近所<rt>きんじょ</rt></ruby>の<ruby>方<rt>かた</rt></ruby>の<ruby>力<rt>ちから</rt></ruby>"
+)
+_RUBY_WRONG_ARIKATA_HOU = "あり<ruby>方<rt>ほう</rt></ruby>"
+_RUBY_RIGHT_ARIKATA = "あり<ruby>方<rt>かた</rt></ruby>"
+_RUBY_WRONG_YARIKATA_HOU = "やり<ruby>方<rt>ほう</rt></ruby>"
+_RUBY_RIGHT_YARIKATA = "やり<ruby>方<rt>かた</rt></ruby>"
+_RUBY_WRONG_KAERIKATA_HOU = "<ruby>返<rt>かえ</rt></ruby>り<ruby>方<rt>ほう</rt></ruby>"
+_RUBY_RIGHT_KAERIKATA = "<ruby>返<rt>かえ</rt></ruby>り<ruby>方<rt>かた</rt></ruby>"
 
 # 見出し語（末尾がひらがなの複合動詞など）の <ruby>親<rt>…</rt></ruby>送り を1ブロックにまとめる。
 _OKURIGANA_HEADWORD_TAIL = re.compile(
@@ -141,9 +252,24 @@ _OKURIGANA_HEADWORD_TAIL = re.compile(
 )
 
 
+def _should_coalesce_okurigana_word(word: str) -> bool:
+    """い形容詞・副詞などは送りまで1ルビにしない（著しい、徐々に、赤い 等）。"""
+    if not word or not _OKURIGANA_HEADWORD_TAIL.match(word):
+        return False
+    if word.startswith("徐々"):
+        return False
+    if word.endswith("しい"):
+        return False
+    if word.endswith("い") and len(word) <= 3:
+        return False
+    return True
+
+
 def _coalesce_ruby_okurigana_for_word(fragment: str, word: str) -> str:
     """pykakasi が「伴」「う」のように分けたとき、見出し語全体を1つの <ruby> にまとめる。"""
     if not fragment or not word:
+        return fragment
+    if not _should_coalesce_okurigana_word(word):
         return fragment
     m = _OKURIGANA_HEADWORD_TAIL.match(word)
     if not m:
@@ -170,11 +296,20 @@ def _fix_jin_standalone_ruby(fragment: str) -> str:
 
 def _apply_post_ruby_corrections(fragment: str) -> str:
     """既知の pykakasi 誤ルビを置換する（LLM 済み HTML に誤りが混じった場合も同様）。"""
-    return _fix_jin_standalone_ruby(
+    return _normalize_mixed_base_ruby(
+        _fix_jin_standalone_ruby(
         fragment.replace(_RUBY_WRONG_YOUKAIKO, _RUBY_RIGHT_YOUKAIKO)
         .replace(_RUBY_WRONG_HITORIGURASHI, _RUBY_RIGHT_HITORIGURASHI)
         .replace(_RUBY_WRONG_YOUSEIENSHA, _RUBY_RIGHT_YOUSEIENSHA)
+        .replace(_RUBY_WRONG_YOIKUSHA, _RUBY_RIGHT_YOIKUSHA)
+        .replace(_RUBY_WRONG_SHAKAIFUKUSHISHI, _RUBY_RIGHT_SHAKAIFUKUSHISHI)
         .replace(_RUBY_WRONG_MOTTOMO, _RUBY_RIGHT_MOTTOMO)
+        .replace(_RUBY_WRONG_SUKOSHI_MAE_ZEN, _RUBY_RIGHT_SUKOSHI_MAE)
+        .replace(_RUBY_WRONG_KINJO_NO_HO_NO_RIKI, _RUBY_RIGHT_KINJO_NO_KATA_NO_CHIKARA)
+        .replace(_RUBY_WRONG_ARIKATA_HOU, _RUBY_RIGHT_ARIKATA)
+        .replace(_RUBY_WRONG_YARIKATA_HOU, _RUBY_RIGHT_YARIKATA)
+        .replace(_RUBY_WRONG_KAERIKATA_HOU, _RUBY_RIGHT_KAERIKATA)
+        )
     )
 
 
@@ -223,13 +358,9 @@ def build_entries(words: list[dict]) -> list[dict]:
         row["index"] = i
         word_ruby_llm = (w.get("word_ruby") or "").strip()
         if word_ruby_llm:
-            row["word_ruby"] = _coalesce_ruby_okurigana_for_word(
-                _apply_post_ruby_corrections(word_ruby_llm), w["word"]
-            )
+            row["word_ruby"] = _apply_post_ruby_corrections(word_ruby_llm)
         else:
-            row["word_ruby"] = _coalesce_ruby_okurigana_for_word(
-                add_ruby(w["word"]), w["word"]
-            )
+            row["word_ruby"] = add_ruby(w["word"])
         meaning_ruby_llm = (w.get("meaning_ruby") or "").strip()
         row["meaning_html"] = _apply_post_ruby_corrections(
             meaning_ruby_llm if meaning_ruby_llm else add_ruby(w["meaning"])

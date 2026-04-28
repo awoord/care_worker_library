@@ -108,7 +108,7 @@ body {
 
 .word-row-example {
     padding: 0 8px 12px;
-    border-bottom: 2px solid var(--border);
+    border-bottom: 1px solid var(--border);
     background: var(--paper);
 }
 
@@ -283,8 +283,8 @@ ruby {
 }
 
 ruby rt {
-    font-size: 0.6em;
-    line-height: 1.1;
+    font-size: 0.56em;
+    line-height: 1;
     color: var(--mid);
     font-family: "Noto Sans JP", sans-serif;
 }
@@ -350,7 +350,16 @@ ruby rt {
 
     .word-row-main,
     .word-row-example {
-        padding: 12px !important;
+        padding: 10px 12px !important;
+    }
+
+    /* 3行目（品詞/英語）→4行目（例文）の間隔を、他行間と同程度に詰める */
+    .word-row-main {
+        padding-bottom: 6px !important;
+    }
+
+    .word-row-example {
+        padding-top: 6px !important;
     }
 
     .word-main-flex {
@@ -361,7 +370,7 @@ ruby rt {
             "meaning meaning meaning"
             "en en en";
         column-gap: 10px;
-        row-gap: 8px;
+        row-gap: 6px;
         align-items: center;
         min-height: 0;
     }
@@ -377,13 +386,15 @@ ruby rt {
         grid-area: check;
         justify-content: flex-start;
         align-items: center;
+        height: 1.8rem;
     }
 
     .word-main-flex > .flex-cell.col-no {
         grid-area: no;
         justify-content: flex-start;
         align-items: center;
-        font-size: 13px;
+        height: 1.8rem;
+        font-size: 15px;
     }
 
     .word-main-flex > .flex-cell.col-en {
@@ -399,6 +410,13 @@ ruby rt {
         grid-area: word;
         max-width: none;
         min-width: 0;
+        align-items: center;
+        height: 1.8rem;
+    }
+
+    .word-main-flex > .flex-cell.col-word .table-word {
+        font-size: 20px;
+        line-height: 1.2;
     }
 
     .word-main-flex > .flex-cell.col-meaning {
@@ -409,6 +427,7 @@ ruby rt {
         white-space: normal;
         word-break: auto-phrase;
         overflow-wrap: anywhere;
+        line-height: 1.5;
     }
 
     .word-group .word-main-flex .col-no::before {
@@ -417,5 +436,6 @@ ruby rt {
 
     .word-row-example .example-block {
         border-radius: 6px;
+        margin-top: 0;
     }
 }

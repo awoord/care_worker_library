@@ -354,29 +354,61 @@ ruby rt {
     }
 
     .word-main-flex {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 0;
+        display: grid;
+        grid-template-columns: auto auto 1fr;
+        grid-template-areas:
+            "check no en"
+            "word word word"
+            "meaning meaning meaning";
+        column-gap: 10px;
+        row-gap: 8px;
+        align-items: center;
         min-height: 0;
     }
 
     .word-main-flex > .flex-cell {
-        width: 100%;
-        padding: 10px 12px;
-        border-bottom: 1px solid rgba(224, 216, 206, 0.6);
+        width: auto;
+        min-width: 0;
+        padding: 0;
+        border-bottom: none;
+    }
+
+    .word-main-flex > .flex-cell.col-check {
+        grid-area: check;
         justify-content: flex-start;
-        align-items: flex-start;
+        align-items: center;
+    }
+
+    .word-main-flex > .flex-cell.col-no {
+        grid-area: no;
+        justify-content: flex-start;
+        align-items: center;
+        font-size: 13px;
     }
 
     .word-main-flex > .flex-cell.col-en {
+        grid-area: en;
+        justify-content: flex-end;
+        align-items: center;
         margin-left: 0;
-        margin-top: 6px;
-        justify-content: flex-start;
-        text-align: left;
+        font-size: 11px;
+        text-align: right;
     }
 
-    .word-main-flex > .flex-cell:last-child {
-        border-bottom: none;
+    .word-main-flex > .flex-cell.col-word {
+        grid-area: word;
+        max-width: none;
+        min-width: 0;
+    }
+
+    .word-main-flex > .flex-cell.col-meaning {
+        grid-area: meaning;
+    }
+
+    .word-main-flex > .flex-cell.col-meaning .col-meaning-inner {
+        white-space: normal;
+        word-break: auto-phrase;
+        overflow-wrap: anywhere;
     }
 
     .word-group .word-main-flex .col-no::before {

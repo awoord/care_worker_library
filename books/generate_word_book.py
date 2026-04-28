@@ -395,13 +395,13 @@ def main() -> None:
         "--output",
         type=Path,
         default=None,
-        help="出力 HTML（既定: books/word_book_generated.html）",
+        help="出力 HTML（既定: books/index.html）",
     )
     args = parser.parse_args()
 
     base_dir = Path(__file__).resolve().parent
     json_path = args.input or (base_dir / "extracted_words.json")
-    out_path = args.output or (base_dir / "word_book_generated.html")
+    out_path = args.output or (base_dir / "index.html")
 
     if not json_path.exists():
         raise SystemExit(f"見つかりません: {json_path}")

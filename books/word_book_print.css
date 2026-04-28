@@ -280,13 +280,15 @@ label.flex-cell.col-check {
 /* ルビ（ふりがな） */
 ruby {
     ruby-position: over;
+    line-height: 1.05;
 }
 
 ruby rt {
-    font-size: 0.56em;
-    line-height: 1;
+    font-size: 0.5em;
+    line-height: 0.9;
     color: var(--mid);
     font-family: "Noto Sans JP", sans-serif;
+    letter-spacing: 0;
 }
 
 @media print {
@@ -369,10 +371,10 @@ ruby rt {
             "check no word"
             "meaning meaning meaning"
             "en en en";
-        grid-template-rows: minmax(2.4rem, auto) auto auto;
+        grid-template-rows: auto auto auto;
         column-gap: 10px;
-        row-gap: 6px;
-        align-items: stretch;
+        row-gap: 4px;
+        align-items: end;
         min-height: 0;
     }
 
@@ -386,17 +388,17 @@ ruby rt {
     .word-main-flex > .flex-cell.col-check {
         grid-area: check;
         justify-content: flex-start;
-        align-items: center;
-        min-height: 2.4rem;
-        align-self: stretch;
+        align-items: flex-end;
+        min-height: 0;
+        align-self: end;
     }
 
     .word-main-flex > .flex-cell.col-no {
         grid-area: no;
         justify-content: flex-start;
-        align-items: center;
-        min-height: 2.4rem;
-        align-self: stretch;
+        align-items: baseline;
+        min-height: 0;
+        align-self: end;
         font-size: 15px;
     }
 
@@ -413,14 +415,19 @@ ruby rt {
         grid-area: word;
         max-width: none;
         min-width: 0;
-        align-items: center;
-        min-height: 2.4rem;
-        align-self: stretch;
+        align-items: baseline;
+        min-height: 0;
+        align-self: end;
     }
 
     .word-main-flex > .flex-cell.col-word .table-word {
         font-size: 20px;
-        line-height: 1.2;
+        line-height: 1.05;
+    }
+
+    .word-main-flex > .flex-cell.col-check .word-check {
+        position: relative;
+        top: -1px;
     }
 
     .word-main-flex > .flex-cell.col-meaning {

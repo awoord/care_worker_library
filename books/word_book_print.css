@@ -59,7 +59,7 @@ body {
     line-height: 1.55;
     letter-spacing: 0.02em;
     padding: 0 0 12px;
-    border-bottom: 2px solid var(--border);
+    border-bottom: 1px solid var(--border);
     margin-bottom: 0;
 }
 
@@ -369,9 +369,10 @@ ruby rt {
             "check no word"
             "meaning meaning meaning"
             "en en en";
+        grid-template-rows: minmax(2.4rem, auto) auto auto;
         column-gap: 10px;
         row-gap: 6px;
-        align-items: center;
+        align-items: stretch;
         min-height: 0;
     }
 
@@ -386,14 +387,16 @@ ruby rt {
         grid-area: check;
         justify-content: flex-start;
         align-items: center;
-        height: 1.8rem;
+        min-height: 2.4rem;
+        align-self: stretch;
     }
 
     .word-main-flex > .flex-cell.col-no {
         grid-area: no;
         justify-content: flex-start;
         align-items: center;
-        height: 1.8rem;
+        min-height: 2.4rem;
+        align-self: stretch;
         font-size: 15px;
     }
 
@@ -411,7 +414,8 @@ ruby rt {
         max-width: none;
         min-width: 0;
         align-items: center;
-        height: 1.8rem;
+        min-height: 2.4rem;
+        align-self: stretch;
     }
 
     .word-main-flex > .flex-cell.col-word .table-word {
@@ -437,5 +441,10 @@ ruby rt {
     .word-row-example .example-block {
         border-radius: 6px;
         margin-top: 0;
+    }
+
+    /* カード枠線を 1px に統一（内側の重複線を消す） */
+    .word-row-example {
+        border-bottom: none;
     }
 }

@@ -81,10 +81,8 @@ body {
     page-break-inside: avoid;
     border-left: 1px solid var(--border);
     border-right: 1px solid var(--border);
-}
-
-.word-group:first-of-type {
     border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
 }
 
 .word-row-main {
@@ -108,8 +106,15 @@ body {
 
 .word-row-example {
     padding: 0 8px 12px;
-    border-bottom: 1px solid var(--border);
+    border-bottom: none;
     background: var(--paper);
+}
+
+
+
+
+.word-group:last-of-type .word-row-example {
+    border-bottom: 1px solid var(--border);
 }
 
 

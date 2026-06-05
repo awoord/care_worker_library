@@ -39,7 +39,7 @@
     "word": "利用者",
     "count": 358,
     "meaning": "介護や福祉のサービスを、実際に使っている人。",
-    "english": "service user",
+    "english": "user",
     "pos": "名",
     "example": "利用者の自立支援や生活の質の向上が期待される。",
     "source": "38-3"
@@ -220,7 +220,7 @@
     "word": "様子",
     "count": 49,
     "meaning": "外から見えるものやこと。",
-    "english": "condition",
+    "english": "look",
     "pos": "名",
     "example": "人の世話になることに慣れていない様子もあるが、最期まで自宅で暮らすことを望んでいる。",
     "source": "38-8"
@@ -229,7 +229,7 @@
     "word": "促す",
     "count": 49,
     "meaning": "してほしいと、やさしくすすめること。",
-    "english": "encourage",
+    "english": "urge",
     "pos": "動",
     "example": "高齢者本人による相談が原則のため、Ａさん自身が相談に来るように促す。",
     "source": "38-20"
@@ -339,8 +339,8 @@
     "meaning": "起こる。新しくできる。",
     "english": "occur",
     "pos": "動",
-    "example": "症状が繰り返し生じるようになってきた。",
-    "source": "35-116"
+    "example": "食物が入り誤嚥｛ごえん｝が生じる部位として、適切なものを1つ選びなさい。",
+    "source": "36-24"
   },
   {
     "word": "変更",
@@ -401,7 +401,7 @@
     "word": "基づく",
     "count": 31,
     "meaning": "何かをもとにして考える・決めること。",
-    "english": "be based on",
+    "english": "base",
     "pos": "動",
     "example": "アセスメントに基づく利用者の具体的な生活課題から検討する。",
     "source": "38-107"
@@ -446,7 +446,7 @@
     "word": "担当",
     "count": 28,
     "meaning": "その仕事や役割を引き受けること。",
-    "english": "responsibility",
+    "english": "charge",
     "pos": "名",
     "example": "指定居宅サービスの担当が、Ａさんのケアプランを作成する。",
     "source": "38-10"
@@ -733,11 +733,11 @@
   {
     "word": "連携",
     "count": 18,
-    "meaning": "別々の人が、目的のために協力して動くこと。",
+    "meaning": "別々の者同士が、目的のために協力して動くこと。",
     "english": "coordination",
     "pos": "名",
-    "example": "医療職と連携した介護を実践する。",
-    "source": "36-30"
+    "example": "他職種が望む連携を、定期的なカンファレンスで実現していく。",
+    "source": "38-106"
   },
   {
     "word": "対象",
@@ -895,7 +895,7 @@
   {
     "word": "認める",
     "count": 14,
-    "meaning": "事実だとする。",
+    "meaning": "事実だと認じる。認めてよいと決めること。",
     "english": "acknowledge",
     "pos": "動",
     "example": "Ａさんは、「自分の仕事ぶりを上司に認めてほしいという気持ちはない」と静かに言った。",
@@ -934,14 +934,14 @@
     "meaning": "気をつけること。",
     "english": "attention",
     "pos": "名",
-    "example": "自宅で介護をするときにどのようなことに注意すべきか、と聞かれた。",
-    "source": "38-115"
+    "example": "非接触型体温計による測定では、環境温度に注意する。",
+    "source": "38-101"
   },
   {
     "word": "事業所",
     "count": 14,
     "meaning": "サービスや仕事を行う場所。",
-    "english": "service office",
+    "english": "office",
     "pos": "名",
     "example": "介護予防通所リハビリテーション事業所のＢ介護福祉職は、息子からの相談を受けて利用計画を見直した。",
     "source": "38-115"
@@ -997,8 +997,8 @@
     "meaning": "食べたり飲んだりして体に取り入れること。",
     "english": "intake",
     "pos": "名",
-    "example": "医師からは、食事摂取に配慮するように指導されている。",
-    "source": "38-47"
+    "example": "食物繊維の摂取を促す。",
+    "source": "38-71"
   },
   {
     "word": "図る",
@@ -1049,7 +1049,7 @@
     "word": "留意点",
     "count": 12,
     "meaning": "特に気をつけるべき点。",
-    "english": "point to note",
+    "english": "reminder",
     "pos": "名",
     "example": "次の記述のうち、バイタルサインを測定するときの留意点として、最も適切なものを1つ選びなさい。",
     "source": "38-101"
@@ -1121,7 +1121,7 @@
     "word": "向上",
     "count": 11,
     "meaning": "今よりよくなること。",
-    "english": "improvement",
+    "english": "advancement",
     "pos": "名",
     "example": "利用者の自立支援や生活の質の向上が期待される。",
     "source": "38-3"
@@ -1193,7 +1193,7 @@
     "word": "防止",
     "count": 10,
     "meaning": "起こらないように防ぐこと。",
-    "english": "prevention",
+    "english": "blocking",
     "pos": "名",
     "example": "転倒の防止のため、廊下の手すりを活用して歩行する。",
     "source": "38-10"
@@ -1202,7 +1202,7 @@
     "word": "展開",
     "count": 10,
     "meaning": "広がりながら進んでいくこと。",
-    "english": "development",
+    "english": "expansion",
     "pos": "名",
     "example": "障害者福祉の歴史的展開として、適切なもの。",
     "source": "38-17"
@@ -1229,7 +1229,7 @@
     "word": "確保",
     "count": 10,
     "meaning": "必要なものを、きちんと手に入れて保つこと。",
-    "english": "securing",
+    "english": "assurance",
     "pos": "名",
     "example": "食事をしやすい姿勢を確保するための介護。",
     "source": "38-45"
@@ -1337,7 +1337,7 @@
   {
     "word": "圧迫",
     "count": 9,
-    "meaning": "強く押して力を加えること。",
+    "meaning": "強くおして力を加えること。",
     "english": "compression",
     "pos": "名",
     "example": "呼吸が確認できない場合は、すぐに圧迫を始める。",
@@ -1393,7 +1393,7 @@
     "word": "通報",
     "count": 9,
     "meaning": "警察や市役所などに知らせること。",
-    "english": "report",
+    "english": "alert",
     "pos": "名",
     "example": "緊急時にすぐに通報できる公共サービスを利用している。",
     "source": "38-15"
@@ -1485,7 +1485,7 @@
     "meaning": "実際にするふるまい。",
     "english": "act",
     "pos": "名",
-    "example": "介護福祉士が実施できる経管栄養の行為として、正しいものを1つ選びなさい。",
+    "example": "喀痰吸引や経管栄養は、医行為から除外された。",
     "source": "36-82"
   },
   {
@@ -1493,7 +1493,7 @@
     "count": 8,
     "meaning": "2つ以上あること。",
     "english": "multiple",
-    "pos": "形",
+    "pos": "名",
     "example": "複数の疾患を持ちやすい。",
     "source": "38-79"
   },
@@ -1504,6 +1504,7 @@
     "english": "conference",
     "pos": "名",
     "example": "後日、カンファレンスが開かれ、短期目標が見直された。",
+    "example_ruby": "<ruby>後日<rt>ごじつ</rt></ruby>、<ruby>カンファレンス<rt>かんふぁれんす</rt></ruby>が<ruby>開<rt>ひら</rt></ruby>かれ、<ruby>短期<rt>たんき</rt></ruby><ruby>目標<rt>もくひょう</rt></ruby>が<ruby>見直<rt>みなお</rt></ruby>された。",
     "source": "38-113"
   },
   {
@@ -1527,7 +1528,7 @@
   {
     "word": "実践",
     "count": 8,
-    "meaning": "実際にやってみること。",
+    "meaning": "実際に行ってみること。",
     "english": "practice",
     "pos": "名",
     "example": "他職種が立案した介護計画をチームで実践する。",
@@ -1663,12 +1664,9 @@
     "word": "看取る",
     "count": 7,
     "meaning": "人の最期までそばで世話をして見届ける。",
-    "word_ruby": "<ruby>看取<rt>みと</rt></ruby>る",
-    "meaning_ruby": "<ruby>人<rt>ひと</rt></ruby>の<ruby>最期<rt>さいご</rt></ruby>までそばで<ruby>世話<rt>せわ</rt></ruby>をして<ruby>見届<rt>みとど</rt></ruby>ける。",
-    "english": "be with someone at the end",
+    "english": "stay with",
     "pos": "動",
     "example": "夫を自宅で看取った。",
-    "example_ruby": "<ruby>夫<rt>おっと</rt></ruby>を<ruby>自宅<rt>じたく</rt></ruby>で<ruby>看取<rt>みと</rt></ruby>った。",
     "source": "34-58"
   },
   {
@@ -1684,7 +1682,7 @@
     "word": "口頭",
     "count": 7,
     "meaning": "声に出して伝えること。",
-    "english": "oral",
+    "english": "speech",
     "pos": "名",
     "example": "入浴介助時の報告は、職員間の口頭による伝達に統一する。",
     "source": "38-10"
@@ -1749,8 +1747,8 @@
     "meaning": "ばらばらのものを一つにそろえること。",
     "english": "unification",
     "pos": "名",
-    "example": "使い方を統一する。",
-    "source": "32-37"
+    "example": "報告は、職員間の口頭による伝達に統一する。",
+    "source": "38-10"
   },
   {
     "word": "制定",
@@ -1848,7 +1846,7 @@
     "word": "指摘",
     "count": 6,
     "meaning": "問題点などを示して伝えること。",
-    "english": "pointing out",
+    "english": "critique",
     "pos": "名",
     "example": "できないことを指摘する。",
     "source": "38-97"
@@ -1893,7 +1891,7 @@
     "word": "事前",
     "count": 6,
     "meaning": "何かをする前。あらかじめ。",
-    "english": "beforehand",
+    "english": "advance",
     "pos": "名",
     "example": "会議の資料を、事前に口頭で説明した。",
     "source": "37-57"
@@ -1949,7 +1947,7 @@
     "meaning": "助けること。必要な支えを行うこと。",
     "english": "assistance",
     "pos": "名",
-    "example": "必要な援助を行い、社会福祉の増進に努める。",
+    "example": "必要な援助を行い、社会福祉の増進に努める者。",
     "source": "36-70"
   },
   {
@@ -1992,7 +1990,7 @@
     "word": "自力",
     "count": 6,
     "meaning": "他人に頼らず、自分の力で行うこと。",
-    "english": "by oneself",
+    "english": "oneself",
     "pos": "名",
     "example": "福祉用具の使用は避けて、自力での歩行を目指す。",
     "source": "38-38"
@@ -2073,7 +2071,7 @@
     "word": "判定",
     "count": 6,
     "meaning": "ルールに合わせて、どれに当てはまるか決めること。",
-    "english": "judgment",
+    "english": "ruling",
     "pos": "名",
     "example": "障害支援区分の判定。",
     "source": "38-109"
@@ -2208,7 +2206,7 @@
     "word": "目安",
     "count": 5,
     "meaning": "決めることや行動のよりどころ。",
-    "english": "guideline",
+    "english": "guide",
     "pos": "名",
     "example": "一口量は、ティースプーンに軽く一杯を目安にする。",
     "source": "38-46"
@@ -2217,7 +2215,7 @@
     "word": "意思決定",
     "count": 5,
     "meaning": "考えて、自分で決めること。",
-    "english": "decision making",
+    "english": "decision",
     "pos": "名",
     "example": "障害のある人の意思決定を支援する社会。",
     "source": "38-91"
@@ -2297,7 +2295,7 @@
   {
     "word": "病態",
     "count": 5,
-    "meaning": "病気の様子。",
+    "meaning": "病気の様子や進み方。",
     "english": "pathology",
     "pos": "名",
     "example": "疾患や病態として、最も適切なものを選びなさい。",
@@ -2343,7 +2341,7 @@
     "word": "原理",
     "count": 5,
     "meaning": "物事の基本となるしくみや考え。",
-    "english": "principle",
+    "english": "mechanism",
     "pos": "名",
     "example": "ノーマライゼーションの8つの原理を提唱した。",
     "source": "38-1"

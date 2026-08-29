@@ -1,0 +1,695 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+}
+
+html,
+body {
+    height: 100%;
+    height: 100dvh;
+    overflow: hidden;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: #ffffff;
+    color: #333333;
+    padding: 6px 10px 0 10px;
+}
+
+.container {
+    max-width: 540px;
+    height: 100%;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.view-panel {
+    display: none;
+    flex: 1;
+    min-height: 0;
+    flex-direction: column;
+}
+
+.view-panel.active {
+    display: flex;
+}
+
+/* ボトムナビゲーション */
+.bottom-nav-bar {
+    display: flex;
+    gap: 6px;
+    padding-top: 6px;
+    padding-bottom: max(6px, env(safe-area-inset-bottom));
+    background-color: #ffffff;
+    border-top: 1px solid #e5e7eb;
+    flex-shrink: 0;
+}
+
+.nav-btn {
+    flex: 1;
+    padding: 10px 0;
+    font-size: 13px;
+    font-weight: bold;
+    border: 1px solid #d1d5db;
+    background-color: #f9fafb;
+    border-radius: 8px;
+    cursor: pointer;
+    text-align: center;
+    color: #4b5563;
+}
+
+.nav-btn.active {
+    background-color: #ffedd5;
+    color: #c2410c;
+    border-color: #fdba74;
+}
+
+/* 1. ことば */
+.learn-tab-bar {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 6px;
+    flex-shrink: 0;
+}
+
+.learn-tab-btn {
+    flex: 1;
+    padding: 7px 0;
+    font-size: 13px;
+    font-weight: bold;
+    border: 1px solid #d1d5db;
+    background-color: #ffffff;
+    border-radius: 6px;
+    cursor: pointer;
+    text-align: center;
+}
+
+.learn-tab-btn.active.cat-基本 {
+    background-color: #2563eb;
+    color: #ffffff;
+    border-color: #2563eb;
+}
+
+.learn-tab-btn.active.cat-介護 {
+    background-color: #16a34a;
+    color: #ffffff;
+    border-color: #16a34a;
+}
+
+.learn-tab-btn.active.cat-医療 {
+    background-color: #dc2626;
+    color: #ffffff;
+    border-color: #dc2626;
+}
+
+.learn-tab-btn.active.cat-社会 {
+    background-color: #9333ea;
+    color: #ffffff;
+    border-color: #9333ea;
+}
+
+.learn-header-banner {
+    border-radius: 6px;
+    padding: 10px 14px;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    font-size: 17px;
+    font-weight: bold;
+}
+
+.learn-header-banner.bg-基本 {
+    background-color: #eff6ff;
+    color: #1d4ed8;
+}
+
+.learn-header-banner.bg-介護 {
+    background-color: #f0fdf4;
+    color: #15803d;
+}
+
+.learn-header-banner.bg-医療 {
+    background-color: #fef2f2;
+    color: #b91c1c;
+}
+
+.learn-header-banner.bg-社会 {
+    background-color: #faf5ff;
+    color: #7e22ce;
+}
+
+.learn-header-text {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mask-toggle-btn {
+    padding: 5px 12px;
+    font-size: 13px;
+    font-weight: bold;
+    background-color: #ffffff;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    border-radius: 4px;
+    cursor: pointer;
+    color: #333333;
+    flex-shrink: 0;
+}
+
+.mask-toggle-btn:active {
+    background-color: #f3f4f6;
+}
+
+.word-list {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    margin-bottom: 6px;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+.word-list.hide-details .word-english,
+.word-list.hide-details .word-detail {
+    visibility: hidden !important;
+}
+
+.word-card {
+    flex: 0 0 auto;
+    background-color: #ffffff;
+    padding: 10px 4px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.word-chk-wrap {
+    padding-top: 1px;
+    flex-shrink: 0;
+}
+
+.word-custom-chk {
+    width: 24px;
+    height: 24px;
+    border: 2px solid;
+    border-radius: 4px;
+    background-color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition:
+            background-color 0.1s ease,
+            border-color 0.1s ease;
+}
+
+.word-custom-chk.chk-基本 {
+    border-color: #2563eb;
+}
+
+.word-custom-chk.chk-介護 {
+    border-color: #16a34a;
+}
+
+.word-custom-chk.chk-医療 {
+    border-color: #dc2626;
+}
+
+.word-custom-chk.chk-社会 {
+    border-color: #9333ea;
+}
+
+.word-card.checked .word-custom-chk.chk-基本 {
+    background-color: #2563eb;
+    border-color: #2563eb;
+}
+
+.word-card.checked .word-custom-chk.chk-介護 {
+    background-color: #16a34a;
+    border-color: #16a34a;
+}
+
+.word-card.checked .word-custom-chk.chk-医療 {
+    background-color: #dc2626;
+    border-color: #dc2626;
+}
+
+.word-card.checked .word-custom-chk.chk-社会 {
+    background-color: #9333ea;
+    border-color: #9333ea;
+}
+
+.word-card.checked .word-custom-chk::after {
+    content: "";
+    display: block;
+    width: 6px;
+    height: 12px;
+    border: solid #ffffff;
+    border-width: 0 2.5px 2.5px 0;
+    transform: rotate(45deg);
+    margin-bottom: 2px;
+}
+
+.word-content {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.word-main-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 2px 8px;
+    margin-bottom: 3px;
+}
+
+.word-title {
+    font-size: 17px;
+    font-weight: bold;
+    color: #111827;
+    word-break: break-word;
+}
+
+.word-english {
+    font-size: 16px;
+    color: #475569;
+    font-weight: 500;
+    word-break: break-word;
+}
+
+.word-detail {
+    font-size: 15px;
+    line-height: 1.6;
+    color: #1f2937;
+    white-space: pre-line;
+    word-break: break-word;
+}
+
+.action-container {
+    flex-shrink: 0;
+    display: flex;
+    gap: 8px;
+    padding-bottom: 4px;
+}
+
+.prev-btn {
+    width: 28%;
+    height: 48px;
+    font-size: 15px;
+    font-weight: bold;
+    color: #4b5563;
+    background-color: #f3f4f6;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.prev-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.submit-btn {
+    flex: 1;
+    height: 48px;
+    font-size: 16px;
+    font-weight: bold;
+    color: #ffffff;
+    background-color: #2563eb;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    letter-spacing: 0.5px;
+}
+
+.submit-btn:disabled {
+    background-color: #9ca3af !important;
+    box-shadow: none;
+    cursor: not-allowed;
+}
+
+/* 2. まいにち */
+.daily-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.daily-stats-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+    flex-shrink: 0;
+}
+
+.daily-stat-card {
+    flex: 1;
+    border-radius: 8px;
+    padding: 10px 8px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 3px;
+}
+
+.daily-stat-card.streak {
+    background-color: #fff7ed;
+    border: 1px solid #ffedd5;
+}
+
+.daily-stat-card.streak .daily-stat-label {
+    font-size: 12px;
+    font-weight: bold;
+    color: #c2410c;
+}
+
+.daily-stat-card.streak .daily-stat-value {
+    font-size: 19px;
+    font-weight: 800;
+    color: #ea580c;
+}
+
+.daily-stat-card.words {
+    background-color: #fefce8;
+    border: 1px solid #fef08a;
+}
+
+.daily-stat-card.words .daily-stat-label {
+    font-size: 12px;
+    font-weight: bold;
+    color: #a16207;
+}
+
+.daily-stat-card.words .daily-stat-value {
+    font-size: 19px;
+    font-weight: 800;
+    color: #ca8a04;
+}
+
+.roadmap-title {
+    font-size: 12px;
+    font-weight: bold;
+    color: #64748b;
+    margin-bottom: 6px;
+    padding-left: 2px;
+    flex-shrink: 0;
+}
+
+.roadmap-scroll-wrapper {
+    flex: 1;
+    overflow-y: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background-color: #ffffff;
+    min-height: 0;
+}
+
+.roadmap-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: center;
+}
+
+.roadmap-table th {
+    position: sticky;
+    top: 0;
+    background-color: #f8fafc;
+    font-size: 12px;
+    font-weight: bold;
+    padding: 7px 0;
+    border-bottom: 1px solid #e2e8f0;
+    z-index: 10;
+}
+
+.roadmap-table th.th-week {
+    color: #64748b;
+    width: 23%;
+}
+
+.roadmap-table th.th-day {
+    color: #475569;
+    width: 11%;
+}
+
+.roadmap-table th.th-sat {
+    color: #2563eb;
+}
+
+.roadmap-table th.th-sun {
+    color: #dc2626;
+}
+
+.roadmap-table td {
+    padding: 6px 0;
+    font-size: 13px;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+}
+
+.roadmap-table td.td-week {
+    font-size: 12px;
+    font-weight: bold;
+    color: #475569;
+    background-color: #f8fafc;
+    border-right: 1px solid #f1f5f9;
+}
+
+.roadmap-table tr.current-week td {
+    background-color: #fff7ed;
+}
+
+.roadmap-table tr.current-week td.td-week {
+    background-color: #ffedd5;
+    color: #c2410c;
+}
+
+/* 3. さがす */
+.search-control-area {
+    background-color: #ffffff;
+    margin-bottom: 4px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.search-input-wrapper {
+    display: flex;
+    align-items: center;
+    height: 40px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    background-color: #ffffff;
+    padding: 0 10px;
+    gap: 8px;
+}
+
+.search-input-wrapper:focus-within {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 1px #2563eb;
+}
+
+.search-icon-box {
+    font-size: 16px;
+    line-height: 1;
+    color: #6b7280;
+}
+
+.search-input-field {
+    flex: 1;
+    height: 100%;
+    border: none;
+    outline: none;
+    font-size: 14px;
+    font-family: inherit;
+    color: #111827;
+    background: transparent;
+}
+
+.filter-chip-row {
+    display: flex;
+    gap: 6px;
+}
+
+.filter-chip {
+    flex: 1;
+    height: 36px;
+    font-size: 13px;
+    font-weight: bold;
+    border: 1px solid #d1d5db;
+    background-color: #ffffff;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #4b5563;
+    user-select: none;
+    transition: all 0.1s ease;
+}
+
+.filter-chip.chip-learned.active {
+    background-color: #ea580c;
+    color: #ffffff;
+    border-color: #ea580c;
+}
+
+.filter-chip.chip-unlearned.active {
+    background-color: #0284c7;
+    color: #ffffff;
+    border-color: #0284c7;
+}
+
+.filter-chip.chip-cat-基本.active {
+    background-color: #2563eb;
+    color: #ffffff;
+    border-color: #2563eb;
+}
+
+.filter-chip.chip-cat-介護.active {
+    background-color: #16a34a;
+    color: #ffffff;
+    border-color: #16a34a;
+}
+
+.filter-chip.chip-cat-医療.active {
+    background-color: #dc2626;
+    color: #ffffff;
+    border-color: #dc2626;
+}
+
+.filter-chip.chip-cat-社会.active {
+    background-color: #9333ea;
+    color: #ffffff;
+    border-color: #9333ea;
+}
+
+.search-status-bar {
+    font-size: 12px;
+    font-weight: bold;
+    color: #64748b;
+    padding: 8px 4px;
+    flex-shrink: 0;
+}
+
+.search-result-scroll {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    border-top: 1px solid #e5e7eb;
+}
+
+.search-item-row {
+    padding: 12px 4px;
+    border-bottom: 1px solid #f3f4f6;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.search-item-header {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.search-item-badge {
+    width: 42px;
+    text-align: center;
+    font-size: 11px;
+    font-weight: bold;
+    padding: 2px 0;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+
+.search-item-badge.bg-基本 {
+    background-color: #eff6ff;
+    color: #1d4ed8;
+}
+
+.search-item-badge.bg-介護 {
+    background-color: #f0fdf4;
+    color: #15803d;
+}
+
+.search-item-badge.bg-医療 {
+    background-color: #fef2f2;
+    color: #b91c1c;
+}
+
+.search-item-badge.bg-社会 {
+    background-color: #faf5ff;
+    color: #7e22ce;
+}
+
+.search-item-title {
+    font-size: 17px;
+    font-weight: bold;
+    color: #111827;
+    word-break: break-word;
+}
+
+.search-item-english {
+    font-size: 16px;
+    color: #475569;
+    font-weight: 500;
+    word-break: break-word;
+}
+
+.search-item-detail {
+    margin-left: 54px;
+    font-size: 15px;
+    line-height: 1.5;
+    color: #1f2937;
+    white-space: pre-line;
+    word-break: break-word;
+}
+
+.loading-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(255, 255, 255, 0.7);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: bold;
+    color: #333333;
+}
+
+.loading-overlay.show {
+    display: flex;
+}

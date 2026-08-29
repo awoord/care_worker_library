@@ -8,6 +8,9 @@ from ftplib import FTP_TLS
 FTP_HOST = "www1165.conoha.ne.jp"
 FTP_USER = "ao@nihongo.site"
 FTP_PASS = "highway#61"
+
+
+# サーバー側のアップロード先
 REMOTE_BASE_DIR = "/public_html/nihongo.site"
 
 # 監視するファイルとURLの設定
@@ -17,12 +20,33 @@ WATCH_FILES = {
         "url": "https://nihongo.site/",
         "keyword": "nihongo.site",
     },
+    "style.css": {
+        "remote_dir": REMOTE_BASE_DIR,
+        "url": "https://nihongo.site/",
+        "keyword": "nihongo.site",
+    },
+    "app.js": {
+        "remote_dir": REMOTE_BASE_DIR,
+        "url": "https://nihongo.site/",
+        "keyword": "nihongo.site",
+    },
     "test/index.html": {
         "remote_dir": REMOTE_BASE_DIR + "/test",
         "url": "https://nihongo.site/test/",
         "keyword": "nihongo.site/test",
     },
+    "test/style.css": {
+        "remote_dir": REMOTE_BASE_DIR + "/test",
+        "url": "https://nihongo.site/test/",
+        "keyword": "nihongo.site/test",
+    },
+    "test/app.js": {
+        "remote_dir": REMOTE_BASE_DIR + "/test",
+        "url": "https://nihongo.site/test/",
+        "keyword": "nihongo.site/test",
+    },
 }
+
 
 # サーバー側でキャッシュを無効化する設定
 HTACCESS_CONTENT = """
@@ -36,22 +60,15 @@ HTACCESS_CONTENT = """
 last_mtimes = {file: 0 for file in WATCH_FILES}
 
 
-def reload_browser_in_background(target_url, keyword):
-    """作業中の画面やタブを切り替えずに、裏側で対象タブのみを再読み込みする"""
-    cache_busting_url = (
-        f"{target_url}?v={int(time.time())}"
-        if "?" not in target_url
-        else f"{target_url}&v={int(time.time())}"
-    )
-
+def reload_browser_in_background(keyword):
+    """URLを変更せず、対象のタブをそのまま再読み込みする"""
     chrome_script = f"""
     tell application "Google Chrome"
-        set targetUrl to "{cache_busting_url}"
         if (count of windows) > 0 then
             repeat with w in windows
                 repeat with t in tabs of w
                     if URL of t contains "{keyword}" then
-                        set URL of t to targetUrl
+                        tell t to reload
                         return
                     end if
                 end repeat
@@ -67,7 +84,6 @@ def reload_browser_in_background(target_url, keyword):
 
 def upload(local_file, config):
     remote_dir = config["remote_dir"]
-    target_url = config["url"]
     keyword = config["keyword"]
 
     try:
@@ -77,7 +93,6 @@ def upload(local_file, config):
         ftps.prot_p()
         ftps.set_pasv(True)
 
-        # 送信先フォルダへ移動（なければ作成）
         try:
             ftps.cwd(remote_dir)
         except Exception:
@@ -89,7 +104,7 @@ def upload(local_file, config):
                 pass
             ftps.cwd(remote_dir)
 
-        # 1. サーバーキャッシュ無効化ファイル（.htaccess）を送信
+        # 1. .htaccess を送信
         htaccess_bytes = io.BytesIO(HTACCESS_CONTENT.strip().encode("utf-8"))
         ftps.storbinary("STOR .htaccess", htaccess_bytes)
 
@@ -105,13 +120,19 @@ def upload(local_file, config):
         )
 
         time.sleep(0.5)
-        reload_browser_in_background(target_url, keyword)
+        reload_browser_in_background(keyword)
 
     except Exception as e:
         print(f"エラー発生 ({local_file}): {e}")
 
 
 print("ファイルの監視を開始しました。（終了: Ctrl + C）")
+
+for f in WATCH_FILES:
+    if os.path.exists(f):
+        print(f"〇 監視対象を確認: {f}")
+    else:
+        print(f"× ファイルが見つかりません: {f}")
 
 while True:
     try:

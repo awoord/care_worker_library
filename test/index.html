@@ -1,0 +1,1484 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="description" content="ことば学習アプリ。基本・介護・医療・社会の日本語単語を学習・管理できます。">
+  <meta name="keywords" content="ことば学習,日本語学習,介護の日本語,医療用語,社会用語,介護福祉士,単語帳,日本語単語">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>ことば学習</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html,
+    body {
+      height: 100%;
+      height: 100dvh;
+      overflow: hidden;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #FFFFFF;
+      color: #333333;
+      padding: 6px 10px 0 10px;
+    }
+
+    .container {
+      max-width: 540px;
+      height: 100%;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .view-panel {
+      display: none;
+      flex: 1;
+      min-height: 0;
+      flex-direction: column;
+    }
+
+    .view-panel.active {
+      display: flex;
+    }
+
+    /* ボトムナビゲーション */
+    .bottom-nav-bar {
+      display: flex;
+      gap: 6px;
+      padding-top: 6px;
+      padding-bottom: max(6px, env(safe-area-inset-bottom));
+      background-color: #FFFFFF;
+      border-top: 1px solid #E5E7EB;
+      flex-shrink: 0;
+    }
+
+    .nav-btn {
+      flex: 1;
+      padding: 10px 0;
+      font-size: 13px;
+      font-weight: bold;
+      border: 1px solid #D1D5DB;
+      background-color: #F9FAFB;
+      border-radius: 8px;
+      cursor: pointer;
+      text-align: center;
+      color: #4B5563;
+    }
+
+    .nav-btn.active {
+      background-color: #FFEDD5;
+      color: #C2410C;
+      border-color: #FDBA74;
+    }
+
+    /* 1. ことば */
+    .learn-tab-bar {
+      display: flex;
+      gap: 5px;
+      margin-bottom: 6px;
+      flex-shrink: 0;
+    }
+
+    .learn-tab-btn {
+      flex: 1;
+      padding: 7px 0;
+      font-size: 13px;
+      font-weight: bold;
+      border: 1px solid #D1D5DB;
+      background-color: #FFFFFF;
+      border-radius: 6px;
+      cursor: pointer;
+      text-align: center;
+    }
+
+    .learn-tab-btn.active.cat-基本 {
+      background-color: #2563EB;
+      color: #FFFFFF;
+      border-color: #2563EB;
+    }
+
+    .learn-tab-btn.active.cat-介護 {
+      background-color: #16A34A;
+      color: #FFFFFF;
+      border-color: #16A34A;
+    }
+
+    .learn-tab-btn.active.cat-医療 {
+      background-color: #DC2626;
+      color: #FFFFFF;
+      border-color: #DC2626;
+    }
+
+    .learn-tab-btn.active.cat-社会 {
+      background-color: #9333EA;
+      color: #FFFFFF;
+      border-color: #9333EA;
+    }
+
+    .learn-header-banner {
+      border-radius: 6px;
+      padding: 10px 14px;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+      font-size: 17px;
+      font-weight: bold;
+    }
+
+    .learn-header-banner.bg-基本 {
+      background-color: #EFF6FF;
+      color: #1D4ED8;
+    }
+
+    .learn-header-banner.bg-介護 {
+      background-color: #F0FDF4;
+      color: #15803D;
+    }
+
+    .learn-header-banner.bg-医療 {
+      background-color: #FEF2F2;
+      color: #B91C1C;
+    }
+
+    .learn-header-banner.bg-社会 {
+      background-color: #FAF5FF;
+      color: #7E22CE;
+    }
+
+    .learn-header-text {
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .mask-toggle-btn {
+      padding: 5px 12px;
+      font-size: 13px;
+      font-weight: bold;
+      background-color: #FFFFFF;
+      border: 1px solid rgba(0, 0, 0, 0.15);
+      border-radius: 4px;
+      cursor: pointer;
+      color: #333333;
+      flex-shrink: 0;
+    }
+
+    .mask-toggle-btn:active {
+      background-color: #F3F4F6;
+    }
+
+    .word-list {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-around;
+      margin-bottom: 6px;
+      min-height: 0;
+      overflow-y: auto;
+    }
+
+    .word-list.hide-details .word-english,
+    .word-list.hide-details .word-detail {
+      visibility: hidden !important;
+    }
+
+    .word-card {
+      flex: 0 0 auto;
+      background-color: #FFFFFF;
+      padding: 10px 4px;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      cursor: pointer;
+      user-select: none;
+      border-bottom: 1px solid #F3F4F6;
+    }
+
+    .word-chk-wrap {
+      padding-top: 1px;
+      flex-shrink: 0;
+    }
+
+    .word-custom-chk {
+      width: 24px;
+      height: 24px;
+      border: 2px solid;
+      border-radius: 4px;
+      background-color: #FFFFFF;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background-color 0.1s ease, border-color 0.1s ease;
+    }
+
+    .word-custom-chk.chk-基本 {
+      border-color: #2563EB;
+    }
+
+    .word-custom-chk.chk-介護 {
+      border-color: #16A34A;
+    }
+
+    .word-custom-chk.chk-医療 {
+      border-color: #DC2626;
+    }
+
+    .word-custom-chk.chk-社会 {
+      border-color: #9333EA;
+    }
+
+    .word-card.checked .word-custom-chk.chk-基本 {
+      background-color: #2563EB;
+      border-color: #2563EB;
+    }
+
+    .word-card.checked .word-custom-chk.chk-介護 {
+      background-color: #16A34A;
+      border-color: #16A34A;
+    }
+
+    .word-card.checked .word-custom-chk.chk-医療 {
+      background-color: #DC2626;
+      border-color: #DC2626;
+    }
+
+    .word-card.checked .word-custom-chk.chk-社会 {
+      background-color: #9333EA;
+      border-color: #9333EA;
+    }
+
+    .word-card.checked .word-custom-chk::after {
+      content: "";
+      display: block;
+      width: 6px;
+      height: 12px;
+      border: solid #FFFFFF;
+      border-width: 0 2.5px 2.5px 0;
+      transform: rotate(45deg);
+      margin-bottom: 2px;
+    }
+
+    .word-content {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .word-main-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      flex-wrap: wrap;
+      gap: 2px 8px;
+      margin-bottom: 3px;
+    }
+
+    .word-title {
+      font-size: 17px;
+      font-weight: bold;
+      color: #111827;
+      word-break: break-word;
+    }
+
+    .word-english {
+      font-size: 16px;
+      color: #475569;
+      font-weight: 500;
+      word-break: break-word;
+    }
+
+    .word-detail {
+      font-size: 15px;
+      line-height: 1.6;
+      color: #1F2937;
+      white-space: pre-line;
+      word-break: break-word;
+    }
+
+    .action-container {
+      flex-shrink: 0;
+      display: flex;
+      gap: 8px;
+      padding-bottom: 4px;
+    }
+
+    .prev-btn {
+      width: 28%;
+      height: 48px;
+      font-size: 15px;
+      font-weight: bold;
+      color: #4B5563;
+      background-color: #F3F4F6;
+      border: 1px solid #D1D5DB;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .prev-btn:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
+    .submit-btn {
+      flex: 1;
+      height: 48px;
+      font-size: 16px;
+      font-weight: bold;
+      color: #FFFFFF;
+      background-color: #2563EB;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      letter-spacing: 0.5px;
+    }
+
+    .submit-btn:disabled {
+      background-color: #9CA3AF !important;
+      box-shadow: none;
+      cursor: not-allowed;
+    }
+
+    /* 2. まいにち */
+    .daily-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .daily-stats-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+      flex-shrink: 0;
+    }
+
+    .daily-stat-card {
+      flex: 1;
+      border-radius: 8px;
+      padding: 10px 8px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 3px;
+    }
+
+    .daily-stat-card.streak {
+      background-color: #FFF7ED;
+      border: 1px solid #FFEDD5;
+    }
+
+    .daily-stat-card.streak .daily-stat-label {
+      font-size: 12px;
+      font-weight: bold;
+      color: #C2410C;
+    }
+
+    .daily-stat-card.streak .daily-stat-value {
+      font-size: 19px;
+      font-weight: 800;
+      color: #EA580C;
+    }
+
+    .daily-stat-card.words {
+      background-color: #FEFCE8;
+      border: 1px solid #FEF08A;
+    }
+
+    .daily-stat-card.words .daily-stat-label {
+      font-size: 12px;
+      font-weight: bold;
+      color: #A16207;
+    }
+
+    .daily-stat-card.words .daily-stat-value {
+      font-size: 19px;
+      font-weight: 800;
+      color: #CA8A04;
+    }
+
+    .roadmap-title {
+      font-size: 12px;
+      font-weight: bold;
+      color: #64748B;
+      margin-bottom: 6px;
+      padding-left: 2px;
+      flex-shrink: 0;
+    }
+
+    .roadmap-scroll-wrapper {
+      flex: 1;
+      overflow-y: auto;
+      border: 1px solid #E2E8F0;
+      border-radius: 8px;
+      background-color: #FFFFFF;
+      min-height: 0;
+    }
+
+    .roadmap-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: center;
+    }
+
+    .roadmap-table th {
+      position: sticky;
+      top: 0;
+      background-color: #F8FAFC;
+      font-size: 12px;
+      font-weight: bold;
+      padding: 7px 0;
+      border-bottom: 1px solid #E2E8F0;
+      z-index: 10;
+    }
+
+    .roadmap-table th.th-week {
+      color: #64748B;
+      width: 23%;
+    }
+
+    .roadmap-table th.th-day {
+      color: #475569;
+      width: 11%;
+    }
+
+    .roadmap-table th.th-sat {
+      color: #2563EB;
+    }
+
+    .roadmap-table th.th-sun {
+      color: #DC2626;
+    }
+
+    .roadmap-table td {
+      padding: 6px 0;
+      font-size: 13px;
+      border-bottom: 1px solid #F1F5F9;
+      vertical-align: middle;
+    }
+
+    .roadmap-table td.td-week {
+      font-size: 12px;
+      font-weight: bold;
+      color: #475569;
+      background-color: #F8FAFC;
+      border-right: 1px solid #F1F5F9;
+    }
+
+    .roadmap-table tr.current-week td {
+      background-color: #FFF7ED;
+    }
+
+    .roadmap-table tr.current-week td.td-week {
+      background-color: #FFEDD5;
+      color: #C2410C;
+    }
+
+    /* 3. さがす */
+    .search-control-area {
+      background-color: #FFFFFF;
+      margin-bottom: 4px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .search-input-wrapper {
+      display: flex;
+      align-items: center;
+      height: 40px;
+      border: 1px solid #D1D5DB;
+      border-radius: 8px;
+      background-color: #FFFFFF;
+      padding: 0 10px;
+      gap: 8px;
+    }
+
+    .search-input-wrapper:focus-within {
+      border-color: #2563EB;
+      box-shadow: 0 0 0 1px #2563EB;
+    }
+
+    .search-icon-box {
+      font-size: 16px;
+      line-height: 1;
+      color: #6B7280;
+    }
+
+    .search-input-field {
+      flex: 1;
+      height: 100%;
+      border: none;
+      outline: none;
+      font-size: 14px;
+      font-family: inherit;
+      color: #111827;
+      background: transparent;
+    }
+
+    .filter-chip-row {
+      display: flex;
+      gap: 6px;
+    }
+
+    .filter-chip {
+      flex: 1;
+      height: 36px;
+      font-size: 13px;
+      font-weight: bold;
+      border: 1px solid #D1D5DB;
+      background-color: #FFFFFF;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #4B5563;
+      user-select: none;
+      transition: all 0.1s ease;
+    }
+
+    .filter-chip.chip-learned.active {
+      background-color: #EA580C;
+      color: #FFFFFF;
+      border-color: #EA580C;
+    }
+
+    .filter-chip.chip-unlearned.active {
+      background-color: #0284C7;
+      color: #FFFFFF;
+      border-color: #0284C7;
+    }
+
+    .filter-chip.chip-cat-基本.active {
+      background-color: #2563EB;
+      color: #FFFFFF;
+      border-color: #2563EB;
+    }
+
+    .filter-chip.chip-cat-介護.active {
+      background-color: #16A34A;
+      color: #FFFFFF;
+      border-color: #16A34A;
+    }
+
+    .filter-chip.chip-cat-医療.active {
+      background-color: #DC2626;
+      color: #FFFFFF;
+      border-color: #DC2626;
+    }
+
+    .filter-chip.chip-cat-社会.active {
+      background-color: #9333EA;
+      color: #FFFFFF;
+      border-color: #9333EA;
+    }
+
+    .search-status-bar {
+      font-size: 12px;
+      font-weight: bold;
+      color: #64748B;
+      padding: 8px 4px;
+      flex-shrink: 0;
+    }
+
+    .search-result-scroll {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      border-top: 1px solid #E5E7EB;
+    }
+
+    .search-item-row {
+      padding: 12px 4px;
+      border-bottom: 1px solid #F3F4F6;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .search-item-header {
+      display: flex;
+      align-items: baseline;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .search-item-badge {
+      width: 42px;
+      text-align: center;
+      font-size: 11px;
+      font-weight: bold;
+      padding: 2px 0;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+
+    .search-item-badge.bg-基本 {
+      background-color: #EFF6FF;
+      color: #1D4ED8;
+    }
+
+    .search-item-badge.bg-介護 {
+      background-color: #F0FDF4;
+      color: #15803D;
+    }
+
+    .search-item-badge.bg-医療 {
+      background-color: #FEF2F2;
+      color: #B91C1C;
+    }
+
+    .search-item-badge.bg-社会 {
+      background-color: #FAF5FF;
+      color: #7E22CE;
+    }
+
+    .search-item-title {
+      font-size: 17px;
+      font-weight: bold;
+      color: #111827;
+      word-break: break-word;
+    }
+
+    .search-item-english {
+      font-size: 16px;
+      color: #475569;
+      font-weight: 500;
+      word-break: break-word;
+    }
+
+    .search-item-detail {
+      margin-left: 54px;
+      font-size: 15px;
+      line-height: 1.5;
+      color: #1F2937;
+      white-space: pre-line;
+      word-break: break-word;
+    }
+
+    .loading-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(255, 255, 255, 0.7);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      font-weight: bold;
+      color: #333333;
+    }
+
+    .loading-overlay.show {
+      display: flex;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="container">
+    <!-- 1. ことば -->
+    <div class="view-panel active" id="panelLearn">
+      <div class="learn-tab-bar">
+        <button class="learn-tab-btn active cat-基本" onclick="switchLearnCat('基本')">基本</button>
+        <button class="learn-tab-btn cat-介護" onclick="switchLearnCat('介護')">介護</button>
+        <button class="learn-tab-btn cat-医療" onclick="switchLearnCat('医療')">医療</button>
+        <button class="learn-tab-btn cat-社会" onclick="switchLearnCat('社会')">社会</button>
+      </div>
+
+      <div class="learn-header-banner bg-基本" id="learnHeaderBanner">
+        <div class="learn-header-text" id="learnHeaderText">読み込み中...</div>
+        <button class="mask-toggle-btn" id="maskToggleBtn" onclick="toggleDetailsMask()">かくす</button>
+      </div>
+
+      <div class="word-list" id="wordList"></div>
+
+      <div class="action-container">
+        <button class="prev-btn" id="prevBtn" onclick="goBackLearnWords()" disabled>まえへ</button>
+        <button class="submit-btn" id="submitBtn" onclick="submitProgress()">つぎへ</button>
+      </div>
+    </div>
+
+    <!-- 2. まいにち -->
+    <div class="view-panel" id="panelDaily">
+      <div class="daily-container">
+        <div class="daily-stats-row">
+          <div class="daily-stat-card streak">
+            <div class="daily-stat-label">⭐️ れんぞく達成</div>
+            <div class="daily-stat-value" id="valStreak">0 日</div>
+          </div>
+          <div class="daily-stat-card words">
+            <div class="daily-stat-label">📚 おぼえた単語</div>
+            <div class="daily-stat-value" id="valTotalWords">0 語</div>
+          </div>
+        </div>
+
+        <div class="roadmap-title">合格ロードマップ（2026/8/27 〜 2027/1/31）</div>
+
+        <div class="roadmap-scroll-wrapper">
+          <table class="roadmap-table">
+            <thead>
+              <tr>
+                <th class="th-week">週</th>
+                <th class="th-day">月</th>
+                <th class="th-day">火</th>
+                <th class="th-day">水</th>
+                <th class="th-day">木</th>
+                <th class="th-day">金</th>
+                <th class="th-day th-sat">土</th>
+                <th class="th-day th-sun">日</th>
+              </tr>
+            </thead>
+            <tbody id="roadmapTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. さがす -->
+    <div class="view-panel" id="panelSearch">
+      <div class="search-control-area">
+        <div class="search-input-wrapper">
+          <span class="search-icon-box">🔎</span>
+          <input type="text" class="search-input-field" id="searchInput" placeholder="単語・ふりがな・英語でけんさく"
+            oninput="onSearchFilterChanged()">
+        </div>
+
+        <div class="filter-chip-row">
+          <button class="filter-chip chip-learned" id="chipLearned" onclick="toggleStatusFilter('learned')">覚えた単語</button>
+          <button class="filter-chip chip-unlearned" id="chipUnlearned" onclick="toggleStatusFilter('unlearned')">覚えていない単語</button>
+        </div>
+
+        <div class="filter-chip-row">
+          <button class="filter-chip chip-cat-基本" id="chipCat-基本" onclick="toggleCatCheckbox('基本')">基本</button>
+          <button class="filter-chip chip-cat-介護" id="chipCat-介護" onclick="toggleCatCheckbox('介護')">介護</button>
+          <button class="filter-chip chip-cat-医療" id="chipCat-医療" onclick="toggleCatCheckbox('医療')">医療</button>
+          <button class="filter-chip chip-cat-社会" id="chipCat-社会" onclick="toggleCatCheckbox('社会')">社会</button>
+        </div>
+      </div>
+
+      <div class="search-status-bar" id="searchStatusBar">全 0 語 を表示中</div>
+      <div class="search-result-scroll" id="searchResultList"></div>
+    </div>
+
+    <!-- 最下部ナビゲーション -->
+    <div class="bottom-nav-bar">
+      <button class="nav-btn active" id="btnModeLearn" onclick="switchMainMode('learn')">📔 ことば</button>
+      <button class="nav-btn" id="btnModeDaily" onclick="switchMainMode('daily')">⭐️ まいにち</button>
+      <button class="nav-btn" id="btnModeSearch" onclick="switchMainMode('search')">🔎 さがす</button>
+    </div>
+  </div>
+
+  <div class="loading-overlay" id="loadingOverlay">⏳ 読み込み中...</div>
+
+  <script>
+    var GAS_API_URL = "https://script.google.com/macros/s/AKfycby1hG96pflujpC2yLpK-RhslOoZXgkr_LGBj-IdEG6hnIrcZjp3HUjN4LIp53WJ0S5ceA/exec?env=test";
+
+    var currentMode = localStorage.getItem("saved_main_mode") || "learn";
+    var currentLearnCat = localStorage.getItem("saved_learn_cat") || "基本";
+    var isDetailsHidden = localStorage.getItem("saved_details_hidden") === "true";
+
+    var allWordsList = [];
+    var roadmapData = {};
+    var initialLearnedDatesMap = {};
+    var initialTotalLearned = 0;
+
+    // スモールゴール定義
+    var SMALL_GOALS = {
+      "基本": [200, 250, 300, 400, 500, 600, 700, 750, 800],
+      "介護": [70, 100, 150, 200, 250, 300],
+      "医療": [80, 100, 130, 170, 210, 250],
+      "社会": [50, 75, 100, 125, 150]
+    };
+
+    var currentDisplayWords = {
+      "基本": [],
+      "介護": [],
+      "医療": [],
+      "社会": []
+    };
+
+    var categoryHistory = {
+      "基本": [],
+      "介護": [],
+      "医療": [],
+      "社会": []
+    };
+
+    var selectedStatuses = [];
+    var selectedCats = [];
+
+    var themeColors = {
+      "基本": "#2563EB",
+      "介護": "#16A34A",
+      "医療": "#DC2626",
+      "社会": "#9333EA"
+    };
+
+    function getTodayJSTStr() {
+      var now = new Date();
+      var utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+      var jst = new Date(utc + (9 * 60 * 60000));
+      return formatDateStr(jst);
+    }
+
+    // 現在の達成数に応じた次のスモールゴールを取得
+    function getNextSmallGoal(catName, currentCount, maxCount) {
+      var goals = SMALL_GOALS[catName] || [];
+      for (var i = 0; i < goals.length; i++) {
+        if (goals[i] > currentCount) {
+          return Math.min(goals[i], maxCount);
+        }
+      }
+      return maxCount;
+    }
+
+    window.onload = function () {
+      updateCategoryTabsUI();
+      applyMaskStateUI();
+      showLoading(true);
+
+      fetch(GAS_API_URL)
+        .then(function (res) { return res.json(); })
+        .then(function (res) {
+          showLoading(false);
+          if (res.error) {
+            document.getElementById("learnHeaderText").textContent = "⚠️ " + res.error;
+            return;
+          }
+
+          allWordsList = res.allWords || [];
+          roadmapData = res.roadmap || {};
+          initialTotalLearned = roadmapData.totalLearned || 0;
+
+          initialLearnedDatesMap = {};
+          (roadmapData.learnedDates || []).forEach(function (d) {
+            initialLearnedDatesMap[d] = true;
+          });
+
+          allWordsList.forEach(function (w) {
+            w.cooldown = 0;
+          });
+
+          ["基本", "介護", "医療", "社会"].forEach(function (cat) {
+            currentDisplayWords[cat] = pickNextWords(cat);
+          });
+
+          renderCurrentLearnCat();
+          onSearchFilterChanged();
+          renderRoadmap();
+          switchMainMode(currentMode);
+        })
+        .catch(function (err) {
+          showLoading(false);
+          document.getElementById("learnHeaderText").textContent = "⚠️ 通信エラー: 再読み込みしてください";
+        });
+    };
+
+    function updateCategoryTabsUI() {
+      document.querySelectorAll(".learn-tab-btn").forEach(function (btn) {
+        btn.classList.remove("active");
+      });
+      var initCatBtn = document.querySelector(".learn-tab-btn.cat-" + currentLearnCat);
+      if (initCatBtn) initCatBtn.classList.add("active");
+    }
+
+    function toggleDetailsMask() {
+      isDetailsHidden = !isDetailsHidden;
+      localStorage.setItem("saved_details_hidden", isDetailsHidden ? "true" : "false");
+      applyMaskStateUI();
+    }
+
+    function applyMaskStateUI() {
+      var listEl = document.getElementById("wordList");
+      var btnEl = document.getElementById("maskToggleBtn");
+      if (isDetailsHidden) {
+        listEl.classList.add("hide-details");
+        btnEl.textContent = "みせる";
+      } else {
+        listEl.classList.remove("hide-details");
+        btnEl.textContent = "かくす";
+      }
+    }
+
+    function switchMainMode(mode) {
+      currentMode = mode;
+      localStorage.setItem("saved_main_mode", mode);
+
+      document.getElementById("btnModeLearn").classList.toggle("active", mode === "learn");
+      document.getElementById("btnModeDaily").classList.toggle("active", mode === "daily");
+      document.getElementById("btnModeSearch").classList.toggle("active", mode === "search");
+
+      document.getElementById("panelLearn").classList.toggle("active", mode === "learn");
+      document.getElementById("panelDaily").classList.toggle("active", mode === "daily");
+      document.getElementById("panelSearch").classList.toggle("active", mode === "search");
+
+      if (mode === "search") {
+        onSearchFilterChanged();
+      } else if (mode === "daily") {
+        renderRoadmap();
+      }
+    }
+
+    function switchLearnCat(catName) {
+      currentLearnCat = catName;
+      localStorage.setItem("saved_learn_cat", catName);
+      updateCategoryTabsUI();
+      renderCurrentLearnCat();
+    }
+
+    function pickNextWords(catName) {
+      var list = allWordsList.filter(function (x) { return x.category === catName; });
+      if (list.length === 0) return [];
+
+      var unlearned = list.filter(function (x) { return !x.isLearned; });
+
+      var readyUnlearned = unlearned.filter(function (x) {
+        return !x.cooldown || x.cooldown <= 0;
+      });
+
+      if (readyUnlearned.length >= 5) {
+        return readyUnlearned.slice(0, 5);
+      }
+
+      var result = [].concat(readyUnlearned);
+
+      if (result.length < 5) {
+        var coolingUnlearned = unlearned.filter(function (x) {
+          return x.cooldown > 0 && result.indexOf(x) === -1;
+        });
+        coolingUnlearned.sort(function (a, b) {
+          return (a.cooldown || 0) - (b.cooldown || 0);
+        });
+        result = result.concat(coolingUnlearned.slice(0, 5 - result.length));
+      }
+
+      if (result.length < 5) {
+        var learned = list.filter(function (x) {
+          return x.isLearned && result.indexOf(x) === -1;
+        });
+        result = result.concat(learned.slice(0, 5 - result.length));
+      }
+
+      return result.slice(0, 5);
+    }
+
+    function getLiveTotalLearnedCount() {
+      var baseLearned = allWordsList.filter(function (w) { return w.isLearned; }).length;
+      var diff = 0;
+      var currentCatWords = currentDisplayWords[currentLearnCat] || [];
+      currentCatWords.forEach(function (item) {
+        if (!item.isLearned && item.uiChecked) {
+          diff++;
+        } else if (item.isLearned && item.uiChecked === false) {
+          diff--;
+        }
+      });
+      return Math.max(0, baseLearned + diff);
+    }
+
+    function renderCurrentLearnCat() {
+      var words = currentDisplayWords[currentLearnCat] || [];
+      var color = themeColors[currentLearnCat] || "#2563EB";
+
+      var headerBanner = document.getElementById("learnHeaderBanner");
+      headerBanner.className = "learn-header-banner bg-" + currentLearnCat;
+
+      var submitBtn = document.getElementById("submitBtn");
+      submitBtn.style.backgroundColor = color;
+
+      var prevBtn = document.getElementById("prevBtn");
+      prevBtn.disabled = (categoryHistory[currentLearnCat].length === 0);
+
+      var wordList = document.getElementById("wordList");
+      wordList.innerHTML = "";
+
+      if (words.length === 0 && allWordsList.length === 0) {
+        document.getElementById("learnHeaderText").textContent = currentLearnCat + "： 単語データがありません";
+        return;
+      }
+
+      words.forEach(function (item, idx) {
+        var card = document.createElement("div");
+        card.className = "word-card";
+        card.id = "card-" + idx;
+
+        if (item.uiChecked) {
+          card.classList.add("checked");
+        }
+
+        card.onclick = function () {
+          card.classList.toggle("checked");
+          item.uiChecked = card.classList.contains("checked");
+          updateLiveHeader();
+          renderRoadmap();
+        };
+
+        var chkWrap = document.createElement("div");
+        chkWrap.className = "word-chk-wrap";
+        var innerChk = document.createElement("div");
+        innerChk.className = "word-custom-chk chk-" + currentLearnCat;
+        chkWrap.appendChild(innerChk);
+
+        var content = document.createElement("div");
+        content.className = "word-content";
+
+        var mainRow = document.createElement("div");
+        mainRow.className = "word-main-row";
+
+        var title = document.createElement("div");
+        title.className = "word-title";
+        title.textContent = item.word + " (" + item.ruby + ")";
+
+        var eng = document.createElement("div");
+        eng.className = "word-english";
+        eng.textContent = item.english;
+
+        mainRow.appendChild(title);
+        mainRow.appendChild(eng);
+
+        var detail = document.createElement("div");
+        detail.className = "word-detail";
+        detail.textContent = item.meaning + (item.example ? "\n" + item.example : "");
+
+        content.appendChild(mainRow);
+        content.appendChild(detail);
+
+        card.appendChild(chkWrap);
+        card.appendChild(content);
+
+        wordList.appendChild(card);
+      });
+
+      updateLiveHeader();
+      applyMaskStateUI();
+    }
+
+    function updateLiveHeader() {
+      var list = allWordsList.filter(function (x) { return x.category === currentLearnCat; });
+      var totalInCat = list.length;
+      var learnedCount = list.filter(function (x) { return x.isLearned; }).length;
+
+      var headerText = document.getElementById("learnHeaderText");
+
+      if (totalInCat === 0) {
+        headerText.textContent = currentLearnCat + "： 登録単語 0 語";
+        return;
+      }
+
+      var liveCheckedCount = 0;
+      var unlearnedCardCount = 0;
+
+      (currentDisplayWords[currentLearnCat] || []).forEach(function (item) {
+        if (!item.isLearned) {
+          unlearnedCardCount++;
+          if (item.uiChecked) {
+            liveCheckedCount++;
+          }
+        }
+      });
+
+      var currentTotal = learnedCount + liveCheckedCount;
+
+      if (currentTotal >= totalInCat && totalInCat > 0) {
+        headerText.textContent = currentLearnCat + "： 全 " + totalInCat + " 語 復習中 🔄";
+        return;
+      }
+
+      // スモールゴールの判定
+      var currentGoal = getNextSmallGoal(currentLearnCat, currentTotal, totalInCat);
+      var remaining = Math.max(0, currentGoal - currentTotal);
+
+      var baseText = currentLearnCat + "： " + currentTotal + " / " + currentGoal + " 語 （あと " + remaining + " 語）";
+
+      if (unlearnedCardCount > 0 && liveCheckedCount >= unlearnedCardCount) {
+        headerText.textContent = baseText + "  👍";
+      } else {
+        headerText.textContent = baseText;
+      }
+    }
+
+    function submitProgress() {
+      var words = currentDisplayWords[currentLearnCat];
+      if (!words || words.length === 0) return;
+
+      var checkedWords = [];
+      var uncheckedWords = [];
+      var currentWords = [];
+      var currentSnapshotWords = [];
+
+      words.forEach(function (item) {
+        currentWords.push(item.word);
+        var isChecked = !!item.uiChecked;
+
+        var snapshotItem = Object.assign({}, item);
+        snapshotItem.uiChecked = isChecked;
+        currentSnapshotWords.push(snapshotItem);
+
+        if (isChecked) {
+          checkedWords.push(item.word);
+        } else {
+          uncheckedWords.push(item.word);
+        }
+      });
+
+      var stateSnapshot = allWordsList.map(function (w) {
+        return {
+          word: w.word,
+          isLearned: w.isLearned,
+          cooldown: w.cooldown || 0
+        };
+      });
+
+      categoryHistory[currentLearnCat].push({
+        words: currentSnapshotWords,
+        stateSnapshot: stateSnapshot
+      });
+
+      allWordsList.forEach(function (w) {
+        if (w.category === currentLearnCat) {
+          if (w.cooldown && w.cooldown > 0) {
+            w.cooldown = Math.max(0, w.cooldown - 5);
+          }
+        }
+      });
+
+      allWordsList.forEach(function (w) {
+        if (checkedWords.indexOf(w.word) !== -1) {
+          w.isLearned = true;
+          w.cooldown = 0;
+        } else if (uncheckedWords.indexOf(w.word) !== -1) {
+          w.isLearned = false;
+          w.cooldown = 20;
+        }
+      });
+
+      currentDisplayWords[currentLearnCat] = pickNextWords(currentLearnCat);
+      renderCurrentLearnCat();
+      renderRoadmap();
+
+      fetch(GAS_API_URL, {
+        method: "POST",
+        body: JSON.stringify({
+          category: currentLearnCat,
+          checkedWords: checkedWords,
+          uncheckedWords: uncheckedWords,
+          currentWords: currentWords
+        })
+      }).catch(function (err) {
+        console.error("保存失敗:", err);
+      });
+    }
+
+    function goBackLearnWords() {
+      if (categoryHistory[currentLearnCat].length === 0) return;
+
+      var previousRecord = categoryHistory[currentLearnCat].pop();
+      currentDisplayWords[currentLearnCat] = previousRecord.words;
+
+      if (previousRecord.stateSnapshot) {
+        var restoreChecked = [];
+        var restoreUnchecked = [];
+
+        var snapMap = {};
+        previousRecord.stateSnapshot.forEach(function (s) {
+          snapMap[s.word] = s;
+        });
+
+        for (var i = 0; i < allWordsList.length; i++) {
+          var wName = allWordsList[i].word;
+          if (snapMap.hasOwnProperty(wName)) {
+            allWordsList[i].isLearned = snapMap[wName].isLearned;
+            allWordsList[i].cooldown = snapMap[wName].cooldown;
+
+            if (allWordsList[i].isLearned) {
+              restoreChecked.push(wName);
+            } else {
+              restoreUnchecked.push(wName);
+            }
+          }
+        }
+
+        fetch(GAS_API_URL, {
+          method: "POST",
+          body: JSON.stringify({
+            category: currentLearnCat,
+            checkedWords: restoreChecked,
+            uncheckedWords: restoreUnchecked,
+            currentWords: []
+          })
+        }).catch(function (err) { });
+      }
+
+      renderCurrentLearnCat();
+      renderRoadmap();
+    }
+
+    function toggleStatusFilter(target) {
+      var idx = selectedStatuses.indexOf(target);
+      if (idx === -1) {
+        selectedStatuses.push(target);
+        document.getElementById(target === "learned" ? "chipLearned" : "chipUnlearned").classList.add("active");
+      } else {
+        selectedStatuses.splice(idx, 1);
+        document.getElementById(target === "learned" ? "chipLearned" : "chipUnlearned").classList.remove("active");
+      }
+
+      onSearchFilterChanged();
+    }
+
+    function toggleCatCheckbox(cat) {
+      var idx = selectedCats.indexOf(cat);
+      if (idx === -1) {
+        selectedCats.push(cat);
+        document.getElementById("chipCat-" + cat).classList.add("active");
+      } else {
+        selectedCats.splice(idx, 1);
+        document.getElementById("chipCat-" + cat).classList.remove("active");
+      }
+      onSearchFilterChanged();
+    }
+
+    function onSearchFilterChanged() {
+      var query = (document.getElementById("searchInput").value || "").trim().toLowerCase();
+      var listEl = document.getElementById("searchResultList");
+      listEl.innerHTML = "";
+
+      var matchCount = 0;
+      var hasCatFilter = (selectedCats.length > 0);
+      var hasStatusFilter = (selectedStatuses.length > 0);
+
+      for (var i = 0; i < allWordsList.length; i++) {
+        var item = allWordsList[i];
+
+        if (hasCatFilter && selectedCats.indexOf(item.category) === -1) continue;
+
+        if (hasStatusFilter) {
+          var itemStatus = item.isLearned ? "learned" : "unlearned";
+          if (selectedStatuses.indexOf(itemStatus) === -1) continue;
+        }
+
+        if (query !== "") {
+          var w = (item.word || "").toLowerCase();
+          var r = (item.ruby || "").toLowerCase();
+          var e = (item.english || "").toLowerCase();
+
+          var isPrefixMatch = (w.indexOf(query) === 0 || r.indexOf(query) === 0 || e.indexOf(query) === 0);
+          if (!isPrefixMatch) {
+            continue;
+          }
+        }
+
+        matchCount++;
+
+        var itemRow = document.createElement("div");
+        itemRow.className = "search-item-row";
+
+        var headerLine = document.createElement("div");
+        headerLine.className = "search-item-header";
+
+        var catBadge = document.createElement("span");
+        catBadge.className = "search-item-badge bg-" + item.category;
+        catBadge.textContent = item.category;
+
+        var titleSpan = document.createElement("span");
+        titleSpan.className = "search-item-title";
+        titleSpan.textContent = item.word + " (" + item.ruby + ")";
+
+        var engSpan = document.createElement("span");
+        engSpan.className = "search-item-english";
+        engSpan.textContent = item.english;
+
+        headerLine.appendChild(catBadge);
+        headerLine.appendChild(titleSpan);
+        headerLine.appendChild(engSpan);
+
+        var detailLine = document.createElement("div");
+        detailLine.className = "search-item-detail";
+        detailLine.textContent = item.meaning + (item.example ? "\n" + item.example : "");
+
+        itemRow.appendChild(headerLine);
+        itemRow.appendChild(detailLine);
+
+        listEl.appendChild(itemRow);
+      }
+
+      var statusBar = document.getElementById("searchStatusBar");
+      if (query === "" && !hasStatusFilter && !hasCatFilter) {
+        statusBar.textContent = "全 " + allWordsList.length + " 語 を表示中";
+      } else {
+        var labels = [];
+        if (hasStatusFilter) {
+          if (selectedStatuses.indexOf("learned") !== -1) labels.push("覚えた単語");
+          if (selectedStatuses.indexOf("unlearned") !== -1) labels.push("覚えていない単語");
+        }
+        if (hasCatFilter) labels.push(selectedCats.join("・"));
+
+        var labelHeader = labels.length > 0 ? "【" + labels.join(" の中の ") + "】 " : "";
+        var queryHeader = query !== "" ? "「" + query + "」: " : "";
+        statusBar.textContent = labelHeader + queryHeader + matchCount + " 語";
+      }
+    }
+
+    function renderRoadmap() {
+      if (!roadmapData) return;
+
+      var todayKey = getTodayJSTStr();
+      var liveTotal = getLiveTotalLearnedCount();
+
+      var isAchievedToday = false;
+      if (liveTotal > 0 && liveTotal >= initialTotalLearned) {
+        if (initialLearnedDatesMap[todayKey]) {
+          isAchievedToday = (liveTotal >= initialTotalLearned);
+        } else {
+          isAchievedToday = (liveTotal > initialTotalLearned);
+        }
+      }
+
+      var dynamicLearnedMap = {};
+      for (var dKey in initialLearnedDatesMap) {
+        dynamicLearnedMap[dKey] = true;
+      }
+      if (isAchievedToday) {
+        dynamicLearnedMap[todayKey] = true;
+      } else {
+        delete dynamicLearnedMap[todayKey];
+      }
+
+      var streakCount = 0;
+      var checkDate = new Date();
+      var utc = checkDate.getTime() + (checkDate.getTimezoneOffset() * 60000);
+      var jstDate = new Date(utc + (9 * 60 * 60000));
+
+      if (!dynamicLearnedMap[todayKey]) {
+        jstDate.setDate(jstDate.getDate() - 1);
+      }
+
+      while (true) {
+        var k = formatDateStr(jstDate);
+        if (dynamicLearnedMap[k]) {
+          streakCount++;
+          jstDate.setDate(jstDate.getDate() - 1);
+        } else {
+          break;
+        }
+      }
+
+      document.getElementById("valStreak").textContent = streakCount + " 日";
+      document.getElementById("valTotalWords").textContent = liveTotal + " 語";
+
+      var tbody = document.getElementById("roadmapTableBody");
+      tbody.innerHTML = "";
+
+      var now = new Date();
+      var currentDay = now.getDay();
+      var mondayOffset = now.getDate() - currentDay + (currentDay === 0 ? -6 : 1);
+      var nowMonday = new Date(now.getFullYear(), now.getMonth(), mondayOffset);
+      var nowMondayKey = formatDateStr(nowMonday);
+
+      var totalWeeks = 23;
+      var baseMonday = new Date(2026, 7, 24);
+
+      for (var w = 0; w < totalWeeks; w++) {
+        var thisMon = new Date(baseMonday.getFullYear(), baseMonday.getMonth(), baseMonday.getDate() + (w * 7));
+        var thisMonKey = formatDateStr(thisMon);
+        var isCurrentWeek = (thisMonKey === nowMondayKey);
+
+        var tr = document.createElement("tr");
+        if (isCurrentWeek) {
+          tr.className = "current-week";
+        }
+
+        var startStr = (thisMon.getMonth() + 1) + "/" + thisMon.getDate() + "〜";
+        var weekLabel = startStr;
+        if (isCurrentWeek) {
+          weekLabel = "👉 " + startStr;
+        } else if (w === totalWeeks - 1) {
+          weekLabel = "📘 " + startStr;
+        }
+
+        var tdWeek = document.createElement("td");
+        tdWeek.className = "td-week";
+        tdWeek.textContent = weekLabel;
+        tr.appendChild(tdWeek);
+
+        for (var d = 0; d < 7; d++) {
+          var targetD = new Date(thisMon.getFullYear(), thisMon.getMonth(), thisMon.getDate() + d);
+          var targetKey = formatDateStr(targetD);
+          var symbol = "";
+
+          if (targetKey < "2026-08-28") {
+            symbol = "";
+          } else if (targetKey > "2027-01-31") {
+            symbol = "";
+          } else if (dynamicLearnedMap[targetKey]) {
+            symbol = "⭐️";
+          } else if (targetKey === "2027-01-31") {
+            symbol = "📘";
+          } else if (targetKey > todayKey) {
+            symbol = "⚪️";
+          } else {
+            symbol = "⬜️";
+          }
+
+          var tdDay = document.createElement("td");
+          tdDay.textContent = symbol;
+          tr.appendChild(tdDay);
+        }
+
+        tbody.appendChild(tr);
+      }
+    }
+
+    function formatDateStr(date) {
+      var y = date.getFullYear();
+      var m = ("0" + (date.getMonth() + 1)).slice(-2);
+      var d = ("0" + date.getDate()).slice(-2);
+      return y + "-" + m + "-" + d;
+    }
+
+    function showLoading(isShow) {
+      var overlay = document.getElementById("loadingOverlay");
+      if (isShow) {
+        overlay.classList.add("show");
+      } else {
+        overlay.classList.remove("show");
+      }
+    }
+  </script>
+
+</body>
+
+</html>

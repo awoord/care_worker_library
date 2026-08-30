@@ -1,1 +1,4 @@
 .DS_Store
+selected_word/sheets_config.json
+selected_word/*service-account*.json
+selected_word/credentials*.json

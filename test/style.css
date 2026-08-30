@@ -68,26 +68,31 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-body.env-test {
-  --color-bg: #EFF6FF;
+body.env-test::before,
+body.env-test::after {
+  content: "";
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  z-index: 1001;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    -45deg,
+    #F59E0B 0,
+    #F59E0B 6px,
+    #78350F 6px,
+    #78350F 12px
+  );
 }
 
-body.env-test .loading-overlay {
-  background-color: rgba(239, 246, 255, 0.88);
+body.env-test::before {
+  left: 0;
+  width: max(var(--space-sm), env(safe-area-inset-left));
 }
 
-.deploy-env-banner {
-  flex-shrink: 0;
-  text-align: center;
-  font-size: clamp(11px, 3vw, 12px);
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  color: #0369A1;
-  background-color: #BAE6FD;
-  border: 1px solid #7DD3FC;
-  border-radius: var(--radius-sm);
-  padding: 4px var(--space-sm);
-  line-height: var(--line-height-tight);
+body.env-test::after {
+  right: 0;
+  width: max(var(--space-sm), env(safe-area-inset-right));
 }
 
 .container {
@@ -113,7 +118,7 @@ body.env-test .loading-overlay {
 #panelLearn {
   display: none;
   grid-template-rows: auto auto 1fr auto;
-  gap: var(--space-xs);
+  gap: 3px;
 }
 
 #panelLearn.active {
@@ -311,7 +316,7 @@ body.env-test .loading-overlay {
 }
 
 #panelLearn .word-list {
-  gap: var(--space-xs);
+  gap: 3px;
 }
 
 .word-list.word-list-scroll {
@@ -323,12 +328,12 @@ body.env-test .loading-overlay {
 .word-list.word-list-fit {
   overflow: hidden;
   justify-content: flex-start;
-  gap: var(--space-xs);
+  gap: 3px;
 }
 
 .word-list.word-list-fit.word-list-fit-partial {
   justify-content: flex-start;
-  gap: var(--space-xs);
+  gap: 3px;
 }
 
 .word-list.word-list-fit .word-card {
@@ -356,7 +361,11 @@ body.env-test .loading-overlay {
   box-shadow: var(--shadow-soft);
 }
 
-#panelLearn .word-card,
+#panelLearn .word-card {
+  --word-card-pad-y: 9px;
+  padding: var(--word-card-pad-y) var(--space-sm);
+}
+
 #panelSearch .search-item-row {
   --word-card-pad-y: 10px;
   padding: var(--word-card-pad-y) var(--space-sm);
@@ -367,9 +376,44 @@ body.env-test .loading-overlay {
   gap: 0;
 }
 
-#panelLearn .word-meaning,
+#panelLearn .word-meaning {
+  margin-top: 4px;
+}
+
 #panelSearch .search-item-body .word-meaning {
   margin-top: min(6px, var(--word-card-pad-y));
+}
+
+#panelLearn .word-ja-block {
+  gap: 1px;
+}
+
+#panelLearn .word-meaning,
+#panelLearn .word-example {
+  line-height: 1.4;
+}
+
+#panelLearn .learn-tab-bar {
+  gap: var(--space-xs);
+}
+
+#panelLearn .learn-tab-btn {
+  min-height: 39px;
+  padding: var(--space-xs) 0;
+}
+
+#panelLearn .learn-header-banner {
+  padding: var(--space-xs) var(--space-sm);
+  min-height: 40px;
+}
+
+#panelLearn .learn-nav-footer {
+  gap: 3px;
+  padding-bottom: 3px;
+}
+
+.container:has(#panelLearn.active) {
+  gap: 3px;
 }
 
 .word-card.checked {
@@ -893,7 +937,9 @@ body.env-test .loading-overlay {
 .search-item-chk-wrap {
   min-width: var(--touch-min);
   min-height: var(--touch-min);
-  height: auto;
+  height: calc(var(--font-size-word) * var(--line-height-tight));
+  align-items: flex-start;
+  justify-content: center;
   cursor: pointer;
 }
 
@@ -962,7 +1008,7 @@ body.env-test .loading-overlay {
 /* スマホ（ことばタブの5語収まり） */
 @media (max-width: 599px) {
   #panelLearn {
-    gap: var(--space-xs);
+    gap: 3px;
   }
 
   .word-list {
@@ -970,7 +1016,7 @@ body.env-test .loading-overlay {
   }
 
   #panelLearn .word-list {
-    gap: var(--space-xs);
+    gap: 3px;
   }
 
   .learn-nav-footer {
@@ -978,7 +1024,17 @@ body.env-test .loading-overlay {
     padding-bottom: var(--space-xs);
   }
 
+  #panelLearn .learn-nav-footer {
+    gap: 3px;
+    padding-bottom: 3px;
+  }
+
   .learn-header-banner {
+    padding: var(--space-xs) var(--space-sm);
+    min-height: 40px;
+  }
+
+  #panelLearn .learn-header-banner {
     padding: var(--space-xs) var(--space-sm);
     min-height: 40px;
   }
@@ -1018,8 +1074,20 @@ body.env-test .loading-overlay {
     padding-right: max(var(--space-md), env(safe-area-inset-right));
   }
 
+  body.env-test::before {
+    width: max(var(--space-md), env(safe-area-inset-left));
+  }
+
+  body.env-test::after {
+    width: max(var(--space-md), env(safe-area-inset-right));
+  }
+
   .container {
     gap: var(--space-sm);
+  }
+
+  .container:has(#panelLearn.active) {
+    gap: 3px;
   }
 
   .word-list {
@@ -1027,19 +1095,24 @@ body.env-test .loading-overlay {
   }
 
   #panelLearn .word-list {
-    gap: var(--space-xs);
+    gap: 3px;
   }
 
-  #panelLearn .word-card,
+  #panelLearn .word-card {
+    --word-card-pad-y: 9px;
+    padding: var(--word-card-pad-y) var(--space-md);
+  }
+
   #panelSearch .search-item-row {
     --word-card-pad-y: var(--space-sm);
     padding: var(--word-card-pad-y) var(--space-md);
   }
 }
 
-/* タブレット以上（ことばタブ：5語固定・読みやすさ調整） */
+/* タブレット以上（ことば・さがす：読みやすさ調整） */
 @media (min-width: 600px) {
-  #panelLearn {
+  #panelLearn,
+  #panelSearch {
     --font-size-word: clamp(18px, 2.6vw, 22px);
     --font-size-reading: clamp(15px, 2.2vw, 17px);
     --font-size-english: clamp(15px, 2.1vw, 17px);
@@ -1048,11 +1121,17 @@ body.env-test .loading-overlay {
   }
 
   #panelLearn .word-card {
+    --word-card-pad-y: 12px;
+    padding: var(--word-card-pad-y) var(--space-md);
+  }
+
+  #panelSearch .search-item-row {
     --word-card-pad-y: 14px;
     padding: var(--word-card-pad-y) var(--space-md);
   }
 
-  #panelLearn .word-example {
+  #panelLearn .word-example,
+  #panelSearch .word-example {
     font-size: clamp(13px, 2vw, 15px);
   }
 }

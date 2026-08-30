@@ -21,22 +21,12 @@ function applyDeployEnvUI() {
 
   var themeMeta = document.querySelector('meta[name="theme-color"]');
   if (themeMeta) {
-    themeMeta.setAttribute("content", "#EFF6FF");
+    themeMeta.setAttribute("content", "#EA580C");
   }
 
   if (document.title.indexOf("【テスト】") !== 0) {
     document.title = "【テスト】" + document.title;
   }
-
-  var container = document.querySelector(".container");
-  if (!container || container.querySelector(".deploy-env-banner")) return;
-
-  var banner = document.createElement("div");
-  banner.className = "deploy-env-banner";
-  banner.setAttribute("role", "status");
-  banner.setAttribute("aria-live", "polite");
-  banner.textContent = "テスト環境";
-  container.insertBefore(banner, container.firstChild);
 }
 
 var uiState = {
@@ -55,6 +45,8 @@ var todayCommittedLearned = {};
 var localLearnedOverrides = {};
 var pendingChecks = {};
 var postInFlightWords = {};
+var pendingChecksSendPromise = Promise.resolve();
+var searchCheckSendTimer = null;
 
 var selectedStatuses = [];
 var selectedCats = [];
@@ -321,17 +313,6 @@ function getNextSmallGoal(catName, currentCount, maxCount) {
   return maxCount;
 }
 
-function getLastClearedGoal(catName, learnedCount) {
-  var goals = SMALL_GOALS[catName] || [];
-  var last = null;
-  for (var i = 0; i < goals.length; i++) {
-    if (goals[i] <= learnedCount) {
-      last = goals[i];
-    }
-  }
-  return last;
-}
-
 function applyLearnListScrollMode(wordList) {
   wordList.classList.remove("word-list-fit", "word-list-fit-partial");
   wordList.classList.add("word-list-scroll");
@@ -547,6 +528,41 @@ function rollbackPendingCommit(snapshot, committedSnapshot, wordsToCommit) {
   }
 }
 
+function applyLocalLearnedSnapshot(snapshot) {
+  for (var wordName in snapshot) {
+    if (!snapshot.hasOwnProperty(wordName)) continue;
+    var item = allWordsList.find(function (w) { return w.word === wordName; });
+    if (item) {
+      item.isLearned = !!snapshot[wordName];
+    }
+  }
+}
+
+function mergePendingAndOverrideLearnedState() {
+  for (var i = 0; i < allWordsList.length; i++) {
+    var wordName = allWordsList[i].word;
+    if (pendingChecks.hasOwnProperty(wordName)) {
+      allWordsList[i].isLearned = pendingChecks[wordName];
+    } else if (localLearnedOverrides.hasOwnProperty(wordName)) {
+      allWordsList[i].isLearned = !!localLearnedOverrides[wordName];
+    }
+  }
+}
+
+function scheduleSearchCheckSync() {
+  clearTimeout(searchCheckSendTimer);
+  searchCheckSendTimer = setTimeout(function () {
+    searchCheckSendTimer = null;
+    applyAndSendPendingChecks();
+  }, 180);
+}
+
+function flushPendingChecksNow() {
+  clearTimeout(searchCheckSendTimer);
+  searchCheckSendTimer = null;
+  applyAndSendPendingChecks();
+}
+
 function finalizeCommittedChecks(wordsToCommit) {
   wordsToCommit.forEach(function (wordName) {
     delete postInFlightWords[wordName];
@@ -556,9 +572,17 @@ function finalizeCommittedChecks(wordsToCommit) {
 }
 
 function applyAndSendPendingChecks() {
+  pendingChecksSendPromise = pendingChecksSendPromise
+    .then(flushPendingChecksOnce)
+    .catch(function (err) {
+      console.error("チェック同期エラー:", err);
+    });
+}
+
+function flushPendingChecksOnce() {
   var wordsToCommit = Object.keys(pendingChecks);
   if (wordsToCommit.length === 0) {
-    return;
+    return Promise.resolve();
   }
 
   var checkedWords = [];
@@ -611,7 +635,7 @@ function applyAndSendPendingChecks() {
     postPayload.env = "test";
   }
 
-  fetch(getApiUrl(), {
+  return fetch(getApiUrl(), {
     method: "POST",
     headers: {
       "Content-Type": "text/plain;charset=utf-8"
@@ -624,6 +648,7 @@ function applyAndSendPendingChecks() {
     }
     return loadDataFromDB(false);
   }).then(function () {
+    applyLocalLearnedSnapshot(snapshot);
     finalizeCommittedChecks(wordsToCommit);
     refreshLearnedCountDisplays(uiState.mode === "daily");
     if (uiState.mode === "learn") {
@@ -631,9 +656,11 @@ function applyAndSendPendingChecks() {
     } else if (uiState.mode === "search") {
       onSearchFilterChanged();
     }
+    return flushPendingChecksOnce();
   }).catch(function (err) {
     rollbackPendingCommit(snapshot, committedSnapshot, wordsToCommit);
     console.error("DB送信エラー:", err);
+    throw err;
   });
 }
 
@@ -659,6 +686,7 @@ function loadDataFromDB(isInitial) {
         w.originalIndex = idx;
       });
       allWordsList = rawWords;
+      mergePendingAndOverrideLearnedState();
       roadmapData = res.roadmap || {};
       invalidateLearnPageOffsetsCache();
 
@@ -792,7 +820,7 @@ function applyMaskStateUI() {
 
 function switchMainMode(mode) {
   if ((mode === "daily" || mode === "search") && uiState.mode === "learn") {
-    applyAndSendPendingChecks();
+    flushPendingChecksNow();
   }
 
   uiState.mode = mode;
@@ -978,14 +1006,11 @@ function updateLiveHeader() {
   var remaining = Math.max(0, nextGoal - liveCatLearned);
   var catGoals = SMALL_GOALS[catName] || [];
   var isExactGoal = liveCatLearned > 0 && catGoals.indexOf(liveCatLearned) !== -1;
-  var lastCleared = getLastClearedGoal(catName, liveCatLearned);
   var nextLabel = "　つぎは " + nextGoal + "語（あと" + remaining + "語）";
   var progressLabel;
 
   if (isExactGoal) {
     progressLabel = liveCatLearned + "語 おぼえた!! 🎉";
-  } else if (lastCleared !== null) {
-    progressLabel = lastCleared + "語 おぼえた";
   } else if (liveCatLearned > 0) {
     progressLabel = liveCatLearned + "語 おぼえた";
   } else {
@@ -1004,7 +1029,7 @@ function submitProgress() {
   uiState.pageByCat[uiState.learnCat] = getNextLearnPageOffset(uiState.learnCat, currentOffset);
   persistUiState();
 
-  applyAndSendPendingChecks();
+  flushPendingChecksNow();
   renderCurrentLearnCat();
 }
 
@@ -1017,7 +1042,7 @@ function goBackLearnWords() {
   uiState.pageByCat[uiState.learnCat] = getPreviousLearnPageOffset(uiState.learnCat, currentOffset);
   persistUiState();
 
-  applyAndSendPendingChecks();
+  flushPendingChecksNow();
   renderCurrentLearnCat();
 }
 
@@ -1086,7 +1111,7 @@ function onSearchItemClick(wordName, rowEl) {
   var newStatus = !getWordChecked(item);
   rowEl.classList.toggle("checked", newStatus);
   pendingChecks[wordName] = newStatus;
-  applyAndSendPendingChecks();
+  scheduleSearchCheckSync();
 
   if (selectedStatuses.length > 0) {
     var itemStatus = newStatus ? "learned" : "unlearned";

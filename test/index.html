@@ -1,58 +1,62 @@
 <!DOCTYPE html>
 <html lang="ja">
-
 <head>
   <meta charset="UTF-8">
-  <meta name="robots" content="noindex, nofollow">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="description" content="ことば学習アプリ。基本・介護・医療・社会の日本語単語を学習・管理できます。">
-  <meta name="keywords" content="ことば学習,日本語学習,介護の日本語,医療用語,社会用語,介護福祉士,単語帳,日本語単語">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <meta http-equiv="Pragma" content="no-cache">
-  <meta http-equiv="Expires" content="0">
-  <title>ことば学習</title>
+  <meta name="application-name" content="ことば学習">
+  <meta name="theme-color" content="#F7F6F3">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>ジャスミンさんのやさしい日本語</title>
   <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
-
   <div class="container">
-    <div class="view-panel active" id="panelLearn">
-      <div class="learn-tab-bar">
-        <button class="learn-tab-btn active cat-基本" onclick="switchLearnCat('基本')">基本</button>
-        <button class="learn-tab-btn cat-介護" onclick="switchLearnCat('介護')">介護</button>
-        <button class="learn-tab-btn cat-医療" onclick="switchLearnCat('医療')">医療</button>
-        <button class="learn-tab-btn cat-社会" onclick="switchLearnCat('社会')">社会</button>
+
+    <!-- 1. ことばパネル -->
+    <div id="panelLearn" class="view-panel active">
+      <div class="learn-tab-bar" role="tablist" aria-label="カテゴリー">
+        <button type="button" class="learn-tab-btn cat-基本" data-cat="基本" role="tab">基本</button>
+        <button type="button" class="learn-tab-btn cat-介護" data-cat="介護" role="tab">介護</button>
+        <button type="button" class="learn-tab-btn cat-医療" data-cat="医療" role="tab">医療</button>
+        <button type="button" class="learn-tab-btn cat-社会" data-cat="社会" role="tab">社会</button>
       </div>
 
-      <div class="learn-header-banner bg-基本" id="learnHeaderBanner">
-        <div class="learn-header-text" id="learnHeaderText">読み込み中...</div>
-        <button class="mask-toggle-btn" id="maskToggleBtn" onclick="toggleDetailsMask()">かくす</button>
+      <div id="learnHeaderBanner" class="learn-header-banner bg-基本">
+        <div id="learnHeaderText" class="learn-header-text"></div>
       </div>
 
-      <div class="word-list" id="wordList"></div>
+      <div id="wordList" class="word-list word-list-scroll" role="list" aria-label="単語リスト">
+        <!-- 単語カードが動的に挿入されます -->
+      </div>
 
-      <div class="action-container">
-        <button class="prev-btn" id="prevBtn" onclick="goBackLearnWords()" disabled>まえへ</button>
-        <button class="submit-btn" id="submitBtn" onclick="submitProgress()">つぎへ</button>
+      <div class="learn-nav-footer">
+        <div id="learnPageNav" class="learn-page-nav">
+          <div id="learnPageIndicator" class="learn-page-indicator" aria-live="polite">1 / 1</div>
+        </div>
+        <div class="action-container">
+          <button type="button" id="prevBtn" class="prev-btn">まえへ</button>
+          <button type="button" id="maskToggleBtn" class="mask-toggle-btn" aria-label="英語と意味を隠す">かくす</button>
+          <button type="button" id="submitBtn" class="submit-btn">つぎへ</button>
+        </div>
       </div>
     </div>
 
-    <div class="view-panel" id="panelDaily">
+    <!-- 2. まいにちパネル -->
+    <div id="panelDaily" class="view-panel">
       <div class="daily-container">
         <div class="daily-stats-row">
           <div class="daily-stat-card streak">
-            <div class="daily-stat-label">⭐️ れんぞく達成</div>
-            <div class="daily-stat-value" id="valStreak">0 日</div>
+            <span class="daily-stat-label">れんぞく達成</span>
+            <span id="valStreak" class="daily-stat-value" aria-live="polite">0 日</span>
           </div>
           <div class="daily-stat-card words">
-            <div class="daily-stat-label">📚 おぼえた単語</div>
-            <div class="daily-stat-value" id="valTotalWords">0 語</div>
+            <span class="daily-stat-label">おぼえた単語</span>
+            <span id="valTotalWords" class="daily-stat-value" aria-live="polite">0 語</span>
           </div>
         </div>
 
-        <div class="roadmap-title">合格ロードマップ（2026/8/27 〜 2027/1/31）</div>
-
+        <div class="roadmap-title">学習ロードマップ</div>
         <div class="roadmap-scroll-wrapper">
           <table class="roadmap-table">
             <thead>
@@ -67,47 +71,66 @@
                 <th class="th-day th-sun">日</th>
               </tr>
             </thead>
-            <tbody id="roadmapTableBody"></tbody>
+            <tbody id="roadmapTableBody">
+              <!-- ロードマップ行が挿入されます -->
+            </tbody>
           </table>
         </div>
       </div>
     </div>
 
-    <div class="view-panel" id="panelSearch">
-      <div class="search-control-area">
-        <div class="search-input-wrapper">
-          <span class="search-icon-box">🔎</span>
-          <input type="text" class="search-input-field" id="searchInput" placeholder="単語・ふりがな・英語でけんさく"
-            oninput="onSearchFilterChanged()">
+    <!-- 3. さがすパネル -->
+    <div id="panelSearch" class="view-panel">
+      <div class="search-filter-panel">
+        <div class="filter-chip-row">
+          <div id="chipLearned" class="filter-chip chip-learned" role="button" tabindex="0">おぼえた</div>
+          <div id="chipUnlearned" class="filter-chip chip-unlearned" role="button" tabindex="0">おぼえていない</div>
         </div>
 
-        <div class="filter-chip-row">
-          <button class="filter-chip chip-learned" id="chipLearned" onclick="toggleStatusFilter('learned')">覚えた単語</button>
-          <button class="filter-chip chip-unlearned" id="chipUnlearned" onclick="toggleStatusFilter('unlearned')">覚えていない単語</button>
-        </div>
-
-        <div class="filter-chip-row">
-          <button class="filter-chip chip-cat-基本" id="chipCat-基本" onclick="toggleCatCheckbox('基本')">基本</button>
-          <button class="filter-chip chip-cat-介護" id="chipCat-介護" onclick="toggleCatCheckbox('介護')">介護</button>
-          <button class="filter-chip chip-cat-医療" id="chipCat-医療" onclick="toggleCatCheckbox('医療')">医療</button>
-          <button class="filter-chip chip-cat-社会" id="chipCat-社会" onclick="toggleCatCheckbox('社会')">社会</button>
+        <div class="filter-chip-row filter-chip-row-cats">
+          <div id="chipCat-基本" class="filter-chip chip-cat-基本" role="button" tabindex="0">基本</div>
+          <div id="chipCat-介護" class="filter-chip chip-cat-介護" role="button" tabindex="0">介護</div>
+          <div id="chipCat-医療" class="filter-chip chip-cat-医療" role="button" tabindex="0">医療</div>
+          <div id="chipCat-社会" class="filter-chip chip-cat-社会" role="button" tabindex="0">社会</div>
         </div>
       </div>
 
-      <div class="search-status-bar" id="searchStatusBar">全 0 語 を表示中</div>
-      <div class="search-result-scroll" id="searchResultList"></div>
+      <div id="searchStatusBar" class="search-status-bar" aria-live="polite">0 語</div>
+
+      <div id="searchResultList" class="search-result-scroll" role="list" aria-label="検索結果">
+        <!-- 検索結果リストが動的に挿入されます -->
+      </div>
+
+      <div class="search-control-area">
+        <div class="search-input-wrapper">
+          <span class="search-icon-box" aria-hidden="true">🔍</span>
+          <input type="search" id="searchInput" class="search-input-field" placeholder="ことば・よみ・English" enterkeyhint="search" autocomplete="off">
+        </div>
+      </div>
     </div>
 
-    <div class="bottom-nav-bar">
-      <button class="nav-btn active" id="btnModeLearn" onclick="switchMainMode('learn')">📔 ことば</button>
-      <button class="nav-btn" id="btnModeDaily" onclick="switchMainMode('daily')">⭐️ まいにち</button>
-      <button class="nav-btn" id="btnModeSearch" onclick="switchMainMode('search')">🔎 さがす</button>
-    </div>
+    <!-- 下部タブメニュー -->
+    <nav class="bottom-nav-bar" aria-label="メインメニュー">
+      <button type="button" id="btnModeLearn" class="nav-btn active">
+        <span class="nav-icon" aria-hidden="true">📔</span>
+        <span class="nav-label">ことば</span>
+      </button>
+      <button type="button" id="btnModeDaily" class="nav-btn">
+        <span class="nav-icon" aria-hidden="true">⭐</span>
+        <span class="nav-label">まいにち</span>
+      </button>
+      <button type="button" id="btnModeSearch" class="nav-btn">
+        <span class="nav-icon" aria-hidden="true">🔎</span>
+        <span class="nav-label">さがす</span>
+      </button>
+    </nav>
+
   </div>
 
-  <div class="loading-overlay" id="loadingOverlay">⏳ 読み込み中...</div>
+  <div id="loadingOverlay" class="loading-overlay" role="status" aria-live="polite">
+    <div class="loading-box">読み込み中...</div>
+  </div>
 
   <script src="app.js"></script>
 </body>
-
 </html>

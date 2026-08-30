@@ -1,693 +1,1058 @@
+:root {
+  --color-bg: #F7F6F3;
+  --color-surface: #FFFFFF;
+  --color-text: #1F2937;
+  --color-text-muted: #64748B;
+  --color-border: #E5E7EB;
+  --color-border-soft: #F1F5F9;
+  --color-accent: #2563EB;
+  --color-accent-soft: #EFF6FF;
+  --color-btn-nav-bg: #F3F4F6;
+  --color-btn-nav-border: #D1D5DB;
+  --color-btn-nav-text: #374151;
+  --color-unlearned: #0284C7;
+  --color-btn-mask-bg: #E0F2FE;
+  --color-btn-mask-border: #BAE6FD;
+  --color-btn-mask-text: #0284C7;
+  --color-english: #0F766E;
+  --color-reading: #6B7280;
+  --color-nav-active-bg: #FFF7ED;
+  --color-nav-active-text: #C2410C;
+  --color-nav-active-border: #FDBA74;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --font-ui: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic UI", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-size-nav: clamp(13px, 3.4vw, 15px);
+  --font-size-tab: clamp(13px, 3.5vw, 15px);
+  --font-size-header: clamp(13px, 3.6vw, 15px);
+  --font-size-word: clamp(17px, 4.6vw, 20px);
+  --font-size-reading: clamp(14px, 3.8vw, 16px);
+  --font-size-english: clamp(14px, 3.7vw, 16px);
+  --font-size-detail: clamp(13px, 3.5vw, 15px);
+  --font-size-btn: clamp(15px, 4vw, 17px);
+  --font-size-stat: clamp(20px, 5.5vw, 26px);
+  --line-height-tight: 1.25;
+  --line-height-body: 1.5;
+  --line-height-detail: 1.45;
+  --touch-min: 44px;
+  --chk-size: clamp(22px, 5.5vw, 26px);
+  --shadow-soft: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --shadow-card: 0 1px 3px rgba(15, 23, 42, 0.08);
+}
+
 * {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-    -webkit-tap-highlight-color: transparent;
-    touch-action: manipulation;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+html,
+body {
+  height: 100%;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+body {
+  font-family: var(--font-ui);
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  padding: max(var(--space-xs), env(safe-area-inset-top)) max(var(--space-sm), env(safe-area-inset-left)) 0 max(var(--space-sm), env(safe-area-inset-right));
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body.env-test {
+  --color-bg: #EFF6FF;
+}
+
+body.env-test .loading-overlay {
+  background-color: rgba(239, 246, 255, 0.88);
+}
+
+.deploy-env-banner {
+  flex-shrink: 0;
+  text-align: center;
+  font-size: clamp(11px, 3vw, 12px);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: #0369A1;
+  background-color: #BAE6FD;
+  border: 1px solid #7DD3FC;
+  border-radius: var(--radius-sm);
+  padding: 4px var(--space-sm);
+  line-height: var(--line-height-tight);
+}
+
+.container {
+  max-width: 640px;
+  height: 100dvh;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.view-panel {
+  display: none;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.view-panel.active {
+  display: flex;
+}
+
+#panelLearn {
+  display: none;
+  grid-template-rows: auto auto 1fr auto;
+  gap: var(--space-xs);
+}
+
+#panelLearn.active {
+  display: grid;
+}
+
+#panelSearch {
+  gap: var(--space-xs);
+}
+
+#panelSearch.active {
+  display: flex;
+}
+
+#panelSearch > .search-filter-panel {
+  flex-shrink: 0;
+  margin-bottom: 0;
+}
+
+#panelSearch > .search-status-bar {
+  flex-shrink: 0;
+}
+
+#panelSearch > .search-result-scroll {
+  flex: 1;
+  min-height: 0;
+}
+
+#panelSearch > .search-control-area {
+  border-top: none;
+  padding-top: 0;
+}
+
+/* ボトムナビゲーション */
+.bottom-nav-bar {
+  display: flex;
+  gap: var(--space-sm);
+  padding: var(--space-sm) 0;
+  padding-bottom: max(var(--space-sm), env(safe-area-inset-bottom));
+  background-color: var(--color-bg);
+  border-top: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.nav-btn {
+  flex: 1;
+  min-height: var(--touch-min);
+  padding: var(--space-xs) var(--space-xs);
+  font-family: inherit;
+  font-size: var(--font-size-nav);
+  font-weight: 700;
+  border: 1px solid var(--color-border);
+  background-color: var(--color-surface);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-align: center;
+  color: var(--color-text-muted);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  box-shadow: var(--shadow-soft);
+}
+
+.nav-icon {
+  font-size: 1.15em;
+  line-height: 1;
+}
+
+.nav-label {
+  line-height: var(--line-height-tight);
+}
+
+.nav-btn.active {
+  background-color: var(--color-nav-active-bg);
+  color: var(--color-nav-active-text);
+  border-color: var(--color-nav-active-border);
+}
+
+/* 1. ことば */
+.learn-tab-bar {
+  display: flex;
+  gap: var(--space-sm);
+  flex-shrink: 0;
+}
+
+.learn-tab-btn {
+  flex: 1;
+  min-height: 40px;
+  padding: var(--space-xs) 0;
+  font-family: inherit;
+  font-size: var(--font-size-tab);
+  font-weight: 700;
+  border: 1px solid var(--color-border);
+  background-color: var(--color-surface);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-align: center;
+  box-shadow: var(--shadow-soft);
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+
+.learn-tab-btn.cat-基本 {
+  color: #2563EB;
+  border-color: #93C5FD;
+}
+
+.learn-tab-btn.cat-介護 {
+  color: #16A34A;
+  border-color: #86EFAC;
+}
+
+.learn-tab-btn.cat-医療 {
+  color: #DC2626;
+  border-color: #FCA5A5;
+}
+
+.learn-tab-btn.cat-社会 {
+  color: #9333EA;
+  border-color: #D8B4FE;
+}
+
+.learn-tab-btn.active.cat-基本 {
+  background-color: #2563EB;
+  color: #FFFFFF;
+  border-color: #2563EB;
+}
+
+.learn-tab-btn.active.cat-介護 {
+  background-color: #16A34A;
+  color: #FFFFFF;
+  border-color: #16A34A;
+}
+
+.learn-tab-btn.active.cat-医療 {
+  background-color: #DC2626;
+  color: #FFFFFF;
+  border-color: #DC2626;
+}
+
+.learn-tab-btn.active.cat-社会 {
+  background-color: #9333EA;
+  color: #FFFFFF;
+  border-color: #9333EA;
+}
+
+.learn-header-banner {
+  border-radius: var(--radius-md);
+  padding: var(--space-sm) var(--space-md);
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  min-height: 44px;
+  font-size: var(--font-size-header);
+  font-weight: 700;
+  box-shadow: var(--shadow-soft);
+}
+
+.learn-header-banner.bg-基本 {
+  background-color: #EFF6FF;
+  color: #1D4ED8;
+}
+
+.learn-header-banner.bg-介護 {
+  background-color: #F0FDF4;
+  color: #15803D;
+}
+
+.learn-header-banner.bg-医療 {
+  background-color: #FEF2F2;
+  color: #B91C1C;
+}
+
+.learn-header-banner.bg-社会 {
+  background-color: #FAF5FF;
+  color: #7E22CE;
+}
+
+.learn-header-text {
+  width: 100%;
+  line-height: var(--line-height-body);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+
+.word-list {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  gap: var(--space-sm);
+}
+
+#panelLearn .word-list {
+  gap: var(--space-xs);
+}
+
+.word-list.word-list-scroll {
+  overflow-y: auto;
+  justify-content: flex-start;
+  -webkit-overflow-scrolling: touch;
+}
+
+.word-list.word-list-fit {
+  overflow: hidden;
+  justify-content: flex-start;
+  gap: var(--space-xs);
+}
+
+.word-list.word-list-fit.word-list-fit-partial {
+  justify-content: flex-start;
+  gap: var(--space-xs);
+}
+
+.word-list.word-list-fit .word-card {
+  flex-shrink: 0;
+}
+
+.word-list.hide-details .word-english,
+.word-list.hide-details .word-meaning,
+.word-list.hide-details .word-example,
+.word-list.hide-details .word-detail {
+  visibility: hidden !important;
+}
+
+.word-card {
+  background-color: var(--color-surface);
+  padding: var(--space-sm);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-soft);
+}
+
+#panelLearn .word-card,
+#panelSearch .search-item-row {
+  --word-card-pad-y: 10px;
+  padding: var(--word-card-pad-y) var(--space-sm);
+}
+
+#panelLearn .word-content,
+#panelSearch .search-item-body {
+  gap: 0;
+}
+
+#panelLearn .word-meaning,
+#panelSearch .search-item-body .word-meaning {
+  margin-top: min(6px, var(--word-card-pad-y));
+}
+
+.word-card.checked {
+  background-color: #F0FDF4;
+  border-color: #BBF7D0;
+}
+
+.word-chk-wrap,
+.search-item-chk-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  align-self: flex-start;
+  height: calc(var(--font-size-word) * var(--line-height-tight));
+}
+
+.word-custom-chk {
+  width: var(--chk-size);
+  height: var(--chk-size);
+  border: 2.5px solid;
+  border-radius: 6px;
+  background-color: var(--color-surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.12s ease, border-color 0.12s ease;
+}
+
+.word-custom-chk.chk-基本 { border-color: #2563EB; }
+.word-custom-chk.chk-介護 { border-color: #16A34A; }
+.word-custom-chk.chk-医療 { border-color: #DC2626; }
+.word-custom-chk.chk-社会 { border-color: #9333EA; }
+
+.word-card.checked .word-custom-chk.chk-基本,
+.search-item-row.checked .word-custom-chk.chk-基本 { background-color: #2563EB; border-color: #2563EB; }
+
+.word-card.checked .word-custom-chk.chk-介護,
+.search-item-row.checked .word-custom-chk.chk-介護 { background-color: #16A34A; border-color: #16A34A; }
+
+.word-card.checked .word-custom-chk.chk-医療,
+.search-item-row.checked .word-custom-chk.chk-医療 { background-color: #DC2626; border-color: #DC2626; }
+
+.word-card.checked .word-custom-chk.chk-社会,
+.search-item-row.checked .word-custom-chk.chk-社会 { background-color: #9333EA; border-color: #9333EA; }
+
+.word-card.checked .word-custom-chk::after,
+.search-item-row.checked .word-custom-chk::after {
+  content: "";
+  display: block;
+  width: 6px;
+  height: 11px;
+  border: solid #FFFFFF;
+  border-width: 0 2.5px 2.5px 0;
+  transform: rotate(45deg);
+  margin-bottom: 2px;
+}
+
+.word-content,
+.search-item-body .word-ja-block,
+.search-item-body .word-meaning,
+.search-item-body .word-example,
+.search-item-body .word-detail {
+  flex: 1;
+  min-width: 0;
+}
+
+.word-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  flex: 1;
+  min-width: 0;
+}
+
+.word-ja-block {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.word-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-xs) var(--space-sm);
+  min-width: 0;
+}
+
+.word-title {
+  font-size: var(--font-size-word);
+  font-weight: 800;
+  color: #111827;
+  line-height: var(--line-height-tight);
+  word-break: break-word;
+  letter-spacing: 0.02em;
+}
+
+.word-reading {
+  font-size: var(--font-size-reading);
+  font-weight: 600;
+  color: var(--color-reading);
+  line-height: var(--line-height-tight);
+  word-break: break-word;
+  flex-shrink: 0;
+}
+
+.word-english {
+  font-size: var(--font-size-english);
+  color: var(--color-english);
+  font-weight: 700;
+  line-height: var(--line-height-tight);
+  word-break: break-word;
+  flex: 1;
+  min-width: 0;
+}
+
+.word-detail {
+  font-size: var(--font-size-detail);
+  line-height: var(--line-height-detail);
+  color: #374151;
+  white-space: pre-line;
+  word-break: break-word;
+}
+
+.word-meaning {
+  font-size: var(--font-size-detail);
+  line-height: var(--line-height-detail);
+  color: #374151;
+  word-break: break-word;
+}
+
+.word-example {
+  font-size: clamp(12px, 3.2vw, 14px);
+  line-height: var(--line-height-detail);
+  color: #4B5563;
+  word-break: break-word;
+  flex-shrink: 0;
+}
+
+.learn-nav-footer {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding-bottom: var(--space-xs);
+}
+
+.learn-page-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.learn-page-indicator {
+  text-align: center;
+  font-size: clamp(12px, 3.2vw, 14px);
+  font-weight: 700;
+  color: var(--color-text-muted);
+  line-height: var(--line-height-tight);
+}
+
+.action-container {
+  flex-shrink: 0;
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.mask-toggle-btn {
+  flex: 0 0 22%;
+  min-height: var(--touch-min);
+  font-family: inherit;
+  font-size: var(--font-size-btn);
+  font-weight: 700;
+  color: var(--color-btn-mask-text);
+  background-color: var(--color-btn-mask-bg);
+  border: 1px solid var(--color-btn-mask-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-soft);
+}
+
+.mask-toggle-btn:active {
+  background-color: #BAE6FD;
+}
+
+.prev-btn {
+  flex: 0 0 22%;
+  min-height: var(--touch-min);
+  font-family: inherit;
+  font-size: var(--font-size-btn);
+  font-weight: 700;
+  color: var(--color-btn-nav-text);
+  background-color: var(--color-btn-nav-bg);
+  border: 1px solid var(--color-btn-nav-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-soft);
+}
+
+.prev-btn:active:not(:disabled) {
+  background-color: #E5E7EB;
+}
+
+.prev-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.submit-btn {
+  flex: 1;
+  min-height: var(--touch-min);
+  font-family: inherit;
+  font-size: var(--font-size-btn);
+  font-weight: 800;
+  color: #FFFFFF;
+  background-color: var(--color-accent);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  box-shadow: var(--shadow-card);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  letter-spacing: 0.04em;
+}
+
+.submit-btn:disabled {
+  background-color: #9CA3AF !important;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+/* 2. まいにち */
+.daily-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  gap: var(--space-sm);
+}
+
+.daily-stats-row {
+  display: flex;
+  gap: var(--space-sm);
+  flex-shrink: 0;
+}
+
+.daily-stat-card {
+  flex: 1;
+  border-radius: var(--radius-md);
+  padding: var(--space-md) var(--space-sm);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--space-xs);
+  box-shadow: var(--shadow-soft);
+}
+
+.daily-stat-card.streak {
+  background-color: #FFF7ED;
+  border: 1px solid #FFEDD5;
+}
+
+.daily-stat-card.streak .daily-stat-label {
+  font-size: clamp(12px, 3.2vw, 14px);
+  font-weight: 700;
+  color: #C2410C;
+  line-height: var(--line-height-tight);
+}
+
+.daily-stat-card.streak .daily-stat-value {
+  font-size: var(--font-size-stat);
+  font-weight: 800;
+  color: #EA580C;
+  line-height: 1.1;
+}
+
+.daily-stat-card.words {
+  background-color: #FEFCE8;
+  border: 1px solid #FEF08A;
+}
+
+.daily-stat-card.words .daily-stat-label {
+  font-size: clamp(12px, 3.2vw, 14px);
+  font-weight: 700;
+  color: #A16207;
+  line-height: var(--line-height-tight);
+}
+
+.daily-stat-card.words .daily-stat-value {
+  font-size: var(--font-size-stat);
+  font-weight: 800;
+  color: #CA8A04;
+  line-height: 1.1;
+}
+
+.roadmap-title {
+  font-size: clamp(13px, 3.5vw, 15px);
+  font-weight: 700;
+  color: var(--color-text-muted);
+  padding-left: 2px;
+  flex-shrink: 0;
+}
+
+.roadmap-scroll-wrapper {
+  flex: 1;
+  overflow-y: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface);
+  min-height: 0;
+  box-shadow: var(--shadow-soft);
+  -webkit-overflow-scrolling: touch;
+}
+
+.roadmap-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: center;
+}
+
+.roadmap-table th {
+  position: sticky;
+  top: 0;
+  background-color: #F8FAFC;
+  font-size: clamp(11px, 3vw, 13px);
+  font-weight: 700;
+  padding: var(--space-sm) 0;
+  border-bottom: 1px solid var(--color-border);
+  z-index: 10;
+}
+
+.roadmap-table th.th-week {
+  color: var(--color-text-muted);
+  width: 24%;
+}
+
+.roadmap-table th.th-day {
+  color: #475569;
+  width: 11%;
+}
+
+.roadmap-table th.th-sat { color: #2563EB; }
+.roadmap-table th.th-sun { color: #DC2626; }
+
+.roadmap-table td {
+  padding: var(--space-sm) 0;
+  font-size: clamp(12px, 3.2vw, 14px);
+  border-bottom: 1px solid var(--color-border-soft);
+  vertical-align: middle;
+}
+
+.roadmap-table td.td-week {
+  font-size: clamp(11px, 3vw, 13px);
+  font-weight: 700;
+  color: #475569;
+  background-color: #F8FAFC;
+  border-right: 1px solid var(--color-border-soft);
+}
+
+.roadmap-table tr.current-week td {
+  background-color: #FFF7ED;
+}
+
+.roadmap-table tr.current-week td.td-week {
+  background-color: #FFEDD5;
+  color: #C2410C;
+}
+
+/* 3. さがす */
+.search-control-area {
+  background-color: var(--color-bg);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  border-top: 1px solid var(--color-border-soft);
+  padding-top: var(--space-xs);
+}
+
+.search-input-wrapper {
+  display: flex;
+  align-items: center;
+  min-height: var(--touch-min);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface);
+  padding: 0 var(--space-md);
+  gap: var(--space-sm);
+  box-shadow: var(--shadow-soft);
+}
+
+.search-input-wrapper:focus-within {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+}
+
+.search-icon-box {
+  font-size: 18px;
+  line-height: 1;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+.search-input-field {
+  flex: 1;
+  min-height: 40px;
+  border: none;
+  outline: none;
+  font-family: inherit;
+  font-size: clamp(15px, 4vw, 17px);
+  color: var(--color-text);
+  background: transparent;
+}
+
+.search-input-field::placeholder {
+  color: #9CA3AF;
+}
+
+.search-filter-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding: var(--space-xs) var(--space-sm);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-soft);
+}
+
+.filter-chip-row {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.filter-chip-row-cats {
+  gap: var(--space-xs);
+}
+
+.filter-chip {
+  flex: 1;
+  min-height: 38px;
+  font-family: inherit;
+  font-size: clamp(13px, 3.5vw, 15px);
+  font-weight: 700;
+  border: 1px solid var(--color-border);
+  background-color: var(--color-surface);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #4B5563;
+  user-select: none;
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+  box-shadow: var(--shadow-soft);
+}
+
+.filter-chip.chip-learned.active {
+  background-color: #EA580C;
+  color: #FFFFFF;
+  border-color: #EA580C;
+}
+
+.filter-chip.chip-unlearned.active {
+  background-color: #0284C7;
+  color: #FFFFFF;
+  border-color: #0284C7;
+}
+
+.filter-chip.chip-cat-基本 { color: #2563EB; border-color: #93C5FD; }
+.filter-chip.chip-cat-介護 { color: #16A34A; border-color: #86EFAC; }
+.filter-chip.chip-cat-医療 { color: #DC2626; border-color: #FCA5A5; }
+.filter-chip.chip-cat-社会 { color: #9333EA; border-color: #D8B4FE; }
+
+.filter-chip.chip-cat-基本.active { background-color: #2563EB; color: #FFFFFF; border-color: #2563EB; }
+.filter-chip.chip-cat-介護.active { background-color: #16A34A; color: #FFFFFF; border-color: #16A34A; }
+.filter-chip.chip-cat-医療.active { background-color: #DC2626; color: #FFFFFF; border-color: #DC2626; }
+.filter-chip.chip-cat-社会.active { background-color: #9333EA; color: #FFFFFF; border-color: #9333EA; }
+
+.search-status-bar {
+  font-size: clamp(12px, 3.2vw, 14px);
+  font-weight: 700;
+  color: var(--color-text-muted);
+  line-height: var(--line-height-tight);
+  padding: 0 2px;
+  flex-shrink: 0;
+}
+
+.search-result-scroll {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+.search-item-row {
+  padding: var(--space-sm);
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-surface);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  user-select: none;
+  -webkit-user-select: none;
+  box-shadow: var(--shadow-soft);
+}
+
+.search-item-chk-wrap {
+  min-width: var(--touch-min);
+  min-height: var(--touch-min);
+  height: auto;
+  cursor: pointer;
+}
+
+.search-item-row.checked {
+  background-color: #F0FDF4;
+  border-color: #BBF7D0;
+}
+
+.search-item-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.search-item-body .word-title-row {
+  column-gap: var(--space-xs);
+}
+
+.search-item-body .word-title-row .search-item-badge {
+  margin-left: auto;
+  align-self: center;
+}
+
+.search-item-badge {
+  min-width: 38px;
+  text-align: center;
+  font-size: clamp(10px, 2.6vw, 11px);
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 999px;
+  flex-shrink: 0;
+  line-height: 1.3;
+}
+
+.search-item-badge.bg-基本 { background-color: #EFF6FF; color: #1D4ED8; }
+.search-item-badge.bg-介護 { background-color: #F0FDF4; color: #15803D; }
+.search-item-badge.bg-医療 { background-color: #FEF2F2; color: #B91C1C; }
+.search-item-badge.bg-社会 { background-color: #FAF5FF; color: #7E22CE; }
+
+.loading-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background-color: rgba(247, 246, 243, 0.85);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+}
+
+.loading-overlay.show {
+  display: flex;
+}
+
+.loading-box {
+  font-size: clamp(14px, 3.8vw, 16px);
+  font-weight: 700;
+  color: var(--color-text);
+  background: var(--color-surface);
+  padding: var(--space-md) var(--space-lg);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+}
+
+/* スマホ（ことばタブの5語収まり） */
+@media (max-width: 599px) {
+  #panelLearn {
+    gap: var(--space-xs);
   }
-  
-  html,
-  body {
-    height: 100%;
-    height: 100dvh;
-    overflow: hidden;
-  }
-  
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    background-color: #FFFFFF;
-    color: #333333;
-    padding: 6px 10px 0 10px;
-  }
-  
-  .container {
-    max-width: 540px;
-    height: 100%;
-    margin: 0 auto;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-  }
-  
-  .view-panel {
-    display: none;
-    flex: 1;
-    min-height: 0;
-    flex-direction: column;
-  }
-  
-  .view-panel.active {
-    display: flex;
-  }
-  
-  /* ボトムナビゲーション */
-  .bottom-nav-bar {
-    display: flex;
-    gap: 6px;
-    padding-top: 6px;
-    padding-bottom: max(6px, env(safe-area-inset-bottom));
-    background-color: #FFFFFF;
-    border-top: 1px solid #E5E7EB;
-    flex-shrink: 0;
-  }
-  
-  .nav-btn {
-    flex: 1;
-    padding: 10px 0;
-    font-size: 13px;
-    font-weight: bold;
-    border: 1px solid #D1D5DB;
-    background-color: #F9FAFB;
-    border-radius: 8px;
-    cursor: pointer;
-    text-align: center;
-    color: #4B5563;
-  }
-  
-  .nav-btn.active {
-    background-color: #FFEDD5;
-    color: #C2410C;
-    border-color: #FDBA74;
-  }
-  
-  /* 1. ことば */
-  .learn-tab-bar {
-    display: flex;
-    gap: 5px;
-    margin-bottom: 6px;
-    flex-shrink: 0;
-  }
-  
-  .learn-tab-btn {
-    flex: 1;
-    padding: 7px 0;
-    font-size: 13px;
-    font-weight: bold;
-    border: 1px solid #D1D5DB;
-    background-color: #FFFFFF;
-    border-radius: 6px;
-    cursor: pointer;
-    text-align: center;
-  }
-  
-  .learn-tab-btn.active.cat-基本 {
-    background-color: #2563EB;
-    color: #FFFFFF;
-    border-color: #2563EB;
-  }
-  
-  .learn-tab-btn.active.cat-介護 {
-    background-color: #16A34A;
-    color: #FFFFFF;
-    border-color: #16A34A;
-  }
-  
-  .learn-tab-btn.active.cat-医療 {
-    background-color: #DC2626;
-    color: #FFFFFF;
-    border-color: #DC2626;
-  }
-  
-  .learn-tab-btn.active.cat-社会 {
-    background-color: #9333EA;
-    color: #FFFFFF;
-    border-color: #9333EA;
-  }
-  
-  .learn-header-banner {
-    border-radius: 6px;
-    padding: 10px 14px;
-    margin-bottom: 6px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-shrink: 0;
-    font-size: 17px;
-    font-weight: bold;
-  }
-  
-  .learn-header-banner.bg-基本 {
-    background-color: #EFF6FF;
-    color: #1D4ED8;
-  }
-  
-  .learn-header-banner.bg-介護 {
-    background-color: #F0FDF4;
-    color: #15803D;
-  }
-  
-  .learn-header-banner.bg-医療 {
-    background-color: #FEF2F2;
-    color: #B91C1C;
-  }
-  
-  .learn-header-banner.bg-社会 {
-    background-color: #FAF5FF;
-    color: #7E22CE;
-  }
-  
-  .learn-header-text {
-    flex: 1;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  
-  .mask-toggle-btn {
-    padding: 5px 12px;
-    font-size: 13px;
-    font-weight: bold;
-    background-color: #FFFFFF;
-    border: 1px solid rgba(0, 0, 0, 0.15);
-    border-radius: 4px;
-    cursor: pointer;
-    color: #333333;
-    flex-shrink: 0;
-  }
-  
-  .mask-toggle-btn:active {
-    background-color: #F3F4F6;
-  }
-  
+
   .word-list {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-around;
-    margin-bottom: 6px;
-    min-height: 0;
-    overflow-y: auto;
+    gap: var(--space-xs);
   }
-  
-  .word-list.hide-details .word-english,
-  .word-list.hide-details .word-detail {
-    visibility: hidden !important;
+
+  #panelLearn .word-list {
+    gap: var(--space-xs);
   }
-  
-  .word-card {
-    flex: 0 0 auto;
-    background-color: #FFFFFF;
-    padding: 10px 4px;
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    cursor: pointer;
-    user-select: none;
-    -webkit-user-select: none;
-    border-bottom: 1px solid #F3F4F6;
+
+  .learn-nav-footer {
+    gap: var(--space-xs);
+    padding-bottom: var(--space-xs);
   }
-  
-  .word-chk-wrap {
-    padding-top: 1px;
-    flex-shrink: 0;
+
+  .learn-header-banner {
+    padding: var(--space-xs) var(--space-sm);
+    min-height: 40px;
   }
-  
-  .word-custom-chk {
-    width: 24px;
-    height: 24px;
-    border: 2px solid;
-    border-radius: 4px;
-    background-color: #FFFFFF;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background-color 0.1s ease, border-color 0.1s ease;
+}
+
+/* 小さい画面（高さ） */
+@media (max-height: 700px) {
+  :root {
+    --font-size-word: clamp(15px, 4.2vw, 18px);
+    --font-size-reading: clamp(12px, 3.4vw, 14px);
+    --font-size-english: clamp(12px, 3.3vw, 14px);
+    --font-size-detail: clamp(11.5px, 3.1vw, 13px);
+    --chk-size: 20px;
   }
-  
-  .word-custom-chk.chk-基本 {
-    border-color: #2563EB;
+
+  .learn-tab-btn {
+    min-height: 36px;
   }
-  
-  .word-custom-chk.chk-介護 {
-    border-color: #16A34A;
+
+  .learn-header-banner {
+    padding: var(--space-xs) var(--space-sm);
+    min-height: 40px;
   }
-  
-  .word-custom-chk.chk-医療 {
-    border-color: #DC2626;
-  }
-  
-  .word-custom-chk.chk-社会 {
-    border-color: #9333EA;
-  }
-  
-  .word-card.checked .word-custom-chk.chk-基本 {
-    background-color: #2563EB;
-    border-color: #2563EB;
-  }
-  
-  .word-card.checked .word-custom-chk.chk-介護 {
-    background-color: #16A34A;
-    border-color: #16A34A;
-  }
-  
-  .word-card.checked .word-custom-chk.chk-医療 {
-    background-color: #DC2626;
-    border-color: #DC2626;
-  }
-  
-  .word-card.checked .word-custom-chk.chk-社会 {
-    background-color: #9333EA;
-    border-color: #9333EA;
-  }
-  
-  .word-card.checked .word-custom-chk::after {
-    content: "";
-    display: block;
-    width: 6px;
-    height: 12px;
-    border: solid #FFFFFF;
-    border-width: 0 2.5px 2.5px 0;
-    transform: rotate(45deg);
-    margin-bottom: 2px;
-  }
-  
-  .word-content {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-  }
-  
-  .word-main-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    flex-wrap: wrap;
-    gap: 2px 8px;
-    margin-bottom: 3px;
-  }
-  
-  .word-title {
-    font-size: 17px;
-    font-weight: bold;
-    color: #111827;
-    word-break: break-word;
-  }
-  
-  .word-english {
-    font-size: 16px;
-    color: #475569;
-    font-weight: 500;
-    word-break: break-word;
-  }
-  
-  .word-detail {
-    font-size: 15px;
-    line-height: 1.6;
-    color: #1F2937;
-    white-space: pre-line;
-    word-break: break-word;
-  }
-  
-  .action-container {
-    flex-shrink: 0;
-    display: flex;
-    gap: 8px;
-    padding-bottom: 4px;
-  }
-  
-  .prev-btn {
-    width: 28%;
-    height: 48px;
-    font-size: 15px;
-    font-weight: bold;
-    color: #4B5563;
-    background-color: #F3F4F6;
-    border: 1px solid #D1D5DB;
-    border-radius: 8px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  
-  .prev-btn:disabled {
-    opacity: 0.35;
-    cursor: not-allowed;
-  }
-  
+
+  .nav-btn,
+  .mask-toggle-btn,
+  .prev-btn,
   .submit-btn {
-    flex: 1;
-    height: 48px;
-    font-size: 16px;
-    font-weight: bold;
-    color: #FFFFFF;
-    background-color: #2563EB;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    letter-spacing: 0.5px;
+    min-height: 40px;
   }
-  
-  .submit-btn:disabled {
-    background-color: #9CA3AF !important;
-    box-shadow: none;
-    cursor: not-allowed;
+}
+
+/* 大きめの画面（幅） */
+@media (min-width: 480px) {
+  body {
+    padding-left: max(var(--space-md), env(safe-area-inset-left));
+    padding-right: max(var(--space-md), env(safe-area-inset-right));
   }
-  
-  /* 2. まいにち */
-  .daily-container {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
+
+  .container {
+    gap: var(--space-sm);
   }
-  
-  .daily-stats-row {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 8px;
-    flex-shrink: 0;
+
+  .word-list {
+    gap: var(--space-sm);
   }
-  
-  .daily-stat-card {
-    flex: 1;
-    border-radius: 8px;
-    padding: 10px 8px;
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: 3px;
+
+  #panelLearn .word-list {
+    gap: var(--space-xs);
   }
-  
-  .daily-stat-card.streak {
-    background-color: #FFF7ED;
-    border: 1px solid #FFEDD5;
+
+  #panelLearn .word-card,
+  #panelSearch .search-item-row {
+    --word-card-pad-y: var(--space-sm);
+    padding: var(--word-card-pad-y) var(--space-md);
   }
-  
-  .daily-stat-card.streak .daily-stat-label {
-    font-size: 12px;
-    font-weight: bold;
-    color: #C2410C;
+}
+
+/* タブレット以上（ことばタブ：5語固定・読みやすさ調整） */
+@media (min-width: 600px) {
+  #panelLearn {
+    --font-size-word: clamp(18px, 2.6vw, 22px);
+    --font-size-reading: clamp(15px, 2.2vw, 17px);
+    --font-size-english: clamp(15px, 2.1vw, 17px);
+    --font-size-detail: clamp(14px, 2vw, 16px);
+    --chk-size: clamp(24px, 3.5vw, 28px);
   }
-  
-  .daily-stat-card.streak .daily-stat-value {
-    font-size: 19px;
-    font-weight: 800;
-    color: #EA580C;
+
+  #panelLearn .word-card {
+    --word-card-pad-y: 14px;
+    padding: var(--word-card-pad-y) var(--space-md);
   }
-  
-  .daily-stat-card.words {
-    background-color: #FEFCE8;
-    border: 1px solid #FEF08A;
+
+  #panelLearn .word-example {
+    font-size: clamp(13px, 2vw, 15px);
   }
-  
-  .daily-stat-card.words .daily-stat-label {
-    font-size: 12px;
-    font-weight: bold;
-    color: #A16207;
-  }
-  
-  .daily-stat-card.words .daily-stat-value {
-    font-size: 19px;
-    font-weight: 800;
-    color: #CA8A04;
-  }
-  
-  .roadmap-title {
-    font-size: 12px;
-    font-weight: bold;
-    color: #64748B;
-    margin-bottom: 6px;
-    padding-left: 2px;
-    flex-shrink: 0;
-  }
-  
-  .roadmap-scroll-wrapper {
-    flex: 1;
-    overflow-y: auto;
-    border: 1px solid #E2E8F0;
-    border-radius: 8px;
-    background-color: #FFFFFF;
-    min-height: 0;
-  }
-  
-  .roadmap-table {
-    width: 100%;
-    border-collapse: collapse;
-    text-align: center;
-  }
-  
-  .roadmap-table th {
-    position: sticky;
-    top: 0;
-    background-color: #F8FAFC;
-    font-size: 12px;
-    font-weight: bold;
-    padding: 7px 0;
-    border-bottom: 1px solid #E2E8F0;
-    z-index: 10;
-  }
-  
-  .roadmap-table th.th-week {
-    color: #64748B;
-    width: 23%;
-  }
-  
-  .roadmap-table th.th-day {
-    color: #475569;
-    width: 11%;
-  }
-  
-  .roadmap-table th.th-sat {
-    color: #2563EB;
-  }
-  
-  .roadmap-table th.th-sun {
-    color: #DC2626;
-  }
-  
-  .roadmap-table td {
-    padding: 6px 0;
-    font-size: 13px;
-    border-bottom: 1px solid #F1F5F9;
-    vertical-align: middle;
-  }
-  
-  .roadmap-table td.td-week {
-    font-size: 12px;
-    font-weight: bold;
-    color: #475569;
-    background-color: #F8FAFC;
-    border-right: 1px solid #F1F5F9;
-  }
-  
-  .roadmap-table tr.current-week td {
-    background-color: #FFF7ED;
-  }
-  
-  .roadmap-table tr.current-week td.td-week {
-    background-color: #FFEDD5;
-    color: #C2410C;
-  }
-  
-  /* 3. さがす */
-  .search-control-area {
-    background-color: #FFFFFF;
-    margin-bottom: 4px;
-    flex-shrink: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-  
-  .search-input-wrapper {
-    display: flex;
-    align-items: center;
-    height: 40px;
-    border: 1px solid #D1D5DB;
-    border-radius: 8px;
-    background-color: #FFFFFF;
-    padding: 0 10px;
-    gap: 8px;
-  }
-  
-  .search-input-wrapper:focus-within {
-    border-color: #2563EB;
-    box-shadow: 0 0 0 1px #2563EB;
-  }
-  
-  .search-icon-box {
-    font-size: 16px;
-    line-height: 1;
-    color: #6B7280;
-  }
-  
-  .search-input-field {
-    flex: 1;
-    height: 100%;
-    border: none;
-    outline: none;
-    font-size: 14px;
-    font-family: inherit;
-    color: #111827;
-    background: transparent;
-  }
-  
-  .filter-chip-row {
-    display: flex;
-    gap: 6px;
-  }
-  
-  .filter-chip {
-    flex: 1;
-    height: 36px;
-    font-size: 13px;
-    font-weight: bold;
-    border: 1px solid #D1D5DB;
-    background-color: #FFFFFF;
-    border-radius: 6px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #4B5563;
-    user-select: none;
-    transition: all 0.1s ease;
-  }
-  
-  .filter-chip.chip-learned.active {
-    background-color: #EA580C;
-    color: #FFFFFF;
-    border-color: #EA580C;
-  }
-  
-  .filter-chip.chip-unlearned.active {
-    background-color: #0284C7;
-    color: #FFFFFF;
-    border-color: #0284C7;
-  }
-  
-  .filter-chip.chip-cat-基本.active {
-    background-color: #2563EB;
-    color: #FFFFFF;
-    border-color: #2563EB;
-  }
-  
-  .filter-chip.chip-cat-介護.active {
-    background-color: #16A34A;
-    color: #FFFFFF;
-    border-color: #16A34A;
-  }
-  
-  .filter-chip.chip-cat-医療.active {
-    background-color: #DC2626;
-    color: #FFFFFF;
-    border-color: #DC2626;
-  }
-  
-  .filter-chip.chip-cat-社会.active {
-    background-color: #9333EA;
-    color: #FFFFFF;
-    border-color: #9333EA;
-  }
-  
-  .search-status-bar {
-    font-size: 12px;
-    font-weight: bold;
-    color: #64748B;
-    padding: 8px 4px;
-    flex-shrink: 0;
-  }
-  
-  .search-result-scroll {
-    flex: 1;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-    border-top: 1px solid #E5E7EB;
-  }
-  
-  .search-item-row {
-    padding: 12px 4px;
-    border-bottom: 1px solid #F3F4F6;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-  
-  .search-item-header {
-    display: flex;
-    align-items: baseline;
-    flex-wrap: wrap;
-    gap: 12px;
-  }
-  
-  .search-item-badge {
-    width: 42px;
-    text-align: center;
-    font-size: 11px;
-    font-weight: bold;
-    padding: 2px 0;
-    border-radius: 4px;
-    flex-shrink: 0;
-  }
-  
-  .search-item-badge.bg-基本 {
-    background-color: #EFF6FF;
-    color: #1D4ED8;
-  }
-  
-  .search-item-badge.bg-介護 {
-    background-color: #F0FDF4;
-    color: #15803D;
-  }
-  
-  .search-item-badge.bg-医療 {
-    background-color: #FEF2F2;
-    color: #B91C1C;
-  }
-  
-  .search-item-badge.bg-社会 {
-    background-color: #FAF5FF;
-    color: #7E22CE;
-  }
-  
-  .search-item-title {
-    font-size: 17px;
-    font-weight: bold;
-    color: #111827;
-    word-break: break-word;
-  }
-  
-  .search-item-english {
-    font-size: 16px;
-    color: #475569;
-    font-weight: 500;
-    word-break: break-word;
-  }
-  
-  .search-item-detail {
-    margin-left: 54px;
-    font-size: 15px;
-    line-height: 1.5;
-    color: #1F2937;
-    white-space: pre-line;
-    word-break: break-word;
-  }
-  
-  .loading-overlay {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(255, 255, 255, 0.7);
-    z-index: 1000;
-    align-items: center;
-    justify-content: center;
-    font-size: 16px;
-    font-weight: bold;
-    color: #333333;
-  }
-  
-  .loading-overlay.show {
-    display: flex;
-  }
+}

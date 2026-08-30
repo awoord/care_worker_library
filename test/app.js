@@ -1,36 +1,70 @@
 var GAS_BASE_URL = "https://script.google.com/macros/s/AKfycby1hG96pflujpC2yLpK-RhslOoZXgkr_LGBj-IdEG6hnIrcZjp3HUjN4LIp53WJ0S5ceA/exec";
+var LEARN_PAGE_SIZE = 5;
+var CATEGORIES = ["基本", "介護", "医療", "社会"];
 
-function getApiUrl() {
-  return GAS_BASE_URL + "?env=test&_t=" + Date.now();
+function isTestDeploy() {
+  return /\/test(?:\/|$)/.test(window.location.pathname);
 }
 
-var currentMode = localStorage.getItem("saved_main_mode") || "learn";
-var currentLearnCat = localStorage.getItem("saved_learn_cat") || "基本";
-var isDetailsHidden = localStorage.getItem("saved_details_hidden") === "true";
+function getApiUrl() {
+  var qs = "_t=" + Date.now();
+  if (isTestDeploy()) {
+    qs = "env=test&" + qs;
+  }
+  return GAS_BASE_URL + "?" + qs;
+}
+
+function applyDeployEnvUI() {
+  if (!isTestDeploy()) return;
+
+  document.body.classList.add("env-test");
+
+  var themeMeta = document.querySelector('meta[name="theme-color"]');
+  if (themeMeta) {
+    themeMeta.setAttribute("content", "#EFF6FF");
+  }
+
+  if (document.title.indexOf("【テスト】") !== 0) {
+    document.title = "【テスト】" + document.title;
+  }
+
+  var container = document.querySelector(".container");
+  if (!container || container.querySelector(".deploy-env-banner")) return;
+
+  var banner = document.createElement("div");
+  banner.className = "deploy-env-banner";
+  banner.setAttribute("role", "status");
+  banner.setAttribute("aria-live", "polite");
+  banner.textContent = "テスト環境";
+  container.insertBefore(banner, container.firstChild);
+}
+
+var uiState = {
+  mode: "learn",
+  learnCat: "基本",
+  detailsHidden: false,
+  pageByCat: { "基本": 0, "介護": 0, "医療": 0, "社会": 0 }
+};
 
 var allWordsList = [];
 var roadmapData = {};
 var initialLearnedDatesMap = {};
-
-// 現在画面上で操作中の仮チェック状態（更新ボタンを押すまで未確定）
-var temporaryCheckedMap = {};
-
-var categoryPage = {
-  "基本": 0,
-  "介護": 0,
-  "医療": 0,
-  "社会": 0
-};
-
-var SMALL_GOALS = {
-  "基本": [200, 250, 300, 400, 500, 600, 700, 750, 800],
-  "介護": [70, 100, 150, 200, 250, 300],
-  "医療": [80, 100, 130, 170, 210, 250],
-  "社会": [50, 75, 100, 125, 150]
-};
+var serverLearnedDatesMap = {};
+var localAchievedDates = {};
+var todayCommittedLearned = {};
+var localLearnedOverrides = {};
+var pendingChecks = {};
+var postInFlightWords = {};
 
 var selectedStatuses = [];
 var selectedCats = [];
+
+var SMALL_GOALS = {
+  "基本": [200, 250, 300, 400, 500, 600, 700, 750, 800, 900, 1000],
+  "介護": [70, 100, 150, 200, 250, 300, 350, 400],
+  "医療": [80, 100, 130, 170, 210, 250, 300, 350],
+  "社会": [50, 75, 100, 125, 150, 200, 250]
+};
 
 var themeColors = {
   "基本": "#2563EB",
@@ -38,6 +72,237 @@ var themeColors = {
   "医療": "#DC2626",
   "社会": "#9333EA"
 };
+
+function loadUiState() {
+  uiState.mode = localStorage.getItem("saved_main_mode") || "learn";
+  uiState.learnCat = localStorage.getItem("saved_learn_cat") || "基本";
+  uiState.detailsHidden = localStorage.getItem("saved_details_hidden") === "true";
+
+  var savedPages = JSON.parse(localStorage.getItem("saved_category_page") || "null");
+  if (savedPages) {
+    uiState.pageByCat = savedPages;
+  }
+
+  localAchievedDates = JSON.parse(localStorage.getItem("saved_achieved_dates") || "{}");
+  todayCommittedLearned = loadTodayCommittedLearned();
+  localLearnedOverrides = loadLocalLearnedOverrides();
+}
+
+function loadLocalLearnedOverrides() {
+  try {
+    return JSON.parse(sessionStorage.getItem("saved_local_learned_overrides") || "{}");
+  } catch (e) {
+    return {};
+  }
+}
+
+function persistLocalLearnedOverrides() {
+  sessionStorage.setItem("saved_local_learned_overrides", JSON.stringify(localLearnedOverrides));
+}
+
+function loadTodayCommittedLearned() {
+  try {
+    var saved = JSON.parse(sessionStorage.getItem("saved_today_committed_learned") || "null");
+    if (!saved || saved.date !== getTodayJSTStr()) {
+      return {};
+    }
+    return saved.words || {};
+  } catch (e) {
+    return {};
+  }
+}
+
+function persistTodayCommittedLearned() {
+  sessionStorage.setItem("saved_today_committed_learned", JSON.stringify({
+    date: getTodayJSTStr(),
+    words: todayCommittedLearned
+  }));
+}
+
+function hasTodayCommittedLearned() {
+  for (var wordName in todayCommittedLearned) {
+    if (todayCommittedLearned.hasOwnProperty(wordName)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function reconcileTodayAchievement(options) {
+  options = options || {};
+  var todayKey = getTodayJSTStr();
+
+  if (hasTodayCommittedLearned()) {
+    markTodayAchieved();
+  } else if (options.allowUnmarkToday) {
+    delete localAchievedDates[todayKey];
+    if (!serverLearnedDatesMap[todayKey]) {
+      delete initialLearnedDatesMap[todayKey];
+    }
+    persistAchievedDates();
+  }
+
+  refreshLearnedCountDisplays(true);
+}
+
+function persistAchievedDates() {
+  localStorage.setItem("saved_achieved_dates", JSON.stringify(localAchievedDates));
+}
+
+function markTodayAchieved() {
+  var todayKey = getTodayJSTStr();
+  localAchievedDates[todayKey] = true;
+  initialLearnedDatesMap[todayKey] = true;
+  persistAchievedDates();
+}
+
+function buildLearnedDatesMap() {
+  var map = {};
+  for (var dKey in serverLearnedDatesMap) {
+    if (serverLearnedDatesMap.hasOwnProperty(dKey)) {
+      map[dKey] = true;
+    }
+  }
+
+  var todayKey = getTodayJSTStr();
+  if (hasTodayCommittedLearned() && !map[todayKey]) {
+    map[todayKey] = true;
+  }
+
+  return map;
+}
+
+function syncTodayCommittedLearnedWithServer() {
+  var synced = {};
+
+  for (var wordName in todayCommittedLearned) {
+    if (!todayCommittedLearned.hasOwnProperty(wordName)) continue;
+
+    if (localLearnedOverrides.hasOwnProperty(wordName) && localLearnedOverrides[wordName]) {
+      synced[wordName] = true;
+      continue;
+    }
+
+    var word = allWordsList.find(function (w) { return w.word === wordName; });
+    if (word && word.isLearned) {
+      synced[wordName] = true;
+    }
+  }
+
+  todayCommittedLearned = synced;
+  persistTodayCommittedLearned();
+}
+
+function syncAchievementCachesFromServer() {
+  syncTodayCommittedLearnedWithServer();
+
+  var todayKey = getTodayJSTStr();
+  localAchievedDates = {};
+
+  if (hasTodayCommittedLearned() && !serverLearnedDatesMap[todayKey]) {
+    localAchievedDates[todayKey] = true;
+  }
+  persistAchievedDates();
+
+  for (var wordName in localLearnedOverrides) {
+    if (!localLearnedOverrides.hasOwnProperty(wordName)) continue;
+    if (postInFlightWords[wordName]) continue;
+
+    var target = allWordsList.find(function (w) { return w.word === wordName; });
+    if (!target) {
+      delete localLearnedOverrides[wordName];
+      continue;
+    }
+
+    delete localLearnedOverrides[wordName];
+  }
+  persistLocalLearnedOverrides();
+}
+
+function getStreakCount() {
+  return calculateStreakCount(buildLearnedDatesMap());
+}
+
+function refreshStreakDisplay() {
+  var streakEl = document.getElementById("valStreak");
+  if (streakEl) {
+    streakEl.textContent = getStreakCount() + " 日";
+  }
+}
+
+function calculateStreakCount(learnedMap) {
+  var todayKey = getTodayJSTStr();
+  var checkDate = new Date();
+  var utc = checkDate.getTime() + (checkDate.getTimezoneOffset() * 60000);
+  var jstDate = new Date(utc + (9 * 60 * 60000));
+
+  if (!learnedMap[todayKey]) {
+    jstDate.setDate(jstDate.getDate() - 1);
+  }
+
+  var streakCount = 0;
+  while (true) {
+    var k = formatDateStr(jstDate);
+    if (learnedMap[k]) {
+      streakCount++;
+      jstDate.setDate(jstDate.getDate() - 1);
+    } else {
+      break;
+    }
+  }
+  return streakCount;
+}
+
+function refreshDailyStatsIfNeeded() {
+  refreshLearnedCountDisplays(true);
+}
+
+function refreshLearnedCountDisplays(refreshRoadmapFully) {
+  if (uiState.mode === "learn") {
+    updateLiveHeader();
+  }
+
+  var totalEl = document.getElementById("valTotalWords");
+  if (totalEl) {
+    totalEl.textContent = getLiveTotalLearnedCount() + " 語";
+  }
+
+  refreshStreakDisplay();
+
+  if (refreshRoadmapFully && uiState.mode === "daily") {
+    renderRoadmap();
+  }
+}
+
+function persistUiState() {
+  localStorage.setItem("saved_main_mode", uiState.mode);
+  localStorage.setItem("saved_learn_cat", uiState.learnCat);
+  localStorage.setItem("saved_details_hidden", uiState.detailsHidden ? "true" : "false");
+  localStorage.setItem("saved_category_page", JSON.stringify(uiState.pageByCat));
+}
+
+function getWordChecked(wordItem) {
+  if (pendingChecks.hasOwnProperty(wordItem.word)) {
+    return pendingChecks[wordItem.word];
+  }
+  if (localLearnedOverrides.hasOwnProperty(wordItem.word)) {
+    return !!localLearnedOverrides[wordItem.word];
+  }
+  return !!wordItem.isLearned;
+}
+
+function countCheckedWords(filterFn) {
+  var count = 0;
+  for (var i = 0; i < allWordsList.length; i++) {
+    var wordItem = allWordsList[i];
+    if (!filterFn || filterFn(wordItem)) {
+      if (getWordChecked(wordItem)) {
+        count++;
+      }
+    }
+  }
+  return count;
+}
 
 function getTodayJSTStr() {
   var now = new Date();
@@ -49,41 +314,197 @@ function getTodayJSTStr() {
 function getNextSmallGoal(catName, currentCount, maxCount) {
   var goals = SMALL_GOALS[catName] || [];
   for (var i = 0; i < goals.length; i++) {
-    if (goals[i] > currentCount) {
-      return Math.min(goals[i], maxCount);
+    if (goals[i] > currentCount && goals[i] < maxCount) {
+      return goals[i];
     }
   }
   return maxCount;
 }
 
-// 未学習の単語を先に出し、全単語にチェックがついている場合（復習中）のみ学習済み単語を出す
+function getLastClearedGoal(catName, learnedCount) {
+  var goals = SMALL_GOALS[catName] || [];
+  var last = null;
+  for (var i = 0; i < goals.length; i++) {
+    if (goals[i] <= learnedCount) {
+      last = goals[i];
+    }
+  }
+  return last;
+}
+
+function applyLearnListScrollMode(wordList) {
+  wordList.classList.remove("word-list-fit", "word-list-fit-partial");
+  wordList.classList.add("word-list-scroll");
+}
+
+function applyLearnListFitMode(wordList, isPartial) {
+  wordList.classList.remove("word-list-scroll");
+  wordList.classList.add("word-list-fit");
+  wordList.classList.toggle("word-list-fit-partial", isPartial);
+  wordList.scrollTop = 0;
+}
+
+function canFitLearnListWithoutScroll(wordList, cards) {
+  if (cards.length === 0) return false;
+
+  var gap = parseFloat(getComputedStyle(wordList).rowGap) || 8;
+  var stackHeight = 0;
+
+  for (var i = 0; i < cards.length; i++) {
+    stackHeight += cards[i].scrollHeight;
+    if (i > 0) stackHeight += gap;
+  }
+
+  return stackHeight <= wordList.clientHeight;
+}
+
+var learnPageOffsetsCache = null;
+
+function invalidateLearnPageOffsetsCache() {
+  learnPageOffsetsCache = null;
+}
+
+function buildLearnPageOffsets(catName) {
+  var list = getCategoryWords(catName);
+  if (list.length === 0) return [0];
+
+  var offsets = [0];
+  for (var offset = LEARN_PAGE_SIZE; offset < list.length; offset += LEARN_PAGE_SIZE) {
+    offsets.push(offset);
+  }
+  return offsets;
+}
+
+function getLearnPageOffsets(catName) {
+  var list = getCategoryWords(catName);
+
+  if (
+    learnPageOffsetsCache &&
+    learnPageOffsetsCache.cat === catName &&
+    learnPageOffsetsCache.length === list.length
+  ) {
+    return learnPageOffsetsCache.offsets;
+  }
+
+  var offsets = buildLearnPageOffsets(catName);
+  learnPageOffsetsCache = {
+    cat: catName,
+    length: list.length,
+    offsets: offsets
+  };
+  return offsets;
+}
+
+function findLearnPageIndex(offsets, offset) {
+  var idx = offsets.indexOf(offset);
+  if (idx !== -1) return idx;
+
+  var closest = 0;
+  for (var i = 0; i < offsets.length; i++) {
+    if (offsets[i] <= offset) closest = i;
+    else break;
+  }
+  return closest;
+}
+
+function normalizeLearnPageOffset(catName) {
+  var list = getCategoryWords(catName);
+  if (list.length === 0) {
+    uiState.pageByCat[catName] = 0;
+    return 0;
+  }
+
+  var offset = uiState.pageByCat[catName] || 0;
+  if (offset >= list.length) offset = 0;
+
+  var offsets = getLearnPageOffsets(catName);
+  var idx = findLearnPageIndex(offsets, offset);
+  offset = offsets[idx];
+  uiState.pageByCat[catName] = offset;
+  return offset;
+}
+
+function getNextLearnPageOffset(catName, currentOffset) {
+  var offsets = getLearnPageOffsets(catName);
+  var idx = findLearnPageIndex(offsets, currentOffset);
+  if (idx >= offsets.length - 1) return 0;
+  return offsets[idx + 1];
+}
+
+function getPreviousLearnPageOffset(catName, currentOffset) {
+  var offsets = getLearnPageOffsets(catName);
+  var idx = findLearnPageIndex(offsets, currentOffset);
+  if (idx <= 0) return offsets[offsets.length - 1];
+  return offsets[idx - 1];
+}
+
+function syncLearnListLayout() {
+  var wordList = document.getElementById("wordList");
+  var panelLearn = document.getElementById("panelLearn");
+  if (!wordList || !panelLearn || !panelLearn.classList.contains("active")) return;
+
+  var cards = wordList.querySelectorAll(".word-card");
+  if (cards.length === 0) return;
+
+  if (canFitLearnListWithoutScroll(wordList, cards)) {
+    applyLearnListFitMode(wordList, cards.length < LEARN_PAGE_SIZE);
+  } else {
+    applyLearnListScrollMode(wordList);
+  }
+}
+
+function syncLearnListLayoutAfterPaint() {
+  requestAnimationFrame(function () {
+    syncLearnListLayout();
+  });
+}
+
+var learnLayoutTimer = null;
+
+function scheduleLearnListLayoutSync() {
+  clearTimeout(learnLayoutTimer);
+  learnLayoutTimer = setTimeout(function () {
+    if (uiState.mode !== "learn") return;
+    syncLearnListLayout();
+  }, 150);
+}
+
 function getCategoryWords(catName) {
   var list = allWordsList.filter(function (w) { return w.category === catName; });
-  
   list.sort(function (a, b) {
     return (a.originalIndex || 0) - (b.originalIndex || 0);
   });
 
-  var unlearned = list.filter(function (w) { return !w.isLearned; });
-  var learned = list.filter(function (w) { return w.isLearned; });
-
-  // 未学習が1件以上あれば未学習のみ、全件チェック済みなら学習済みを対象にする
-  if (unlearned.length > 0) {
-    return unlearned;
-  } else {
-    return learned;
-  }
+  return list;
 }
 
-function getCurrentWords(catName) {
+function getWordsForPage(catName, offset) {
   var list = getCategoryWords(catName);
   if (list.length === 0) return [];
-  var page = categoryPage[catName] || 0;
-  if (page >= list.length) {
-    page = 0;
-    categoryPage[catName] = 0;
+  return list.slice(offset, offset + LEARN_PAGE_SIZE);
+}
+
+function getLearnPageInfo(catName) {
+  var list = getCategoryWords(catName);
+  if (list.length === 0) {
+    return { current: 1, total: 1 };
   }
-  return list.slice(page, page + 5);
+
+  var offsets = getLearnPageOffsets(catName);
+  var pageOffset = normalizeLearnPageOffset(catName);
+
+  return {
+    current: findLearnPageIndex(offsets, pageOffset) + 1,
+    total: offsets.length
+  };
+}
+
+function updateLearnPageIndicator(catName) {
+  var pageInfo = getLearnPageInfo(catName);
+
+  document.getElementById("learnPageIndicator").textContent =
+    pageInfo.current + " / " + pageInfo.total;
+  document.getElementById("prevBtn").disabled = (pageInfo.total <= 1);
 }
 
 function getCategoryLearnedCount(catName) {
@@ -92,62 +513,136 @@ function getCategoryLearnedCount(catName) {
   }).length;
 }
 
+function getLiveCategoryLearnedCount(catName) {
+  return countCheckedWords(function (w) {
+    return w.category === catName;
+  });
+}
+
 function getTotalLearnedCount() {
   return allWordsList.filter(function (w) {
     return w.isLearned;
   }).length;
 }
 
-// 更新ボタン（つぎへ／まえへ）押下時に現在の5単語を確定・db送信する関数
-function commitAndSaveCurrentWords() {
-  var currentWords = getCurrentWords(currentLearnCat);
-  if (currentWords.length === 0) return;
+function getLiveTotalLearnedCount() {
+  return countCheckedWords();
+}
+
+function rollbackPendingCommit(snapshot, committedSnapshot, wordsToCommit) {
+  wordsToCommit.forEach(function (wordName) {
+    delete postInFlightWords[wordName];
+    pendingChecks[wordName] = snapshot[wordName];
+    localLearnedOverrides[wordName] = snapshot[wordName];
+  });
+  todayCommittedLearned = committedSnapshot;
+  persistTodayCommittedLearned();
+  persistLocalLearnedOverrides();
+  reconcileTodayAchievement({ allowUnmarkToday: true });
+  refreshLearnedCountDisplays(false);
+  if (uiState.mode === "learn") {
+    renderCurrentLearnCat();
+  } else if (uiState.mode === "search") {
+    onSearchFilterChanged();
+  }
+}
+
+function finalizeCommittedChecks(wordsToCommit) {
+  wordsToCommit.forEach(function (wordName) {
+    delete postInFlightWords[wordName];
+    delete localLearnedOverrides[wordName];
+  });
+  persistLocalLearnedOverrides();
+}
+
+function applyAndSendPendingChecks() {
+  var wordsToCommit = Object.keys(pendingChecks);
+  if (wordsToCommit.length === 0) {
+    return;
+  }
 
   var checkedWords = [];
   var uncheckedWords = [];
+  var snapshot = {};
+  wordsToCommit.forEach(function (wordName) {
+    snapshot[wordName] = pendingChecks[wordName];
+  });
 
-  currentWords.forEach(function (w) {
-    var finalStatus = temporaryCheckedMap.hasOwnProperty(w.word)
-      ? temporaryCheckedMap[w.word]
-      : !!w.isLearned;
-
-    w.isLearned = finalStatus;
-
-    if (finalStatus) {
-      checkedWords.push(w.word);
+  wordsToCommit.forEach(function (wordName) {
+    if (pendingChecks[wordName]) {
+      checkedWords.push(wordName);
     } else {
-      uncheckedWords.push(w.word);
+      uncheckedWords.push(wordName);
     }
   });
 
-  temporaryCheckedMap = {};
+  pendingChecks = {};
+
+  var committedSnapshot = {};
+  for (var key in todayCommittedLearned) {
+    if (todayCommittedLearned.hasOwnProperty(key)) {
+      committedSnapshot[key] = true;
+    }
+  }
+
+  checkedWords.forEach(function (wordName) {
+    todayCommittedLearned[wordName] = true;
+  });
+  uncheckedWords.forEach(function (wordName) {
+    delete todayCommittedLearned[wordName];
+  });
+  persistTodayCommittedLearned();
+  reconcileTodayAchievement({ allowUnmarkToday: true });
+
+  wordsToCommit.forEach(function (wordName) {
+    localLearnedOverrides[wordName] = snapshot[wordName];
+    postInFlightWords[wordName] = true;
+  });
+  persistLocalLearnedOverrides();
+  refreshLearnedCountDisplays(false);
+
+  var postPayload = {
+    category: uiState.learnCat,
+    checkedWords: checkedWords,
+    uncheckedWords: uncheckedWords,
+    currentWords: []
+  };
+  if (isTestDeploy()) {
+    postPayload.env = "test";
+  }
 
   fetch(getApiUrl(), {
     method: "POST",
     headers: {
       "Content-Type": "text/plain;charset=utf-8"
     },
-    body: JSON.stringify({
-      category: currentLearnCat,
-      checkedWords: checkedWords,
-      uncheckedWords: uncheckedWords,
-      currentWords: []
-    }),
+    body: JSON.stringify(postPayload),
     keepalive: true
+  }).then(function (res) {
+    if (!res.ok) {
+      throw new Error("POST failed: " + res.status);
+    }
+    return loadDataFromDB(false);
+  }).then(function () {
+    finalizeCommittedChecks(wordsToCommit);
+    refreshLearnedCountDisplays(uiState.mode === "daily");
+    if (uiState.mode === "learn") {
+      renderCurrentLearnCat();
+    } else if (uiState.mode === "search") {
+      onSearchFilterChanged();
+    }
   }).catch(function (err) {
+    rollbackPendingCommit(snapshot, committedSnapshot, wordsToCommit);
     console.error("DB送信エラー:", err);
   });
 }
 
-// dbから確定済みデータを取得して画面描画
 function loadDataFromDB(isInitial) {
-  temporaryCheckedMap = {};
-
   if (isInitial) {
     showLoading(true);
   }
 
-  fetch(getApiUrl())
+  return fetch(getApiUrl())
     .then(function (res) { return res.json(); })
     .then(function (res) {
       if (isInitial) {
@@ -159,29 +654,37 @@ function loadDataFromDB(isInitial) {
       }
 
       var rawWords = res.allWords || [];
+
       rawWords.forEach(function (w, idx) {
         w.originalIndex = idx;
       });
       allWordsList = rawWords;
       roadmapData = res.roadmap || {};
+      invalidateLearnPageOffsetsCache();
 
+      serverLearnedDatesMap = {};
       initialLearnedDatesMap = {};
       (roadmapData.learnedDates || []).forEach(function (d) {
+        serverLearnedDatesMap[d] = true;
         initialLearnedDatesMap[d] = true;
       });
+
+      syncAchievementCachesFromServer();
+      reconcileTodayAchievement();
+      refreshLearnedCountDisplays(uiState.mode === "daily");
 
       renderCurrentLearnCat();
       onSearchFilterChanged();
 
-      if (currentMode === "daily") {
+      if (uiState.mode === "daily") {
         renderRoadmap();
       }
 
       if (isInitial) {
-        switchMainMode(currentMode);
+        switchMainMode(uiState.mode);
       }
     })
-    .catch(function (err) {
+    .catch(function () {
       if (isInitial) {
         showLoading(false);
       }
@@ -189,15 +692,63 @@ function loadDataFromDB(isInitial) {
     });
 }
 
+function bindEvents() {
+  document.querySelector(".learn-tab-bar").addEventListener("click", function (e) {
+    var btn = e.target.closest(".learn-tab-btn");
+    if (!btn || !btn.dataset.cat) return;
+    switchLearnCat(btn.dataset.cat);
+  });
+
+  document.getElementById("maskToggleBtn").addEventListener("click", toggleDetailsMask);
+  document.getElementById("prevBtn").addEventListener("click", goBackLearnWords);
+  document.getElementById("submitBtn").addEventListener("click", submitProgress);
+
+  document.getElementById("wordList").addEventListener("click", function (e) {
+    var card = e.target.closest(".word-card");
+    if (!card || !card.dataset.word) return;
+    onWordCardClick(card.dataset.word, card);
+  });
+
+  document.getElementById("btnModeLearn").addEventListener("click", function () {
+    switchMainMode("learn");
+  });
+  document.getElementById("btnModeDaily").addEventListener("click", function () {
+    switchMainMode("daily");
+  });
+  document.getElementById("btnModeSearch").addEventListener("click", function () {
+    switchMainMode("search");
+  });
+
+  document.getElementById("searchInput").addEventListener("input", onSearchFilterChanged);
+
+  document.getElementById("searchResultList").addEventListener("click", function (e) {
+    var chkWrap = e.target.closest(".search-item-chk-wrap");
+    if (!chkWrap) return;
+    var row = chkWrap.closest(".search-item-row");
+    if (!row || !row.dataset.word) return;
+    onSearchItemClick(row.dataset.word, row);
+  });
+
+  document.getElementById("chipLearned").addEventListener("click", function () {
+    toggleStatusFilter("learned");
+  });
+  document.getElementById("chipUnlearned").addEventListener("click", function () {
+    toggleStatusFilter("unlearned");
+  });
+
+  CATEGORIES.forEach(function (cat) {
+    document.getElementById("chipCat-" + cat).addEventListener("click", function () {
+      toggleCatCheckbox(cat);
+    });
+  });
+}
+
 window.onload = function () {
+  applyDeployEnvUI();
+  loadUiState();
+  bindEvents();
   updateCategoryTabsUI();
   applyMaskStateUI();
-
-  var savedPages = JSON.parse(localStorage.getItem("saved_category_page") || "null");
-  if (savedPages) {
-    categoryPage = savedPages;
-  }
-
   loadDataFromDB(true);
 
   document.addEventListener("visibilitychange", function () {
@@ -205,42 +756,47 @@ window.onload = function () {
       loadDataFromDB(false);
     }
   });
+
+  window.addEventListener("resize", scheduleLearnListLayoutSync);
+  window.addEventListener("orientationchange", scheduleLearnListLayoutSync);
 };
 
 function updateCategoryTabsUI() {
   document.querySelectorAll(".learn-tab-btn").forEach(function (btn) {
     btn.classList.remove("active");
   });
-  var initCatBtn = document.querySelector(".learn-tab-btn.cat-" + currentLearnCat);
+  var initCatBtn = document.querySelector(".learn-tab-btn.cat-" + uiState.learnCat);
   if (initCatBtn) initCatBtn.classList.add("active");
 }
 
 function toggleDetailsMask() {
-  isDetailsHidden = !isDetailsHidden;
-  localStorage.setItem("saved_details_hidden", isDetailsHidden ? "true" : "false");
+  uiState.detailsHidden = !uiState.detailsHidden;
+  persistUiState();
   applyMaskStateUI();
+  scheduleLearnListLayoutSync();
 }
 
 function applyMaskStateUI() {
   var listEl = document.getElementById("wordList");
   var btnEl = document.getElementById("maskToggleBtn");
-  if (isDetailsHidden) {
+  if (uiState.detailsHidden) {
     listEl.classList.add("hide-details");
-    btnEl.textContent = "みせる";
+    btnEl.textContent = "みる";
+    btnEl.setAttribute("aria-label", "英語と意味を見る");
   } else {
     listEl.classList.remove("hide-details");
     btnEl.textContent = "かくす";
+    btnEl.setAttribute("aria-label", "英語と意味を隠す");
   }
 }
 
-// 画面モード切り替え（ことば / まいにち / さがす）
 function switchMainMode(mode) {
-  if (currentMode === "learn" && mode !== "learn") {
-    commitAndSaveCurrentWords();
+  if ((mode === "daily" || mode === "search") && uiState.mode === "learn") {
+    applyAndSendPendingChecks();
   }
 
-  currentMode = mode;
-  localStorage.setItem("saved_main_mode", mode);
+  uiState.mode = mode;
+  persistUiState();
 
   document.getElementById("btnModeLearn").classList.toggle("active", mode === "learn");
   document.getElementById("btnModeDaily").classList.toggle("active", mode === "daily");
@@ -254,172 +810,214 @@ function switchMainMode(mode) {
     onSearchFilterChanged();
   } else if (mode === "daily") {
     renderRoadmap();
+  } else if (mode === "learn") {
+    renderCurrentLearnCat();
   }
+
+  refreshLearnedCountDisplays(mode === "daily");
 }
 
-// カテゴリー切り替え
 function switchLearnCat(catName) {
-  commitAndSaveCurrentWords();
-
-  currentLearnCat = catName;
-  localStorage.setItem("saved_learn_cat", catName);
+  uiState.learnCat = catName;
+  uiState.pageByCat[catName] = 0;
+  persistUiState();
+  invalidateLearnPageOffsetsCache();
   updateCategoryTabsUI();
-  categoryPage[currentLearnCat] = 0; // カテゴリー変更時は先頭ページにリセット
   renderCurrentLearnCat();
+}
+
+function formatMeaningText(text) {
+  var cleaned = (text || "").toString().trim();
+  if (!cleaned) return "";
+  return cleaned.replace(/。/g, ".");
+}
+
+function formatExampleText(text) {
+  var cleaned = (text || "").toString().trim();
+  if (!cleaned) return "";
+  cleaned = cleaned.replace(/。/g, "");
+  if (cleaned.charAt(0) === "「" && cleaned.charAt(cleaned.length - 1) === "」") {
+    return cleaned;
+  }
+  return "「" + cleaned + "」";
+}
+
+function buildWordTextBlocks(item) {
+  var fragment = document.createDocumentFragment();
+
+  var jaBlock = document.createElement("div");
+  jaBlock.className = "word-ja-block";
+
+  var titleRow = document.createElement("div");
+  titleRow.className = "word-title-row";
+
+  var title = document.createElement("div");
+  title.className = "word-title";
+  title.textContent = item.word;
+
+  titleRow.appendChild(title);
+
+  var reading = document.createElement("div");
+  reading.className = "word-reading";
+  reading.textContent = item.ruby;
+  titleRow.appendChild(reading);
+
+  var eng = document.createElement("div");
+  eng.className = "word-english";
+  eng.textContent = item.english;
+  titleRow.appendChild(eng);
+
+  jaBlock.appendChild(titleRow);
+  fragment.appendChild(jaBlock);
+
+  var meaning = formatMeaningText(item.meaning);
+  if (meaning) {
+    var meaningEl = document.createElement("div");
+    meaningEl.className = "word-meaning";
+    meaningEl.textContent = meaning;
+    fragment.appendChild(meaningEl);
+  }
+
+  var example = formatExampleText(item.example);
+  if (example) {
+    var exampleEl = document.createElement("div");
+    exampleEl.className = "word-example";
+    exampleEl.textContent = example;
+    fragment.appendChild(exampleEl);
+  }
+
+  return fragment;
+}
+
+function createWordCard(item) {
+  var card = document.createElement("div");
+  card.className = "word-card";
+  card.dataset.word = item.word;
+  card.setAttribute("role", "listitem");
+
+  var isChecked = getWordChecked(item);
+  if (isChecked) {
+    card.classList.add("checked");
+  }
+
+  var chkWrap = document.createElement("div");
+  chkWrap.className = "word-chk-wrap";
+  var innerChk = document.createElement("div");
+  innerChk.className = "word-custom-chk chk-" + uiState.learnCat;
+  innerChk.setAttribute("aria-hidden", "true");
+  chkWrap.appendChild(innerChk);
+
+  var content = document.createElement("div");
+  content.className = "word-content";
+  content.appendChild(buildWordTextBlocks(item));
+
+  card.appendChild(chkWrap);
+  card.appendChild(content);
+
+  return card;
+}
+
+function onWordCardClick(wordName, cardEl) {
+  var item = allWordsList.find(function (w) { return w.word === wordName; });
+  if (!item) return;
+
+  var newStatus = !getWordChecked(item);
+  cardEl.classList.toggle("checked", newStatus);
+  pendingChecks[wordName] = newStatus;
+  updateLiveHeader();
+  refreshLearnedCountDisplays(false);
 }
 
 function renderCurrentLearnCat() {
-  var words = getCurrentWords(currentLearnCat);
-  var color = themeColors[currentLearnCat] || "#2563EB";
+  var wordList = document.getElementById("wordList");
+  var list = getCategoryWords(uiState.learnCat);
+  var offset = normalizeLearnPageOffset(uiState.learnCat);
+  var words = getWordsForPage(uiState.learnCat, offset);
+  var color = themeColors[uiState.learnCat] || "#2563EB";
 
   var headerBanner = document.getElementById("learnHeaderBanner");
-  headerBanner.className = "learn-header-banner bg-" + currentLearnCat;
+  headerBanner.className = "learn-header-banner bg-" + uiState.learnCat;
 
-  var submitBtn = document.getElementById("submitBtn");
-  submitBtn.style.backgroundColor = color;
+  document.getElementById("submitBtn").style.backgroundColor = color;
 
-  var prevBtn = document.getElementById("prevBtn");
-  prevBtn.disabled = ((categoryPage[currentLearnCat] || 0) === 0);
-
-  var wordList = document.getElementById("wordList");
   wordList.innerHTML = "";
 
   if (words.length === 0 && allWordsList.length === 0) {
-    document.getElementById("learnHeaderText").textContent = currentLearnCat + "： 単語データがありません";
+    document.getElementById("learnHeaderText").textContent = uiState.learnCat + "： 単語データがありません";
+    updateLearnPageIndicator(uiState.learnCat);
     return;
   }
 
-  words.forEach(function (item, idx) {
-    var card = document.createElement("div");
-    card.className = "word-card";
-    card.id = "card-" + idx;
-
-    var isChecked = temporaryCheckedMap.hasOwnProperty(item.word)
-      ? temporaryCheckedMap[item.word]
-      : !!item.isLearned;
-
-    if (isChecked) {
-      card.classList.add("checked");
-    }
-
-    card.onclick = function (e) {
-      var currentStatus = temporaryCheckedMap.hasOwnProperty(item.word)
-        ? temporaryCheckedMap[item.word]
-        : !!item.isLearned;
-      var newStatus = !currentStatus;
-
-      card.classList.toggle("checked", newStatus);
-      temporaryCheckedMap[item.word] = newStatus;
-
-      updateLiveHeader();
-    };
-
-    var chkWrap = document.createElement("div");
-    chkWrap.className = "word-chk-wrap";
-    var innerChk = document.createElement("div");
-    innerChk.className = "word-custom-chk chk-" + currentLearnCat;
-    chkWrap.appendChild(innerChk);
-
-    var content = document.createElement("div");
-    content.className = "word-content";
-
-    var mainRow = document.createElement("div");
-    mainRow.className = "word-main-row";
-
-    var title = document.createElement("div");
-    title.className = "word-title";
-    title.textContent = item.word + " (" + item.ruby + ")";
-
-    var eng = document.createElement("div");
-    eng.className = "word-english";
-    eng.textContent = item.english;
-
-    mainRow.appendChild(title);
-    mainRow.appendChild(eng);
-
-    var detail = document.createElement("div");
-    detail.className = "word-detail";
-    detail.textContent = item.meaning + (item.example ? "\n" + item.example : "");
-
-    content.appendChild(mainRow);
-    content.appendChild(detail);
-
-    card.appendChild(chkWrap);
-    card.appendChild(content);
-
-    wordList.appendChild(card);
+  words.forEach(function (item) {
+    wordList.appendChild(createWordCard(item));
   });
 
+  updateLearnPageIndicator(uiState.learnCat);
   updateLiveHeader();
   applyMaskStateUI();
+  syncLearnListLayoutAfterPaint();
 }
 
 function updateLiveHeader() {
-  var list = getCategoryWords(currentLearnCat);
-  var totalInCat = list.length;
-  var catLearned = getCategoryLearnedCount(currentLearnCat);
-
-  var currentWords = getCurrentWords(currentLearnCat);
-  var pendingDiff = 0;
-  currentWords.forEach(function (w) {
-    if (temporaryCheckedMap.hasOwnProperty(w.word)) {
-      var tempStatus = temporaryCheckedMap[w.word];
-      if (tempStatus && !w.isLearned) pendingDiff++;
-      if (!tempStatus && w.isLearned) pendingDiff--;
-    }
-  });
-
-  var liveCatLearned = Math.max(0, catLearned + pendingDiff);
-
+  var actualTotalInCat = allWordsList.filter(function (w) { return w.category === uiState.learnCat; }).length;
+  var liveCatLearned = getLiveCategoryLearnedCount(uiState.learnCat);
   var headerText = document.getElementById("learnHeaderText");
+  var catName = uiState.learnCat;
 
-  if (totalInCat === 0) {
-    headerText.textContent = currentLearnCat + "： 登録単語 0 語";
+  if (actualTotalInCat === 0) {
+    headerText.textContent = "登録単語 0 語";
     return;
   }
 
-  if (liveCatLearned >= totalInCat && totalInCat > 0) {
-    headerText.textContent = currentLearnCat + "： 全 " + totalInCat + " 語 復習中 🔄";
+  if (liveCatLearned >= actualTotalInCat) {
+    headerText.textContent = "全 " + actualTotalInCat + " 語 復習中 🔄";
     return;
   }
 
-  var currentGoal = getNextSmallGoal(currentLearnCat, liveCatLearned, totalInCat);
-  var remaining = Math.max(0, currentGoal - liveCatLearned);
+  var nextGoal = getNextSmallGoal(catName, liveCatLearned, actualTotalInCat);
+  var remaining = Math.max(0, nextGoal - liveCatLearned);
+  var catGoals = SMALL_GOALS[catName] || [];
+  var isExactGoal = liveCatLearned > 0 && catGoals.indexOf(liveCatLearned) !== -1;
+  var lastCleared = getLastClearedGoal(catName, liveCatLearned);
+  var nextLabel = "　つぎは " + nextGoal + "語（あと" + remaining + "語）";
+  var progressLabel;
 
-  headerText.textContent = currentLearnCat + "： " + liveCatLearned + " / " + currentGoal + " 語 （あと " + remaining + " 語）";
+  if (isExactGoal) {
+    progressLabel = liveCatLearned + "語 おぼえた!! 🎉";
+  } else if (lastCleared !== null) {
+    progressLabel = lastCleared + "語 おぼえた";
+  } else if (liveCatLearned > 0) {
+    progressLabel = liveCatLearned + "語 おぼえた";
+  } else {
+    progressLabel = "スタート";
+  }
+
+  headerText.textContent = progressLabel + nextLabel;
 }
 
-// 更新ボタン（つぎへ）
 function submitProgress() {
-  var list = getCategoryWords(currentLearnCat);
+  var list = getCategoryWords(uiState.learnCat);
   if (list.length === 0) return;
 
-  commitAndSaveCurrentWords();
+  invalidateLearnPageOffsetsCache();
+  var currentOffset = uiState.pageByCat[uiState.learnCat] || 0;
+  uiState.pageByCat[uiState.learnCat] = getNextLearnPageOffset(uiState.learnCat, currentOffset);
+  persistUiState();
 
-  var nextPage = (categoryPage[currentLearnCat] || 0) + 5;
-  if (nextPage >= list.length) {
-    nextPage = 0;
-  }
-  categoryPage[currentLearnCat] = nextPage;
-  localStorage.setItem("saved_category_page", JSON.stringify(categoryPage));
-
+  applyAndSendPendingChecks();
   renderCurrentLearnCat();
 }
 
-// 更新ボタン（まえへ）
 function goBackLearnWords() {
-  var list = getCategoryWords(currentLearnCat);
+  var list = getCategoryWords(uiState.learnCat);
   if (list.length === 0) return;
 
-  var currentPage = categoryPage[currentLearnCat] || 0;
-  if (currentPage <= 0) return;
+  invalidateLearnPageOffsetsCache();
+  var currentOffset = uiState.pageByCat[uiState.learnCat] || 0;
+  uiState.pageByCat[uiState.learnCat] = getPreviousLearnPageOffset(uiState.learnCat, currentOffset);
+  persistUiState();
 
-  commitAndSaveCurrentWords();
-
-  var prevPage = Math.max(0, currentPage - 5);
-  categoryPage[currentLearnCat] = prevPage;
-  localStorage.setItem("saved_category_page", JSON.stringify(categoryPage));
-
+  applyAndSendPendingChecks();
   renderCurrentLearnCat();
 }
 
@@ -432,7 +1030,6 @@ function toggleStatusFilter(target) {
     selectedStatuses.splice(idx, 1);
     document.getElementById(target === "learned" ? "chipLearned" : "chipUnlearned").classList.remove("active");
   }
-
   onSearchFilterChanged();
 }
 
@@ -446,6 +1043,108 @@ function toggleCatCheckbox(cat) {
     document.getElementById("chipCat-" + cat).classList.remove("active");
   }
   onSearchFilterChanged();
+}
+
+function createSearchItemRow(item) {
+  var itemRow = document.createElement("div");
+  itemRow.className = "search-item-row";
+  itemRow.dataset.word = item.word;
+  itemRow.setAttribute("role", "listitem");
+
+  if (getWordChecked(item)) {
+    itemRow.classList.add("checked");
+  }
+
+  var chkWrap = document.createElement("div");
+  chkWrap.className = "search-item-chk-wrap";
+  var innerChk = document.createElement("div");
+  innerChk.className = "word-custom-chk chk-" + item.category;
+  chkWrap.appendChild(innerChk);
+
+  var body = document.createElement("div");
+  body.className = "search-item-body";
+  body.appendChild(buildWordTextBlocks(item));
+
+  var titleRow = body.querySelector(".word-title-row");
+  if (titleRow) {
+    var catBadge = document.createElement("span");
+    catBadge.className = "search-item-badge bg-" + item.category;
+    catBadge.textContent = item.category;
+    titleRow.appendChild(catBadge);
+  }
+
+  itemRow.appendChild(chkWrap);
+  itemRow.appendChild(body);
+
+  return itemRow;
+}
+
+function onSearchItemClick(wordName, rowEl) {
+  var item = allWordsList.find(function (w) { return w.word === wordName; });
+  if (!item) return;
+
+  var newStatus = !getWordChecked(item);
+  rowEl.classList.toggle("checked", newStatus);
+  pendingChecks[wordName] = newStatus;
+  applyAndSendPendingChecks();
+
+  if (selectedStatuses.length > 0) {
+    var itemStatus = newStatus ? "learned" : "unlearned";
+    if (selectedStatuses.indexOf(itemStatus) === -1) {
+      rowEl.remove();
+      updateSearchStatusBar(document.querySelectorAll("#searchResultList .search-item-row").length);
+    }
+  }
+}
+
+function buildSearchStatusText(matchCount, query, hasCatFilter, hasStatusFilter) {
+  if (query === "" && !hasStatusFilter && !hasCatFilter) {
+    return "全 " + allWordsList.length + " 語 を表示中";
+  }
+
+  var hasLearned = selectedStatuses.indexOf("learned") !== -1;
+  var hasUnlearned = selectedStatuses.indexOf("unlearned") !== -1;
+  var statusLabel = "";
+
+  if (hasLearned && !hasUnlearned) {
+    statusLabel = "おぼえた単語";
+  } else if (hasUnlearned && !hasLearned) {
+    statusLabel = "おぼえていない単語";
+  }
+
+  var catLabel = hasCatFilter ? selectedCats.join("・") : "";
+  var filterLabel = "";
+
+  if (catLabel && statusLabel) {
+    filterLabel = catLabel + "の" + statusLabel;
+  } else if (catLabel) {
+    filterLabel = catLabel;
+  } else if (statusLabel) {
+    filterLabel = statusLabel;
+  }
+
+  var parts = [];
+  if (query !== "") {
+    parts.push("「" + query + "」");
+  }
+  if (filterLabel !== "") {
+    parts.push(filterLabel);
+  }
+
+  var prefix = parts.length > 0 ? parts.join("") + "：" : "";
+  return prefix + matchCount + " 語";
+}
+
+function updateSearchStatusBar(matchCount) {
+  var query = (document.getElementById("searchInput").value || "").trim().toLowerCase();
+  var hasCatFilter = (selectedCats.length > 0);
+  var hasStatusFilter = (selectedStatuses.length > 0);
+  document.getElementById("searchStatusBar").textContent = buildSearchStatusText(
+    matchCount,
+    query,
+    hasCatFilter,
+    hasStatusFilter
+  );
 }
 
 function onSearchFilterChanged() {
@@ -468,7 +1167,7 @@ function onSearchFilterChanged() {
     if (hasCatFilter && selectedCats.indexOf(item.category) === -1) continue;
 
     if (hasStatusFilter) {
-      var itemStatus = item.isLearned ? "learned" : "unlearned";
+      var itemStatus = getWordChecked(item) ? "learned" : "unlearned";
       if (selectedStatuses.indexOf(itemStatus) === -1) continue;
     }
 
@@ -478,98 +1177,23 @@ function onSearchFilterChanged() {
       var e = (item.english || "").toLowerCase();
 
       var isPrefixMatch = (w.indexOf(query) === 0 || r.indexOf(query) === 0 || e.indexOf(query) === 0);
-      if (!isPrefixMatch) {
-        continue;
-      }
+      if (!isPrefixMatch) continue;
     }
 
     matchCount++;
-
-    var itemRow = document.createElement("div");
-    itemRow.className = "search-item-row";
-
-    var headerLine = document.createElement("div");
-    headerLine.className = "search-item-header";
-
-    var catBadge = document.createElement("span");
-    catBadge.className = "search-item-badge bg-" + item.category;
-    catBadge.textContent = item.category;
-
-    var titleSpan = document.createElement("span");
-    titleSpan.className = "search-item-title";
-    titleSpan.textContent = item.word + " (" + item.ruby + ")";
-
-    var engSpan = document.createElement("span");
-    engSpan.className = "search-item-english";
-    engSpan.textContent = item.english;
-
-    headerLine.appendChild(catBadge);
-    headerLine.appendChild(titleSpan);
-    headerLine.appendChild(engSpan);
-
-    var detailLine = document.createElement("div");
-    detailLine.className = "search-item-detail";
-    detailLine.textContent = item.meaning + (item.example ? "\n" + item.example : "");
-
-    itemRow.appendChild(headerLine);
-    itemRow.appendChild(detailLine);
-
-    listEl.appendChild(itemRow);
+    listEl.appendChild(createSearchItemRow(item));
   }
 
-  var statusBar = document.getElementById("searchStatusBar");
-  if (query === "" && !hasStatusFilter && !hasCatFilter) {
-    statusBar.textContent = "全 " + allWordsList.length + " 語 を表示中";
-  } else {
-    var labels = [];
-    if (hasStatusFilter) {
-      if (selectedStatuses.indexOf("learned") !== -1) labels.push("覚えた単語");
-      if (selectedStatuses.indexOf("unlearned") !== -1) labels.push("覚えていない単語");
-    }
-    if (hasCatFilter) labels.push(selectedCats.join("・"));
-
-    var labelHeader = labels.length > 0 ? "【" + labels.join(" の中の ") + "】 " : "";
-    var queryHeader = query !== "" ? "「" + query + "」: " : "";
-    statusBar.textContent = labelHeader + queryHeader + matchCount + " 語";
-  }
+  updateSearchStatusBar(matchCount);
 }
 
-// まいにちシートの描画処理
 function renderRoadmap() {
   if (!roadmapData) return;
 
   var todayKey = getTodayJSTStr();
-  var totalLearned = getTotalLearnedCount();
-
-  var dynamicLearnedMap = {};
-  for (var dKey in initialLearnedDatesMap) {
-    dynamicLearnedMap[dKey] = true;
-  }
-
-  if (totalLearned === 0) {
-    delete dynamicLearnedMap[todayKey];
-  }
-
-  var streakCount = 0;
-  var checkDate = new Date();
-  var utc = checkDate.getTime() + (checkDate.getTimezoneOffset() * 60000);
-  var jstDate = new Date(utc + (9 * 60 * 60000));
-
-  if (!dynamicLearnedMap[todayKey]) {
-    jstDate.setDate(jstDate.getDate() - 1);
-  }
-
-  if (totalLearned > 0) {
-    while (true) {
-      var k = formatDateStr(jstDate);
-      if (dynamicLearnedMap[k]) {
-        streakCount++;
-        jstDate.setDate(jstDate.getDate() - 1);
-      } else {
-        break;
-      }
-    }
-  }
+  var totalLearned = getLiveTotalLearnedCount();
+  var dynamicLearnedMap = buildLearnedDatesMap();
+  var streakCount = getStreakCount();
 
   document.getElementById("valStreak").textContent = streakCount + " 日";
   document.getElementById("valTotalWords").textContent = totalLearned + " 語";

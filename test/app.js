@@ -1,9 +1,23 @@
 var GAS_BASE_URL = "https://script.google.com/macros/s/AKfycby1hG96pflujpC2yLpK-RhslOoZXgkr_LGBj-IdEG6hnIrcZjp3HUjN4LIp53WJ0S5ceA/exec";
-var LEARN_PAGE_SIZE = 5;
+var FLASH_SESSION_SIZE = 5;
+var FLASH_EXIT_KNOWN_MS = 480;
+var FLASH_EXIT_SKIP_MS = 360;
+var FLASH_EXIT_GAP_MS = 50;
+var LEARN_MODE_AUTO = "auto";
+var AUTO_SESSION_PLAN = {
+  "基本": 2,
+  "介護": 1,
+  "医療": 1,
+  "社会": 1
+};
 var CATEGORIES = ["基本", "介護", "医療", "社会"];
 
 function isTestDeploy() {
   return /\/test(?:\/|$)/.test(window.location.pathname);
+}
+
+function getStorageKey(base) {
+  return base + (isTestDeploy() ? "_test" : "_prod");
 }
 
 function getApiUrl() {
@@ -14,6 +28,62 @@ function getApiUrl() {
   return GAS_BASE_URL + "?" + qs;
 }
 
+var bootPrefetchPromise = null;
+
+function fetchAppData() {
+  return fetch(getApiUrl()).then(function (res) {
+    return res.json();
+  });
+}
+
+function startBootPrefetch() {
+  if (!bootPrefetchPromise) {
+    bootPrefetchPromise = fetchAppData();
+  }
+  return bootPrefetchPromise;
+}
+
+function readWordsCache() {
+  try {
+    var raw = localStorage.getItem(getStorageKey("care_worker_words_cache_v3"));
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch (e) {
+    return null;
+  }
+}
+
+function writeWordsCache(payload) {
+  try {
+    localStorage.setItem(getStorageKey("care_worker_words_cache_v3"), JSON.stringify(payload));
+  } catch (e) {}
+}
+
+function normalizeWordItem(item) {
+  if (!item || item.word !== undefined) {
+    return item;
+  }
+  return {
+    word: item.w,
+    category: item.c,
+    ruby: item.r,
+    english: item.e,
+    meaning: item.m,
+    example: item.x,
+    isLearned: !!item.l
+  };
+}
+
+function normalizeApiPayload(res) {
+  if (!res || res.error) {
+    return res;
+  }
+  return {
+    allWords: (res.allWords || []).map(normalizeWordItem),
+    roadmap: res.roadmap || {}
+  };
+}
+
 function applyDeployEnvUI() {
   if (!isTestDeploy()) return;
 
@@ -21,7 +91,7 @@ function applyDeployEnvUI() {
 
   var themeMeta = document.querySelector('meta[name="theme-color"]');
   if (themeMeta) {
-    themeMeta.setAttribute("content", "#EA580C");
+    themeMeta.setAttribute("content", "#FB923C");
   }
 
   if (document.title.indexOf("【テスト】") !== 0) {
@@ -31,22 +101,43 @@ function applyDeployEnvUI() {
 
 var uiState = {
   mode: "learn",
-  learnCat: "基本",
-  detailsHidden: false,
-  pageByCat: { "基本": 0, "介護": 0, "医療": 0, "社会": 0 }
+  learnCat: LEARN_MODE_AUTO
 };
 
+var flashSession = {
+  cat: "",
+  wordNames: [],
+  initialCount: 0,
+  index: 0,
+  revealed: false,
+  completed: false,
+  advancing: false,
+  answerLog: []
+};
+
+var learnDataReady = false;
+var flashInteractionReady = false;
+
 var allWordsList = [];
+var vocabularyRubyEntries = null;
+var MIN_VOCAB_RUBY_LENGTH = 2;
 var roadmapData = {};
 var initialLearnedDatesMap = {};
 var serverLearnedDatesMap = {};
 var localAchievedDates = {};
 var todayCommittedLearned = {};
+var todaySkippedWords = {};
 var localLearnedOverrides = {};
+var trackedJSTDateKey = "";
 var pendingChecks = {};
 var postInFlightWords = {};
 var pendingChecksSendPromise = Promise.resolve();
 var searchCheckSendTimer = null;
+var searchInputTimer = null;
+var searchRenderToken = 0;
+var SEARCH_RENDER_BATCH = 50;
+var VIEWPORT_DEFAULT = "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover";
+var VIEWPORT_SEARCH_ZOOMABLE = "width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover";
 
 var selectedStatuses = [];
 var selectedCats = [];
@@ -59,42 +150,93 @@ var SMALL_GOALS = {
 };
 
 var themeColors = {
-  "基本": "#2563EB",
-  "介護": "#16A34A",
-  "医療": "#DC2626",
-  "社会": "#9333EA"
+  "auto": "#939BB4",
+  "基本": "#4255FF",
+  "介護": "#23B26D",
+  "医療": "#E11D48",
+  "社会": "#A855F7"
 };
 
-function loadUiState() {
-  uiState.mode = localStorage.getItem("saved_main_mode") || "learn";
-  uiState.learnCat = localStorage.getItem("saved_learn_cat") || "基本";
-  uiState.detailsHidden = localStorage.getItem("saved_details_hidden") === "true";
-
-  var savedPages = JSON.parse(localStorage.getItem("saved_category_page") || "null");
-  if (savedPages) {
-    uiState.pageByCat = savedPages;
+function normalizeLearnCat(catName) {
+  if (catName === LEARN_MODE_AUTO) {
+    return LEARN_MODE_AUTO;
   }
+  if (CATEGORIES.indexOf(catName) !== -1) {
+    return catName;
+  }
+  return LEARN_MODE_AUTO;
+}
 
-  localAchievedDates = JSON.parse(localStorage.getItem("saved_achieved_dates") || "{}");
+function loadUiState() {
+  uiState.mode = localStorage.getItem(getStorageKey("saved_main_mode")) || "learn";
+  var savedLearnCat = localStorage.getItem(getStorageKey("saved_learn_cat")) || LEARN_MODE_AUTO;
+  uiState.learnCat = normalizeLearnCat(savedLearnCat);
+
+  localAchievedDates = JSON.parse(localStorage.getItem(getStorageKey("saved_achieved_dates")) || "{}");
   todayCommittedLearned = loadTodayCommittedLearned();
+  todaySkippedWords = loadTodaySkippedWords();
+  pendingChecks = loadPendingChecksFromStorage();
   localLearnedOverrides = loadLocalLearnedOverrides();
+  trackedJSTDateKey = getTodayJSTStr();
+  loadFlashSessionFromStorage();
+}
+
+function persistFlashSession() {
+  try {
+    sessionStorage.setItem(getStorageKey("care_worker_flash_session_v2"), JSON.stringify({
+      cat: flashSession.cat,
+      wordNames: flashSession.wordNames,
+      initialCount: flashSession.initialCount,
+      index: flashSession.index,
+      completed: flashSession.completed,
+      answerLog: flashSession.answerLog
+    }));
+  } catch (e) {}
+}
+
+function loadFlashSessionFromStorage() {
+  try {
+    var flashSessionKey = getStorageKey("care_worker_flash_session_v2");
+    var saved = JSON.parse(sessionStorage.getItem(flashSessionKey) || "null");
+    if (!saved || !Array.isArray(saved.wordNames) || !saved.wordNames.length) {
+      return;
+    }
+    if (saved.cat !== uiState.learnCat) {
+      sessionStorage.removeItem(flashSessionKey);
+      return;
+    }
+
+    flashSession.cat = saved.cat;
+    flashSession.wordNames = saved.wordNames.slice();
+    flashSession.initialCount = saved.initialCount || saved.wordNames.length;
+    flashSession.index = saved.index || 0;
+    flashSession.revealed = false;
+    flashSession.completed = !!saved.completed;
+    flashSession.advancing = false;
+    flashSession.answerLog = Array.isArray(saved.answerLog) ? saved.answerLog : [];
+
+    if (flashSession.index >= flashSession.wordNames.length) {
+      flashSession.index = Math.max(0, flashSession.wordNames.length - 1);
+      flashSession.completed = flashSession.wordNames.length === 0;
+    }
+  } catch (e) {}
 }
 
 function loadLocalLearnedOverrides() {
   try {
-    return JSON.parse(sessionStorage.getItem("saved_local_learned_overrides") || "{}");
+    return JSON.parse(sessionStorage.getItem(getStorageKey("saved_local_learned_overrides")) || "{}");
   } catch (e) {
     return {};
   }
 }
 
 function persistLocalLearnedOverrides() {
-  sessionStorage.setItem("saved_local_learned_overrides", JSON.stringify(localLearnedOverrides));
+  sessionStorage.setItem(getStorageKey("saved_local_learned_overrides"), JSON.stringify(localLearnedOverrides));
 }
 
 function loadTodayCommittedLearned() {
   try {
-    var saved = JSON.parse(sessionStorage.getItem("saved_today_committed_learned") || "null");
+    var saved = JSON.parse(localStorage.getItem(getStorageKey("saved_today_committed_learned")) || "null");
     if (!saved || saved.date !== getTodayJSTStr()) {
       return {};
     }
@@ -105,10 +247,89 @@ function loadTodayCommittedLearned() {
 }
 
 function persistTodayCommittedLearned() {
-  sessionStorage.setItem("saved_today_committed_learned", JSON.stringify({
+  localStorage.setItem(getStorageKey("saved_today_committed_learned"), JSON.stringify({
     date: getTodayJSTStr(),
     words: todayCommittedLearned
   }));
+}
+
+function loadTodaySkippedWords() {
+  try {
+    var saved = JSON.parse(localStorage.getItem(getStorageKey("saved_today_skipped_words")) || "null");
+    if (!saved || saved.date !== getTodayJSTStr()) {
+      return {};
+    }
+    return saved.words || {};
+  } catch (e) {
+    return {};
+  }
+}
+
+function loadPendingChecksFromStorage() {
+  try {
+    var saved = JSON.parse(localStorage.getItem(getStorageKey("saved_pending_checks")) || "null");
+    if (!saved || saved.date !== getTodayJSTStr()) {
+      return {};
+    }
+    return saved.checks || {};
+  } catch (e) {
+    return {};
+  }
+}
+
+function persistPendingChecksToStorage() {
+  var keys = Object.keys(pendingChecks);
+  if (keys.length === 0) {
+    localStorage.removeItem(getStorageKey("saved_pending_checks"));
+    return;
+  }
+  localStorage.setItem(getStorageKey("saved_pending_checks"), JSON.stringify({
+    date: getTodayJSTStr(),
+    checks: pendingChecks
+  }));
+}
+
+function persistTodaySkippedWords() {
+  localStorage.setItem(getStorageKey("saved_today_skipped_words"), JSON.stringify({
+    date: getTodayJSTStr(),
+    words: todaySkippedWords
+  }));
+}
+
+function refreshDailyBoundariesIfNeeded() {
+  var todayKey = getTodayJSTStr();
+  if (todayKey === trackedJSTDateKey) {
+    return false;
+  }
+
+  trackedJSTDateKey = todayKey;
+  todayCommittedLearned = loadTodayCommittedLearned();
+  todaySkippedWords = loadTodaySkippedWords();
+  pendingChecks = loadPendingChecksFromStorage();
+  reconcileTodayAchievement({ allowUnmarkToday: true });
+  refreshLearnedCountDisplays(uiState.mode === "daily");
+
+  if (uiState.mode === "learn") {
+    if (flashSession.completed) {
+      updateFlashSessionUI();
+    } else {
+      refreshFlashSessionAfterDataLoad();
+    }
+  } else if (uiState.mode === "daily") {
+    renderRoadmap();
+  }
+
+  return true;
+}
+
+function markWordSkippedToday(wordName) {
+  if (!wordName) return;
+  todaySkippedWords[wordName] = true;
+  persistTodaySkippedWords();
+}
+
+function isWordSkippedToday(wordName) {
+  return !!todaySkippedWords[wordName];
 }
 
 function hasTodayCommittedLearned() {
@@ -120,11 +341,48 @@ function hasTodayCommittedLearned() {
   return false;
 }
 
+function getTodayLearnedCount() {
+  var counted = {};
+  var count = 0;
+
+  for (var wordName in todayCommittedLearned) {
+    if (!todayCommittedLearned.hasOwnProperty(wordName)) continue;
+    if (!counted[wordName]) {
+      counted[wordName] = true;
+      count++;
+    }
+  }
+
+  for (var pendingName in pendingChecks) {
+    if (!pendingChecks.hasOwnProperty(pendingName)) continue;
+    if (pendingChecks[pendingName] && !counted[pendingName]) {
+      counted[pendingName] = true;
+      count++;
+    }
+  }
+
+  return count;
+}
+
+function hasTodayAchievement() {
+  var todayKey = getTodayJSTStr();
+  return !!(serverLearnedDatesMap[todayKey] || hasTodayCommittedLearned());
+}
+
+function recordTodayKnownPress(wordName) {
+  if (wordName) {
+    todayCommittedLearned[wordName] = true;
+    persistTodayCommittedLearned();
+  }
+  markTodayAchieved();
+  refreshLearnedCountDisplays(true);
+}
+
 function reconcileTodayAchievement(options) {
   options = options || {};
   var todayKey = getTodayJSTStr();
 
-  if (hasTodayCommittedLearned()) {
+  if (hasTodayAchievement()) {
     markTodayAchieved();
   } else if (options.allowUnmarkToday) {
     delete localAchievedDates[todayKey];
@@ -138,7 +396,7 @@ function reconcileTodayAchievement(options) {
 }
 
 function persistAchievedDates() {
-  localStorage.setItem("saved_achieved_dates", JSON.stringify(localAchievedDates));
+  localStorage.setItem(getStorageKey("saved_achieved_dates"), JSON.stringify(localAchievedDates));
 }
 
 function markTodayAchieved() {
@@ -157,27 +415,80 @@ function buildLearnedDatesMap() {
   }
 
   var todayKey = getTodayJSTStr();
-  if (hasTodayCommittedLearned() && !map[todayKey]) {
+  if (hasTodayAchievement() && !map[todayKey]) {
     map[todayKey] = true;
   }
 
   return map;
 }
 
+function hasTodayStreakAchievement() {
+  var todayKey = getTodayJSTStr();
+  if (serverLearnedDatesMap[todayKey]) {
+    return true;
+  }
+  return getTodayLearnedCount() > 0;
+}
+
+// 昨日までの連続達成日数（サーバー記録のみ。今日の達成は含めない）
+function getYesterdayStreakCount() {
+  var map = {};
+  var todayKey = getTodayJSTStr();
+
+  for (var dKey in serverLearnedDatesMap) {
+    if (serverLearnedDatesMap.hasOwnProperty(dKey) && dKey !== todayKey) {
+      map[dKey] = true;
+    }
+  }
+
+  var jstYesterday = getJSTDate();
+  jstYesterday.setUTCDate(jstYesterday.getUTCDate() - 1);
+  return countStreakEndingAt(map, jstYesterday);
+}
+
+function shouldKeepTodayCommittedWord(wordName) {
+  if (postInFlightWords[wordName]) {
+    return true;
+  }
+  if (pendingChecks.hasOwnProperty(wordName)) {
+    return pendingChecks[wordName] === true;
+  }
+  if (localLearnedOverrides.hasOwnProperty(wordName)) {
+    return localLearnedOverrides[wordName] === true;
+  }
+
+  var word = findWordByKey(wordName);
+  return !!(word && word.isLearned);
+}
+
 function syncTodayCommittedLearnedWithServer() {
-  var synced = {};
+  var candidates = {};
+  var persistedToday = loadTodayCommittedLearned();
+
+  for (var savedName in persistedToday) {
+    if (persistedToday.hasOwnProperty(savedName)) {
+      candidates[savedName] = true;
+    }
+  }
 
   for (var wordName in todayCommittedLearned) {
-    if (!todayCommittedLearned.hasOwnProperty(wordName)) continue;
-
-    if (localLearnedOverrides.hasOwnProperty(wordName) && localLearnedOverrides[wordName]) {
-      synced[wordName] = true;
-      continue;
+    if (todayCommittedLearned.hasOwnProperty(wordName)) {
+      candidates[wordName] = true;
     }
+  }
 
-    var word = allWordsList.find(function (w) { return w.word === wordName; });
-    if (word && word.isLearned) {
-      synced[wordName] = true;
+  for (var pendingName in pendingChecks) {
+    if (!pendingChecks.hasOwnProperty(pendingName)) continue;
+    if (pendingChecks[pendingName]) {
+      candidates[pendingName] = true;
+    }
+  }
+
+  var synced = {};
+  for (var candidateName in candidates) {
+    if (!candidates.hasOwnProperty(candidateName)) continue;
+    if (shouldKeepTodayCommittedWord(candidateName)) {
+      synced[candidateName] = true;
     }
   }
 
@@ -189,9 +500,11 @@ function syncAchievementCachesFromServer() {
   syncTodayCommittedLearnedWithServer();
 
   var todayKey = getTodayJSTStr();
+  var keepTodayAchieved = hasTodayStreakAchievement();
+
   localAchievedDates = {};
 
-  if (hasTodayCommittedLearned() && !serverLearnedDatesMap[todayKey]) {
+  if (keepTodayAchieved && !serverLearnedDatesMap[todayKey]) {
     localAchievedDates[todayKey] = true;
   }
   persistAchievedDates();
@@ -200,7 +513,7 @@ function syncAchievementCachesFromServer() {
     if (!localLearnedOverrides.hasOwnProperty(wordName)) continue;
     if (postInFlightWords[wordName]) continue;
 
-    var target = allWordsList.find(function (w) { return w.word === wordName; });
+    var target = findWordByKey(wordName);
     if (!target) {
       delete localLearnedOverrides[wordName];
       continue;
@@ -211,33 +524,46 @@ function syncAchievementCachesFromServer() {
   persistLocalLearnedOverrides();
 }
 
+// れんぞく達成 = 昨日までの連続 +（今日1語以上覚えたら +1）
+// 例: 昨日まで10日 → 今日達成前10日、達成後11日。昨日まで0日 → 達成前0日、達成後1日。
 function getStreakCount() {
-  return calculateStreakCount(buildLearnedDatesMap());
+  var streakThroughYesterday = getYesterdayStreakCount();
+  if (hasTodayStreakAchievement()) {
+    return streakThroughYesterday + 1;
+  }
+  return streakThroughYesterday;
+}
+
+function setDailyStatValue(el, count, unit) {
+  if (!el) return;
+  el.innerHTML = count + '<span class="daily-stat-unit"> ' + unit + '</span>';
 }
 
 function refreshStreakDisplay() {
   var streakEl = document.getElementById("valStreak");
-  if (streakEl) {
-    streakEl.textContent = getStreakCount() + " 日";
-  }
+  setDailyStatValue(streakEl, getStreakCount(), "日");
 }
 
-function calculateStreakCount(learnedMap) {
-  var todayKey = getTodayJSTStr();
-  var checkDate = new Date();
+function refreshTodayLearnedDisplay() {
+  var todayEl = document.getElementById("valTodayWords");
+  setDailyStatValue(todayEl, getTodayLearnedCount(), "語");
+}
+
+function getJSTDate(baseDate) {
+  var checkDate = baseDate ? new Date(baseDate.getTime()) : new Date();
   var utc = checkDate.getTime() + (checkDate.getTimezoneOffset() * 60000);
-  var jstDate = new Date(utc + (9 * 60 * 60000));
+  return new Date(utc + (9 * 60 * 60000));
+}
 
-  if (!learnedMap[todayKey]) {
-    jstDate.setDate(jstDate.getDate() - 1);
-  }
-
+function countStreakEndingAt(learnedMap, jstDate) {
   var streakCount = 0;
+  var cursor = new Date(jstDate.getTime());
+
   while (true) {
-    var k = formatDateStr(jstDate);
+    var k = formatJSTDateStr(cursor);
     if (learnedMap[k]) {
       streakCount++;
-      jstDate.setDate(jstDate.getDate() - 1);
+      cursor.setUTCDate(cursor.getUTCDate() - 1);
     } else {
       break;
     }
@@ -256,10 +582,11 @@ function refreshLearnedCountDisplays(refreshRoadmapFully) {
 
   var totalEl = document.getElementById("valTotalWords");
   if (totalEl) {
-    totalEl.textContent = getLiveTotalLearnedCount() + " 語";
+    setDailyStatValue(totalEl, getLiveTotalLearnedCount(), "語");
   }
 
   refreshStreakDisplay();
+  refreshTodayLearnedDisplay();
 
   if (refreshRoadmapFully && uiState.mode === "daily") {
     renderRoadmap();
@@ -267,18 +594,18 @@ function refreshLearnedCountDisplays(refreshRoadmapFully) {
 }
 
 function persistUiState() {
-  localStorage.setItem("saved_main_mode", uiState.mode);
-  localStorage.setItem("saved_learn_cat", uiState.learnCat);
-  localStorage.setItem("saved_details_hidden", uiState.detailsHidden ? "true" : "false");
-  localStorage.setItem("saved_category_page", JSON.stringify(uiState.pageByCat));
+  localStorage.setItem(getStorageKey("saved_main_mode"), uiState.mode);
+  localStorage.setItem(getStorageKey("saved_learn_cat"), uiState.learnCat);
 }
 
 function getWordChecked(wordItem) {
-  if (pendingChecks.hasOwnProperty(wordItem.word)) {
-    return pendingChecks[wordItem.word];
+  var wordName = getWordKey(wordItem);
+  if (!wordName) return false;
+  if (pendingChecks.hasOwnProperty(wordName)) {
+    return pendingChecks[wordName];
   }
-  if (localLearnedOverrides.hasOwnProperty(wordItem.word)) {
-    return !!localLearnedOverrides[wordItem.word];
+  if (localLearnedOverrides.hasOwnProperty(wordName)) {
+    return !!localLearnedOverrides[wordName];
   }
   return !!wordItem.isLearned;
 }
@@ -297,10 +624,17 @@ function countCheckedWords(filterFn) {
 }
 
 function getTodayJSTStr() {
-  var now = new Date();
-  var utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+  return formatJSTDateStr();
+}
+
+function formatJSTDateStr(fromDate) {
+  var base = fromDate ? new Date(fromDate.getTime()) : new Date();
+  var utc = base.getTime() + (base.getTimezoneOffset() * 60000);
   var jst = new Date(utc + (9 * 60 * 60000));
-  return formatDateStr(jst);
+  var y = jst.getUTCFullYear();
+  var m = ("0" + (jst.getUTCMonth() + 1)).slice(-2);
+  var d = ("0" + jst.getUTCDate()).slice(-2);
+  return y + "-" + m + "-" + d;
 }
 
 function getNextSmallGoal(catName, currentCount, maxCount) {
@@ -313,179 +647,706 @@ function getNextSmallGoal(catName, currentCount, maxCount) {
   return maxCount;
 }
 
-function applyLearnListScrollMode(wordList) {
-  wordList.classList.remove("word-list-fit", "word-list-fit-partial");
-  wordList.classList.add("word-list-scroll");
-}
-
-function applyLearnListFitMode(wordList, isPartial) {
-  wordList.classList.remove("word-list-scroll");
-  wordList.classList.add("word-list-fit");
-  wordList.classList.toggle("word-list-fit-partial", isPartial);
-  wordList.scrollTop = 0;
-}
-
-function canFitLearnListWithoutScroll(wordList, cards) {
-  if (cards.length === 0) return false;
-
-  var gap = parseFloat(getComputedStyle(wordList).rowGap) || 8;
-  var stackHeight = 0;
-
-  for (var i = 0; i < cards.length; i++) {
-    stackHeight += cards[i].scrollHeight;
-    if (i > 0) stackHeight += gap;
-  }
-
-  return stackHeight <= wordList.clientHeight;
-}
-
-var learnPageOffsetsCache = null;
-
-function invalidateLearnPageOffsetsCache() {
-  learnPageOffsetsCache = null;
-}
-
-function buildLearnPageOffsets(catName) {
-  var list = getCategoryWords(catName);
-  if (list.length === 0) return [0];
-
-  var offsets = [0];
-  for (var offset = LEARN_PAGE_SIZE; offset < list.length; offset += LEARN_PAGE_SIZE) {
-    offsets.push(offset);
-  }
-  return offsets;
-}
-
-function getLearnPageOffsets(catName) {
-  var list = getCategoryWords(catName);
-
-  if (
-    learnPageOffsetsCache &&
-    learnPageOffsetsCache.cat === catName &&
-    learnPageOffsetsCache.length === list.length
-  ) {
-    return learnPageOffsetsCache.offsets;
-  }
-
-  var offsets = buildLearnPageOffsets(catName);
-  learnPageOffsetsCache = {
-    cat: catName,
-    length: list.length,
-    offsets: offsets
-  };
-  return offsets;
-}
-
-function findLearnPageIndex(offsets, offset) {
-  var idx = offsets.indexOf(offset);
-  if (idx !== -1) return idx;
-
-  var closest = 0;
-  for (var i = 0; i < offsets.length; i++) {
-    if (offsets[i] <= offset) closest = i;
-    else break;
-  }
-  return closest;
-}
-
-function normalizeLearnPageOffset(catName) {
-  var list = getCategoryWords(catName);
-  if (list.length === 0) {
-    uiState.pageByCat[catName] = 0;
-    return 0;
-  }
-
-  var offset = uiState.pageByCat[catName] || 0;
-  if (offset >= list.length) offset = 0;
-
-  var offsets = getLearnPageOffsets(catName);
-  var idx = findLearnPageIndex(offsets, offset);
-  offset = offsets[idx];
-  uiState.pageByCat[catName] = offset;
-  return offset;
-}
-
-function getNextLearnPageOffset(catName, currentOffset) {
-  var offsets = getLearnPageOffsets(catName);
-  var idx = findLearnPageIndex(offsets, currentOffset);
-  if (idx >= offsets.length - 1) return 0;
-  return offsets[idx + 1];
-}
-
-function getPreviousLearnPageOffset(catName, currentOffset) {
-  var offsets = getLearnPageOffsets(catName);
-  var idx = findLearnPageIndex(offsets, currentOffset);
-  if (idx <= 0) return offsets[offsets.length - 1];
-  return offsets[idx - 1];
-}
-
-function syncLearnListLayout() {
-  var wordList = document.getElementById("wordList");
-  var panelLearn = document.getElementById("panelLearn");
-  if (!wordList || !panelLearn || !panelLearn.classList.contains("active")) return;
-
-  var cards = wordList.querySelectorAll(".word-card");
-  if (cards.length === 0) return;
-
-  if (canFitLearnListWithoutScroll(wordList, cards)) {
-    applyLearnListFitMode(wordList, cards.length < LEARN_PAGE_SIZE);
-  } else {
-    applyLearnListScrollMode(wordList);
-  }
-}
-
-function syncLearnListLayoutAfterPaint() {
-  requestAnimationFrame(function () {
-    syncLearnListLayout();
+function getUnlearnedCategoryWords(catName) {
+  return getCategoryWords(catName).filter(function (w) {
+    var wordName = getWordKey(w);
+    if (!wordName || getWordChecked(w) || isWordSkippedToday(wordName)) {
+      return false;
+    }
+    return true;
   });
 }
 
-var learnLayoutTimer = null;
+function isAutoLearnMode() {
+  return uiState.learnCat === LEARN_MODE_AUTO;
+}
 
-function scheduleLearnListLayoutSync() {
-  clearTimeout(learnLayoutTimer);
-  learnLayoutTimer = setTimeout(function () {
-    if (uiState.mode !== "learn") return;
-    syncLearnListLayout();
-  }, 150);
+function getFlashThemeCat(item) {
+  if (isAutoLearnMode() && item) {
+    return getWordCategoryKey(item) || LEARN_MODE_AUTO;
+  }
+  return uiState.learnCat;
+}
+
+function getLearnModeLabel(catName) {
+  if (catName === LEARN_MODE_AUTO) {
+    return "すべて";
+  }
+  return catName;
+}
+
+function pickWordNamesFromCategory(catName, count) {
+  var unlearned = getUnlearnedCategoryWords(catName);
+  var names = [];
+  for (var i = 0; i < unlearned.length && names.length < count; i++) {
+    var wordName = getWordKey(unlearned[i]);
+    if (wordName) {
+      names.push(wordName);
+    }
+  }
+  return names;
+}
+
+// 方針A: 未学習が5未満でもその数だけ出題。他カテゴリからの補充はしない。
+function buildAutoFlashSessionWordNames() {
+  var names = [];
+  CATEGORIES.forEach(function (catName) {
+    var count = AUTO_SESSION_PLAN[catName] || 0;
+    if (count > 0) {
+      names = names.concat(pickWordNamesFromCategory(catName, count));
+    }
+  });
+  return names;
+}
+
+function buildFlashSessionWordNames(catName) {
+  if (catName === LEARN_MODE_AUTO) {
+    return buildAutoFlashSessionWordNames();
+  }
+  return pickWordNamesFromCategory(catName, FLASH_SESSION_SIZE);
+}
+
+function startFlashSession(catName, forceNew) {
+  var sameOngoingSession =
+    !forceNew &&
+    allWordsList.length > 0 &&
+    flashSession.cat === catName &&
+    flashSession.wordNames.length > 0 &&
+    !flashSession.completed;
+
+  if (sameOngoingSession) {
+    return;
+  }
+
+  flashSession.cat = catName;
+  flashSession.wordNames = buildFlashSessionWordNames(catName);
+  flashSession.initialCount = flashSession.wordNames.length;
+  flashSession.index = 0;
+  flashSession.revealed = false;
+  flashSession.advancing = false;
+  flashSession.completed = flashSession.wordNames.length === 0;
+  flashSession.answerLog = [];
+  persistFlashSession();
+}
+
+function getCurrentFlashWordItem() {
+  if (flashSession.completed || flashSession.index >= flashSession.wordNames.length) {
+    return null;
+  }
+
+  var wordName = flashSession.wordNames[flashSession.index];
+  return allWordsList.find(function (w) { return getWordKey(w) === wordName; }) || null;
+}
+
+function resetFlashcardView() {
+  flashSession.revealed = false;
+  flashSession.advancing = false;
+  clearFlashcardAnswer();
+  setFlashRevealState(false);
+}
+
+function markLearnDataReady() {
+  learnDataReady = true;
+  flashInteractionReady = false;
+  window.setTimeout(function () {
+    flashInteractionReady = true;
+  }, 400);
+}
+
+function isFlashCompleteLocked() {
+  return uiState.mode === "learn" &&
+    flashSession.completed &&
+    flashSession.initialCount > 0;
+}
+
+function prefersReducedMotion() {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+function setFlashAnswerButtonsBusy(isBusy) {
+  var answerBtns = document.getElementById("flashAnswerBtns");
+  if (answerBtns) {
+    answerBtns.classList.toggle("is-busy", !!isBusy);
+  }
+  updateFlashAnswerButtonsVisibility();
+  updateFlashUndoButton();
+}
+
+function updateFlashAnswerButtonsVisibility() {
+  var revealBtn = document.getElementById("flashRevealBtn");
+  var answerBtns = document.getElementById("flashAnswerBtns");
+  if (!revealBtn || !answerBtns) return;
+
+  var inStudy = !flashSession.completed && flashSession.wordNames.length > 0;
+  var showReveal = inStudy && !flashSession.revealed && !flashSession.advancing;
+  var showAnswer = inStudy && flashSession.revealed && !flashSession.advancing;
+
+  revealBtn.hidden = !showReveal;
+  answerBtns.hidden = !showAnswer;
+}
+
+function clearFlashcardAnimationState() {
+  var card = document.getElementById("flashcard");
+  if (!card) return;
+
+  card.style.transition = "none";
+  card.classList.remove("is-leaving-known", "is-leaving-skip", "is-arriving", "is-arriving-prep");
+  card.style.removeProperty("opacity");
+  card.style.removeProperty("transform");
+  void card.offsetWidth;
+  card.style.removeProperty("transition");
+}
+
+function flashButtonPressFeedback(markLearned) {
+  var btnId = markLearned ? "flashKnownBtn" : "flashUnknownBtn";
+  var btn = document.getElementById(btnId);
+  if (!btn) return;
+
+  btn.classList.remove("is-pressed-feedback");
+  void btn.offsetWidth;
+  btn.classList.add("is-pressed-feedback");
+  window.setTimeout(function () {
+    btn.classList.remove("is-pressed-feedback");
+  }, 180);
+}
+
+function playFlashAdvanceFeedback(markLearned, done) {
+  var card = document.getElementById("flashcard");
+  var dotsEl = document.getElementById("flashProgressDots");
+  var currentDot = dotsEl ? dotsEl.children[flashSession.index] : null;
+  var duration = prefersReducedMotion()
+    ? 200
+    : (markLearned ? FLASH_EXIT_KNOWN_MS : FLASH_EXIT_SKIP_MS);
+
+  if (!card) {
+    if (done) done();
+    return;
+  }
+
+  flashButtonPressFeedback(markLearned);
+  clearFlashcardAnimationState();
+
+  if (currentDot) {
+    currentDot.style.transition = markLearned
+      ? "transform 0.2s cubic-bezier(0.33, 1, 0.68, 1), background-color 0.2s ease, border-color 0.2s ease"
+      : "background-color 0.18s ease, border-color 0.18s ease";
+    if (markLearned) {
+      currentDot.style.transform = "scale(1.1)";
+    }
+    currentDot.style.backgroundColor = "var(--learn-color-progress-done)";
+    currentDot.style.borderColor = "var(--learn-color-progress-done)";
+  }
+
+  window.requestAnimationFrame(function () {
+    window.requestAnimationFrame(function () {
+      card.classList.add(markLearned ? "is-leaving-known" : "is-leaving-skip");
+    });
+  });
+
+  window.setTimeout(function () {
+    window.setTimeout(function () {
+      if (done) done();
+    }, FLASH_EXIT_GAP_MS);
+  }, duration);
+}
+
+function playFlashcardEnterAnimation() {
+  if (prefersReducedMotion()) return;
+
+  var card = document.getElementById("flashcard");
+  if (!card) return;
+
+  clearFlashcardAnimationState();
+  card.classList.add("is-arriving-prep");
+  void card.offsetWidth;
+  window.requestAnimationFrame(function () {
+    window.requestAnimationFrame(function () {
+      card.classList.remove("is-arriving-prep");
+      card.classList.add("is-arriving");
+    });
+  });
+  window.setTimeout(function () {
+    card.classList.remove("is-arriving");
+  }, 340);
+}
+
+function updateFlashProgressDots() {
+  var progressEl = document.getElementById("flashProgress");
+  var dotsEl = document.getElementById("flashProgressDots");
+  if (!progressEl || !dotsEl) return;
+
+  if (flashSession.completed || flashSession.wordNames.length === 0) {
+    progressEl.hidden = true;
+    return;
+  }
+
+  var total = flashSession.initialCount || flashSession.wordNames.length || FLASH_SESSION_SIZE;
+  var current = Math.min(flashSession.index + 1, total);
+  progressEl.hidden = false;
+  progressEl.setAttribute("aria-label", current + "つ目 / 全" + total + "つ");
+
+  dotsEl.innerHTML = "";
+  var item = getCurrentFlashWordItem();
+  var currentColor = themeColors[getFlashThemeCat(item)] || "#64748B";
+
+  for (var i = 0; i < total; i++) {
+    var dot = document.createElement("span");
+    dot.className = "flash-progress-dot";
+    dot.setAttribute("aria-hidden", "true");
+    if (i < flashSession.index) {
+      dot.classList.add("is-done");
+    } else if (i === flashSession.index) {
+      dot.classList.add("is-current");
+      dot.style.backgroundColor = currentColor;
+      dot.style.borderColor = currentColor;
+    } else {
+      dot.classList.add("is-upcoming");
+    }
+    dotsEl.appendChild(dot);
+  }
+
+  updateFlashUndoButton();
+}
+
+function canUndoFlashcard() {
+  if (!flashInteractionReady || flashSession.advancing) {
+    return false;
+  }
+  if (!flashSession.answerLog.length || flashSession.wordNames.length === 0) {
+    return false;
+  }
+  if (!flashSession.completed && flashSession.index === 0) {
+    return false;
+  }
+
+  var lastEntry = flashSession.answerLog[flashSession.answerLog.length - 1];
+  return !!(lastEntry && lastEntry.wordName);
+}
+
+function updateFlashUndoButton() {
+  var studyBtn = document.getElementById("flashUndoBtn");
+  var completeBtn = document.getElementById("flashUndoBtnComplete");
+  var showUndo = canUndoFlashcard();
+  var onComplete = flashSession.completed && flashSession.initialCount > 0;
+
+  if (studyBtn) {
+    var showStudy = showUndo && !onComplete;
+    studyBtn.classList.toggle("is-unavailable", !showStudy);
+    studyBtn.disabled = false;
+  }
+  if (completeBtn) {
+    var showComplete = showUndo && onComplete;
+    completeBtn.classList.toggle("is-unavailable", !showComplete);
+    completeBtn.disabled = false;
+  }
+}
+
+function captureFlashUndoSnapshot(wordName) {
+  var item = findWordByKey(wordName);
+  return {
+    hadPendingCheck: pendingChecks.hasOwnProperty(wordName),
+    pendingCheckValue: pendingChecks[wordName],
+    wasInTodayCommitted: !!todayCommittedLearned[wordName],
+    wasSkippedToday: !!todaySkippedWords[wordName],
+    wasLearned: item ? getWordChecked(item) : false
+  };
+}
+
+function revertFlashAnswer(entry) {
+  var wordName = entry.wordName;
+  var snap = entry.undoSnapshot;
+  var item = findWordByKey(wordName);
+
+  if (entry.markLearned) {
+    if (snap.hadPendingCheck) {
+      pendingChecks[wordName] = snap.pendingCheckValue;
+    } else {
+      delete pendingChecks[wordName];
+    }
+
+    if (item) {
+      if (pendingChecks.hasOwnProperty(wordName)) {
+        item.isLearned = pendingChecks[wordName];
+      } else if (localLearnedOverrides.hasOwnProperty(wordName)) {
+        item.isLearned = !!localLearnedOverrides[wordName];
+      } else {
+        item.isLearned = snap.wasLearned;
+      }
+    }
+
+    if (!snap.wasInTodayCommitted) {
+      delete todayCommittedLearned[wordName];
+      persistTodayCommittedLearned();
+    }
+
+    reconcileTodayAchievement({ allowUnmarkToday: true });
+  } else if (!snap.wasSkippedToday) {
+    delete todaySkippedWords[wordName];
+    persistTodaySkippedWords();
+  }
+
+  persistPendingChecksToStorage();
+}
+
+function undoFlashcard() {
+  if (!canUndoFlashcard()) return;
+
+  var entry = flashSession.answerLog.pop();
+  if (!entry) return;
+
+  flashSession.advancing = true;
+  if (entry.wordName) {
+    delete postInFlightWords[entry.wordName];
+  }
+  revertFlashAnswer(entry);
+  flashSession.index = Math.max(0, flashSession.index - 1);
+  flashSession.completed = false;
+  flashSession.revealed = false;
+  flashSession.advancing = false;
+
+  updateFlashSessionUI();
+  persistFlashSession();
+  refreshLearnedCountDisplays(true);
+}
+
+function fillFlashcardAnswer(item) {
+  var englishEl = document.getElementById("flashEnglish");
+  var meaningEl = document.getElementById("flashMeaning");
+  var exampleEl = document.getElementById("flashExample");
+  var english = item.english || item.e || "";
+  var meaning = formatMeaningText(item.meaning || item.m);
+  var example = formatExampleText(item.example || item.x);
+
+  englishEl.textContent = english;
+  englishEl.classList.toggle("is-empty", !english);
+  appendTextWithVocabularyRuby(meaningEl, meaning);
+  meaningEl.classList.toggle("is-empty", !meaning);
+  appendTextWithVocabularyRuby(exampleEl, example);
+  exampleEl.classList.toggle("is-empty", !example);
+}
+
+function clearFlashcardAnswer() {
+  ["flashEnglish", "flashMeaning", "flashExample"].forEach(function (id) {
+    var el = document.getElementById(id);
+    el.textContent = "";
+    el.classList.add("is-empty");
+  });
+}
+
+function resetFlashcardScroll() {
+  var back = document.getElementById("flashcardBack");
+  var front = document.querySelector(".flashcard-front");
+  if (back) {
+    back.scrollTop = 0;
+  }
+  if (front) {
+    front.scrollTop = 0;
+  }
+}
+
+function setFlashRevealState(isRevealed) {
+  flashSession.revealed = isRevealed;
+
+  var card = document.getElementById("flashcard");
+  var back = document.getElementById("flashcardBack");
+  if (!card || !back) return;
+
+  back.setAttribute("aria-hidden", isRevealed ? "false" : "true");
+  back.setAttribute("aria-label", isRevealed ? "タップで答えを隠す" : "タップで答えを表示");
+
+  if (isRevealed) {
+    card.classList.add("revealed");
+  } else {
+    card.classList.remove("revealed");
+    resetFlashcardScroll();
+  }
+
+  updateFlashAnswerButtonsVisibility();
+  updateFlashUndoButton();
+}
+
+function toggleFlashcardAnswer() {
+  if (!flashInteractionReady || flashSession.completed || flashSession.advancing) return;
+
+  var item = getCurrentFlashWordItem();
+  if (!item) return;
+
+  if (flashSession.revealed) {
+    setFlashRevealState(false);
+    return;
+  }
+
+  fillFlashcardAnswer(item);
+  resetFlashcardScroll();
+  setFlashRevealState(true);
+
+  if (prefersReducedMotion()) {
+    return;
+  }
+
+  var card = document.getElementById("flashcard");
+  card.classList.remove("revealed");
+  void card.offsetWidth;
+  window.requestAnimationFrame(function () {
+    card.classList.add("revealed");
+  });
+}
+
+function resetFlashKnownBtnStyle() {
+  var knownBtn = document.getElementById("flashKnownBtn");
+  if (!knownBtn) return;
+  knownBtn.style.removeProperty("background-color");
+  knownBtn.style.removeProperty("border-color");
+  knownBtn.style.removeProperty("color");
+}
+
+function renderFlashcardContent(item) {
+  clearFlashcardAnimationState();
+
+  document.getElementById("flashWord").textContent = getWordKey(item);
+  var readingEl = document.getElementById("flashReading");
+  var reading = item.ruby || item.r || "";
+  readingEl.textContent = reading;
+  readingEl.hidden = !reading;
+
+  clearFlashcardAnswer();
+  resetFlashKnownBtnStyle();
+  resetFlashcardScroll();
+}
+
+function getFlashSessionAnswerCounts() {
+  var knownCount = 0;
+  var skippedCount = 0;
+
+  flashSession.answerLog.forEach(function (entry) {
+    if (entry.markLearned) {
+      knownCount++;
+    } else {
+      skippedCount++;
+    }
+  });
+
+  return {
+    knownCount: knownCount,
+    skippedCount: skippedCount
+  };
+}
+
+function buildFlashCompleteCopy(total, counts) {
+  var knownCount = counts.knownCount;
+  var skippedCount = counts.skippedCount;
+  var copy = {
+    message: total + "つ おわり！ おつかれさま",
+    detail: "",
+    detailHidden: true,
+    restartLabel: "もう" + total + "つ 見てみる"
+  };
+
+  if (knownCount === total && total > 0) {
+    copy.message = total + "つ ぜんぶ おぼえた！ 🎉";
+    copy.restartLabel = "もう" + total + "つ やる";
+    return copy;
+  }
+
+  if (knownCount === 0 && skippedCount === total && total > 0) {
+    copy.message = total + "つ おわり！ また チャレンジしよう";
+    copy.detail = "むずかしかった ことばは また でます";
+    copy.detailHidden = false;
+    return copy;
+  }
+
+  if (skippedCount > 0) {
+    copy.message = total + "つ おわり！ おつかれさま";
+    copy.detail = "おぼえた " + knownCount + "　まだ " + skippedCount;
+    copy.detailHidden = false;
+    return copy;
+  }
+
+  return copy;
+}
+
+function updateFlashCompleteUI() {
+  var messageEl = document.getElementById("flashCompleteMessage");
+  var detailEl = document.getElementById("flashCompleteDetail");
+  var restartBtn = document.getElementById("flashRestartBtn");
+  if (!messageEl || !restartBtn) return;
+
+  if (flashSession.wordNames.length === 0) {
+    messageEl.textContent = "単語がありません";
+    if (detailEl) {
+      detailEl.textContent = "";
+      detailEl.hidden = true;
+    }
+    restartBtn.textContent = "もう" + FLASH_SESSION_SIZE + "つ つづける";
+    return;
+  }
+
+  var total = flashSession.initialCount || flashSession.wordNames.length;
+  var copy = buildFlashCompleteCopy(total, getFlashSessionAnswerCounts());
+
+  messageEl.textContent = copy.message;
+  restartBtn.textContent = copy.restartLabel;
+
+  if (!detailEl) return;
+
+  if (copy.detailHidden || !copy.detail) {
+    detailEl.textContent = "";
+    detailEl.hidden = true;
+    return;
+  }
+
+  detailEl.textContent = copy.detail;
+  detailEl.hidden = false;
+}
+
+function updateFlashSessionUI(options) {
+  options = options || {};
+  var studyEl = document.getElementById("flashStudy");
+  var completeEl = document.getElementById("flashComplete");
+  var answerBtns = document.getElementById("flashAnswerBtns");
+  var headerBanner = document.getElementById("learnHeaderBanner");
+  var themeCat = getFlashThemeCat(getCurrentFlashWordItem());
+  headerBanner.className = "learn-header-banner bg-" + themeCat;
+
+  if (flashSession.completed || flashSession.wordNames.length === 0) {
+    studyEl.hidden = true;
+    completeEl.hidden = false;
+    updateFlashProgressDots();
+    answerBtns.hidden = true;
+    updateFlashCompleteUI();
+    document.getElementById("flashRestartBtn").hidden = flashSession.wordNames.length === 0;
+
+    document.getElementById("flashFinishBtn").hidden = flashSession.wordNames.length === 0;
+
+    updateLiveHeader();
+    updateCategoryTabsUI();
+    updateFlashUndoButton();
+    updateFlashAnswerButtonsVisibility();
+    return;
+  }
+
+  studyEl.hidden = false;
+  completeEl.hidden = true;
+  updateFlashProgressDots();
+  updateLiveHeader();
+  updateCategoryTabsUI();
+
+  var item = getCurrentFlashWordItem();
+  if (!item) {
+    var currentName = flashSession.wordNames[flashSession.index];
+    if (currentName && allWordsList.length > 0) {
+      return;
+    }
+    flashSession.completed = true;
+    updateFlashSessionUI();
+    return;
+  }
+
+  var preserveRevealed = !!options.preserveRevealed && flashSession.revealed;
+  renderFlashcardContent(item);
+  if (preserveRevealed) {
+    fillFlashcardAnswer(item);
+  }
+  setFlashRevealState(preserveRevealed);
+
+  if (options.animateEnter) {
+    playFlashcardEnterAnimation();
+  }
+
+  updateFlashAnswerButtonsVisibility();
+  updateFlashUndoButton();
+}
+
+function advanceFlashcard(markLearned) {
+  if (flashSession.advancing || flashSession.completed) return;
+
+  var item = getCurrentFlashWordItem();
+  if (!item) return;
+
+  flashSession.advancing = true;
+  setFlashAnswerButtonsBusy(true);
+
+  var wordName = getWordKey(item);
+  var undoSnapshot = captureFlashUndoSnapshot(wordName);
+  if (markLearned && wordName) {
+    applyKnownWordState(wordName);
+  } else if (!markLearned && wordName) {
+    markWordSkippedToday(wordName);
+  }
+
+  flashSession.answerLog.push({
+    wordName: wordName,
+    markLearned: markLearned,
+    undoSnapshot: undoSnapshot
+  });
+
+  playFlashAdvanceFeedback(markLearned, function () {
+    flashSession.index++;
+    flashSession.revealed = false;
+
+    if (flashSession.index >= flashSession.wordNames.length) {
+      flashSession.completed = true;
+    }
+
+    flashSession.advancing = false;
+    setFlashAnswerButtonsBusy(false);
+    updateFlashSessionUI({
+      animateEnter: !flashSession.completed
+    });
+    persistFlashSession();
+  });
+}
+
+function restartFlashSession() {
+  flushPendingChecksNow();
+  startFlashSession(uiState.learnCat, true);
+  updateFlashSessionUI();
+}
+
+function finishFlashSession() {
+  if (!flashSession.completed || flashSession.initialCount === 0) return;
+  switchMainMode("daily");
+}
+
+function getWordKey(item) {
+  return item.word || item.w || "";
+}
+
+function findWordByKey(wordName) {
+  if (!wordName) return null;
+  for (var i = 0; i < allWordsList.length; i++) {
+    if (getWordKey(allWordsList[i]) === wordName) {
+      return allWordsList[i];
+    }
+  }
+  return null;
+}
+
+function applyKnownWordState(wordName) {
+  if (!wordName) return;
+
+  pendingChecks[wordName] = true;
+  persistPendingChecksToStorage();
+  var item = findWordByKey(wordName);
+  if (item) {
+    item.isLearned = true;
+  }
+  recordTodayKnownPress(wordName);
+}
+
+function getWordCategoryKey(item) {
+  return item.category || item.c || "";
 }
 
 function getCategoryWords(catName) {
-  var list = allWordsList.filter(function (w) { return w.category === catName; });
+  var list = allWordsList.filter(function (w) {
+    return getWordCategoryKey(w) === catName;
+  });
   list.sort(function (a, b) {
     return (a.originalIndex || 0) - (b.originalIndex || 0);
   });
 
   return list;
-}
-
-function getWordsForPage(catName, offset) {
-  var list = getCategoryWords(catName);
-  if (list.length === 0) return [];
-  return list.slice(offset, offset + LEARN_PAGE_SIZE);
-}
-
-function getLearnPageInfo(catName) {
-  var list = getCategoryWords(catName);
-  if (list.length === 0) {
-    return { current: 1, total: 1 };
-  }
-
-  var offsets = getLearnPageOffsets(catName);
-  var pageOffset = normalizeLearnPageOffset(catName);
-
-  return {
-    current: findLearnPageIndex(offsets, pageOffset) + 1,
-    total: offsets.length
-  };
-}
-
-function updateLearnPageIndicator(catName) {
-  var pageInfo = getLearnPageInfo(catName);
-
-  document.getElementById("learnPageIndicator").textContent =
-    pageInfo.current + " / " + pageInfo.total;
-  document.getElementById("prevBtn").disabled = (pageInfo.total <= 1);
 }
 
 function getCategoryLearnedCount(catName) {
@@ -519,10 +1380,11 @@ function rollbackPendingCommit(snapshot, committedSnapshot, wordsToCommit) {
   todayCommittedLearned = committedSnapshot;
   persistTodayCommittedLearned();
   persistLocalLearnedOverrides();
+  persistPendingChecksToStorage();
   reconcileTodayAchievement({ allowUnmarkToday: true });
   refreshLearnedCountDisplays(false);
   if (uiState.mode === "learn") {
-    renderCurrentLearnCat();
+    refreshFlashSessionAfterDataLoad();
   } else if (uiState.mode === "search") {
     onSearchFilterChanged();
   }
@@ -531,7 +1393,7 @@ function rollbackPendingCommit(snapshot, committedSnapshot, wordsToCommit) {
 function applyLocalLearnedSnapshot(snapshot) {
   for (var wordName in snapshot) {
     if (!snapshot.hasOwnProperty(wordName)) continue;
-    var item = allWordsList.find(function (w) { return w.word === wordName; });
+    var item = findWordByKey(wordName);
     if (item) {
       item.isLearned = !!snapshot[wordName];
     }
@@ -540,7 +1402,8 @@ function applyLocalLearnedSnapshot(snapshot) {
 
 function mergePendingAndOverrideLearnedState() {
   for (var i = 0; i < allWordsList.length; i++) {
-    var wordName = allWordsList[i].word;
+    var wordName = getWordKey(allWordsList[i]);
+    if (!wordName) continue;
     if (pendingChecks.hasOwnProperty(wordName)) {
       allWordsList[i].isLearned = pendingChecks[wordName];
     } else if (localLearnedOverrides.hasOwnProperty(wordName)) {
@@ -601,6 +1464,7 @@ function flushPendingChecksOnce() {
   });
 
   pendingChecks = {};
+  persistPendingChecksToStorage();
 
   var committedSnapshot = {};
   for (var key in todayCommittedLearned) {
@@ -652,7 +1516,7 @@ function flushPendingChecksOnce() {
     finalizeCommittedChecks(wordsToCommit);
     refreshLearnedCountDisplays(uiState.mode === "daily");
     if (uiState.mode === "learn") {
-      renderCurrentLearnCat();
+      refreshFlashSessionAfterDataLoad();
     } else if (uiState.mode === "search") {
       onSearchFilterChanged();
     }
@@ -665,77 +1529,171 @@ function flushPendingChecksOnce() {
 }
 
 function loadDataFromDB(isInitial) {
+  var usedCache = false;
+
   if (isInitial) {
-    showLoading(true);
+    var cached = readWordsCache();
+    if (cached) {
+      usedCache = true;
+      applyAppData(cached, { isInitial: true, fromCache: true });
+    } else {
+      showLoading(true);
+    }
   }
 
-  return fetch(getApiUrl())
-    .then(function (res) { return res.json(); })
+  var fetchPromise = isInitial ? startBootPrefetch() : fetchAppData();
+
+  return fetchPromise
+    .then(function (res) {
+      var payload = normalizeApiPayload(res);
+      if (!payload.error) {
+        writeWordsCache(payload);
+      }
+      return payload;
+    })
     .then(function (res) {
       if (isInitial) {
         showLoading(false);
       }
-      if (res.error) {
-        document.getElementById("learnHeaderText").textContent = "⚠️ " + res.error;
-        return;
-      }
-
-      var rawWords = res.allWords || [];
-
-      rawWords.forEach(function (w, idx) {
-        w.originalIndex = idx;
-      });
-      allWordsList = rawWords;
-      mergePendingAndOverrideLearnedState();
-      roadmapData = res.roadmap || {};
-      invalidateLearnPageOffsetsCache();
-
-      serverLearnedDatesMap = {};
-      initialLearnedDatesMap = {};
-      (roadmapData.learnedDates || []).forEach(function (d) {
-        serverLearnedDatesMap[d] = true;
-        initialLearnedDatesMap[d] = true;
-      });
-
-      syncAchievementCachesFromServer();
-      reconcileTodayAchievement();
-      refreshLearnedCountDisplays(uiState.mode === "daily");
-
-      renderCurrentLearnCat();
-      onSearchFilterChanged();
-
-      if (uiState.mode === "daily") {
-        renderRoadmap();
-      }
-
-      if (isInitial) {
-        switchMainMode(uiState.mode);
-      }
+      applyAppData(res, { isInitial: isInitial, fromCache: false });
     })
     .catch(function () {
-      if (isInitial) {
+      if (isInitial && !usedCache) {
         showLoading(false);
       }
-      document.getElementById("learnHeaderText").textContent = "⚠️ 通信エラー: 再読み込みしてください";
+      if (!allWordsList.length) {
+        var headerBanner = document.getElementById("learnHeaderBanner");
+        headerBanner.hidden = false;
+        document.getElementById("learnHeaderText").textContent = "⚠️ 通信エラー: 再読み込みしてください";
+      }
     });
 }
 
+function applyAppData(res, options) {
+  options = options || {};
+
+  if (res.error) {
+    var headerBanner = document.getElementById("learnHeaderBanner");
+    headerBanner.hidden = false;
+    document.getElementById("learnHeaderText").textContent = "⚠️ " + res.error;
+    return;
+  }
+
+  var rawWords = (res.allWords || []).map(normalizeWordItem);
+  rawWords.forEach(function (w, idx) {
+    w.originalIndex = idx;
+  });
+  allWordsList = rawWords;
+  invalidateVocabularyRubyEntries();
+  mergePendingAndOverrideLearnedState();
+  roadmapData = res.roadmap || {};
+
+  serverLearnedDatesMap = {};
+  initialLearnedDatesMap = {};
+  (roadmapData.learnedDates || []).forEach(function (d) {
+    serverLearnedDatesMap[d] = true;
+    initialLearnedDatesMap[d] = true;
+  });
+
+  syncAchievementCachesFromServer();
+  reconcileTodayAchievement();
+  refreshLearnedCountDisplays(uiState.mode === "daily");
+  updateSearchStatusBarPlaceholder();
+
+  if (options.isInitial) {
+    switchMainMode(uiState.mode);
+    if (uiState.mode === "learn") {
+      var hasRestoredSession =
+        flashSession.wordNames.length > 0 &&
+        flashSession.cat === uiState.learnCat;
+
+      if (hasRestoredSession) {
+        if (flashSession.completed) {
+          updateFlashSessionUI();
+        } else {
+          refreshFlashSessionAfterDataLoad();
+        }
+      } else {
+        renderCurrentLearnCat(true);
+      }
+      if (!learnDataReady) {
+        resetFlashcardView();
+      }
+    }
+    markLearnDataReady();
+    return;
+  }
+
+  if (uiState.mode === "learn") {
+    refreshFlashSessionAfterDataLoad();
+  } else if (uiState.mode === "daily") {
+    renderRoadmap();
+  } else if (uiState.mode === "search") {
+    onSearchFilterChanged();
+  }
+}
+
+function updateSearchStatusBarPlaceholder() {
+  if (uiState.mode === "search") return;
+  document.getElementById("searchStatusBar").textContent = allWordsList.length + " 語";
+}
+
 function bindEvents() {
-  document.querySelector(".learn-tab-bar").addEventListener("click", function (e) {
+  document.querySelector(".learn-cat-row").addEventListener("click", function (e) {
     var btn = e.target.closest(".learn-tab-btn");
     if (!btn || !btn.dataset.cat) return;
     switchLearnCat(btn.dataset.cat);
   });
 
-  document.getElementById("maskToggleBtn").addEventListener("click", toggleDetailsMask);
-  document.getElementById("prevBtn").addEventListener("click", goBackLearnWords);
-  document.getElementById("submitBtn").addEventListener("click", submitProgress);
+  var front = document.querySelector(".flashcard-front");
+  var back = document.getElementById("flashcardBack");
 
-  document.getElementById("wordList").addEventListener("click", function (e) {
-    var card = e.target.closest(".word-card");
-    if (!card || !card.dataset.word) return;
-    onWordCardClick(card.dataset.word, card);
+  function bindFlashReveal(el) {
+    if (!el) return;
+    el.addEventListener("click", function (e) {
+      e.stopPropagation();
+      toggleFlashcardAnswer();
+    });
+    el.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        toggleFlashcardAnswer();
+      }
+    });
+  }
+
+  bindFlashReveal(front);
+  bindFlashReveal(back);
+  document.getElementById("flashRevealBtn").addEventListener("click", function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!flashSession.revealed) {
+      toggleFlashcardAnswer();
+    }
   });
+  document.getElementById("flashKnownBtn").addEventListener("click", function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    advanceFlashcard(true);
+  });
+  document.getElementById("flashUnknownBtn").addEventListener("click", function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    advanceFlashcard(false);
+  });
+  document.getElementById("flashUndoBtn").addEventListener("click", function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    undoFlashcard();
+  });
+  document.getElementById("flashUndoBtnComplete").addEventListener("click", function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    undoFlashcard();
+  });
+  document.getElementById("flashRestartBtn").addEventListener("click", restartFlashSession);
+  document.getElementById("flashFinishBtn").addEventListener("click", finishFlashSession);
+  resetFlashKnownBtnStyle();
 
   document.getElementById("btnModeLearn").addEventListener("click", function () {
     switchMainMode("learn");
@@ -747,7 +1705,7 @@ function bindEvents() {
     switchMainMode("search");
   });
 
-  document.getElementById("searchInput").addEventListener("input", onSearchFilterChanged);
+  document.getElementById("searchInput").addEventListener("input", scheduleSearchFilterFromInput);
 
   document.getElementById("searchResultList").addEventListener("click", function (e) {
     var chkWrap = e.target.closest(".search-item-chk-wrap");
@@ -774,48 +1732,79 @@ function bindEvents() {
 window.onload = function () {
   applyDeployEnvUI();
   loadUiState();
+  updateViewportForMode(uiState.mode);
   bindEvents();
   updateCategoryTabsUI();
-  applyMaskStateUI();
   loadDataFromDB(true);
 
   document.addEventListener("visibilitychange", function () {
-    if (!document.hidden) {
+    if (document.hidden) return;
+
+    refreshDailyBoundariesIfNeeded();
+    if (learnDataReady) {
+      bootPrefetchPromise = null;
       loadDataFromDB(false);
     }
   });
 
-  window.addEventListener("resize", scheduleLearnListLayoutSync);
-  window.addEventListener("orientationchange", scheduleLearnListLayoutSync);
+  window.setInterval(function () {
+    if (!document.hidden) {
+      refreshDailyBoundariesIfNeeded();
+    }
+  }, 60000);
 };
 
-function updateCategoryTabsUI() {
-  document.querySelectorAll(".learn-tab-btn").forEach(function (btn) {
-    btn.classList.remove("active");
-  });
-  var initCatBtn = document.querySelector(".learn-tab-btn.cat-" + uiState.learnCat);
-  if (initCatBtn) initCatBtn.classList.add("active");
-}
+window.addEventListener("pageshow", function (event) {
+  refreshDailyBoundariesIfNeeded();
 
-function toggleDetailsMask() {
-  uiState.detailsHidden = !uiState.detailsHidden;
-  persistUiState();
-  applyMaskStateUI();
-  scheduleLearnListLayoutSync();
-}
-
-function applyMaskStateUI() {
-  var listEl = document.getElementById("wordList");
-  var btnEl = document.getElementById("maskToggleBtn");
-  if (uiState.detailsHidden) {
-    listEl.classList.add("hide-details");
-    btnEl.textContent = "みる";
-    btnEl.setAttribute("aria-label", "英語と意味を見る");
-  } else {
-    listEl.classList.remove("hide-details");
-    btnEl.textContent = "かくす";
-    btnEl.setAttribute("aria-label", "英語と意味を隠す");
+  if (!event.persisted || uiState.mode !== "learn" || flashSession.completed) {
+    return;
   }
+
+  resetFlashcardView();
+  var item = getCurrentFlashWordItem();
+  if (item) {
+    renderFlashcardContent(item);
+  }
+});
+
+startBootPrefetch();
+
+function updateLearnModeClass() {
+  var panelLearn = document.getElementById("panelLearn");
+  if (!panelLearn) return;
+
+  ["auto", "基本", "介護", "医療", "社会"].forEach(function (cat) {
+    panelLearn.classList.remove("learn-mode-" + cat);
+  });
+  panelLearn.classList.add("learn-mode-" + uiState.learnCat);
+}
+
+function updateCategoryTabsUI() {
+  var isAuto = isAutoLearnMode();
+  var locked = isFlashCompleteLocked();
+  var row = document.querySelector(".learn-cat-row");
+
+  if (row) {
+    row.classList.toggle("is-locked", locked);
+  }
+
+  document.querySelectorAll(".learn-cat-row .learn-tab-btn").forEach(function (btn) {
+    var isAutoBtn = btn.dataset.cat === LEARN_MODE_AUTO;
+    var isActive = isAutoBtn ? isAuto : (!isAuto && btn.dataset.cat === uiState.learnCat);
+    btn.classList.toggle("active", isActive);
+    btn.setAttribute("aria-selected", isActive ? "true" : "false");
+    btn.disabled = locked;
+    btn.setAttribute("aria-disabled", locked ? "true" : "false");
+  });
+
+  updateLearnModeClass();
+}
+
+function updateViewportForMode(mode) {
+  var meta = document.querySelector('meta[name="viewport"]');
+  if (!meta) return;
+  meta.setAttribute("content", mode === "search" ? VIEWPORT_SEARCH_ZOOMABLE : VIEWPORT_DEFAULT);
 }
 
 function switchMainMode(mode) {
@@ -839,19 +1828,31 @@ function switchMainMode(mode) {
   } else if (mode === "daily") {
     renderRoadmap();
   } else if (mode === "learn") {
-    renderCurrentLearnCat();
+    refreshFlashSessionAfterDataLoad();
+    updateCategoryTabsUI();
   }
 
   refreshLearnedCountDisplays(mode === "daily");
+  updateViewportForMode(mode);
 }
 
 function switchLearnCat(catName) {
+  if (isFlashCompleteLocked()) return;
+
+  catName = normalizeLearnCat(catName);
+  if (catName === uiState.learnCat) {
+    return;
+  }
+
   uiState.learnCat = catName;
-  uiState.pageByCat[catName] = 0;
   persistUiState();
-  invalidateLearnPageOffsetsCache();
   updateCategoryTabsUI();
-  renderCurrentLearnCat();
+
+  // カテゴリ切替は常に新セット（1/5）から。途中進捗の復元はしない。
+  resetFlashcardView();
+  startFlashSession(catName, true);
+  updateFlashSessionUI();
+  persistFlashSession();
 }
 
 function formatMeaningText(text) {
@@ -870,6 +1871,125 @@ function formatExampleText(text) {
   return "「" + cleaned + "」";
 }
 
+function invalidateVocabularyRubyEntries() {
+  vocabularyRubyEntries = null;
+}
+
+function getVocabularyRubyEntries() {
+  if (vocabularyRubyEntries) {
+    return vocabularyRubyEntries;
+  }
+
+  var byWord = {};
+  for (var i = 0; i < allWordsList.length; i++) {
+    var item = allWordsList[i];
+    var word = getWordKey(item);
+    var ruby = (item.ruby || item.r || "").trim();
+    if (!word || !ruby || word.length < MIN_VOCAB_RUBY_LENGTH) {
+      continue;
+    }
+    if (!byWord[word]) {
+      byWord[word] = ruby;
+    }
+  }
+
+  vocabularyRubyEntries = Object.keys(byWord).map(function (word) {
+    return {
+      word: word,
+      ruby: byWord[word]
+    };
+  }).sort(function (a, b) {
+    return b.word.length - a.word.length;
+  });
+
+  return vocabularyRubyEntries;
+}
+
+function findVocabularyRubyMatches(text, entries) {
+  if (!text || !entries.length) {
+    return [];
+  }
+
+  var matches = [];
+  for (var i = 0; i < entries.length; i++) {
+    var entry = entries[i];
+    if (text.indexOf(entry.word) === -1) {
+      continue;
+    }
+
+    var searchFrom = 0;
+    var pos = text.indexOf(entry.word, searchFrom);
+    while (pos !== -1) {
+      matches.push({
+        start: pos,
+        end: pos + entry.word.length,
+        word: entry.word,
+        ruby: entry.ruby
+      });
+      searchFrom = pos + 1;
+      pos = text.indexOf(entry.word, searchFrom);
+    }
+  }
+
+  matches.sort(function (a, b) {
+    if (a.start !== b.start) {
+      return a.start - b.start;
+    }
+    return (b.end - b.start) - (a.end - a.start);
+  });
+
+  var accepted = [];
+  var lastEnd = 0;
+  for (var j = 0; j < matches.length; j++) {
+    var match = matches[j];
+    if (match.start < lastEnd) {
+      continue;
+    }
+    accepted.push(match);
+    lastEnd = match.end;
+  }
+
+  return accepted;
+}
+
+function appendTextWithVocabularyRuby(container, text) {
+  container.textContent = "";
+  if (!text) {
+    return;
+  }
+
+  var entries = getVocabularyRubyEntries();
+  var matches = findVocabularyRubyMatches(text, entries);
+  if (!matches.length) {
+    container.textContent = text;
+    return;
+  }
+
+  var fragment = document.createDocumentFragment();
+  var cursor = 0;
+
+  for (var i = 0; i < matches.length; i++) {
+    var m = matches[i];
+    if (m.start > cursor) {
+      fragment.appendChild(document.createTextNode(text.slice(cursor, m.start)));
+    }
+
+    var rubyEl = document.createElement("ruby");
+    rubyEl.textContent = m.word;
+    var rt = document.createElement("rt");
+    rt.textContent = m.ruby;
+    rubyEl.appendChild(rt);
+    fragment.appendChild(rubyEl);
+    cursor = m.end;
+  }
+
+  if (cursor < text.length) {
+    fragment.appendChild(document.createTextNode(text.slice(cursor)));
+  }
+
+  container.appendChild(fragment);
+}
+
 function buildWordTextBlocks(item) {
   var fragment = document.createDocumentFragment();
 
@@ -879,21 +1999,32 @@ function buildWordTextBlocks(item) {
   var titleRow = document.createElement("div");
   titleRow.className = "word-title-row";
 
-  var title = document.createElement("div");
-  title.className = "word-title";
-  title.textContent = item.word;
-
-  titleRow.appendChild(title);
+  var headStack = document.createElement("div");
+  headStack.className = "word-head-stack";
 
   var reading = document.createElement("div");
   reading.className = "word-reading";
-  reading.textContent = item.ruby;
-  titleRow.appendChild(reading);
+  reading.textContent = item.ruby || "";
+  if (!item.ruby) {
+    reading.hidden = true;
+  }
+  headStack.appendChild(reading);
+
+  var titleLine = document.createElement("div");
+  titleLine.className = "word-title-line";
+
+  var title = document.createElement("div");
+  title.className = "word-title";
+  title.textContent = item.word;
+  titleLine.appendChild(title);
 
   var eng = document.createElement("div");
   eng.className = "word-english";
   eng.textContent = item.english;
-  titleRow.appendChild(eng);
+  titleLine.appendChild(eng);
+
+  headStack.appendChild(titleLine);
+  titleRow.appendChild(headStack);
 
   jaBlock.appendChild(titleRow);
   fragment.appendChild(jaBlock);
@@ -902,7 +2033,7 @@ function buildWordTextBlocks(item) {
   if (meaning) {
     var meaningEl = document.createElement("div");
     meaningEl.className = "word-meaning";
-    meaningEl.textContent = meaning;
+    appendTextWithVocabularyRuby(meaningEl, meaning);
     fragment.appendChild(meaningEl);
   }
 
@@ -910,140 +2041,64 @@ function buildWordTextBlocks(item) {
   if (example) {
     var exampleEl = document.createElement("div");
     exampleEl.className = "word-example";
-    exampleEl.textContent = example;
+    appendTextWithVocabularyRuby(exampleEl, example);
     fragment.appendChild(exampleEl);
   }
 
   return fragment;
 }
 
-function createWordCard(item) {
-  var card = document.createElement("div");
-  card.className = "word-card";
-  card.dataset.word = item.word;
-  card.setAttribute("role", "listitem");
-
-  var isChecked = getWordChecked(item);
-  if (isChecked) {
-    card.classList.add("checked");
-  }
-
-  var chkWrap = document.createElement("div");
-  chkWrap.className = "word-chk-wrap";
-  var innerChk = document.createElement("div");
-  innerChk.className = "word-custom-chk chk-" + uiState.learnCat;
-  innerChk.setAttribute("aria-hidden", "true");
-  chkWrap.appendChild(innerChk);
-
-  var content = document.createElement("div");
-  content.className = "word-content";
-  content.appendChild(buildWordTextBlocks(item));
-
-  card.appendChild(chkWrap);
-  card.appendChild(content);
-
-  return card;
-}
-
-function onWordCardClick(wordName, cardEl) {
-  var item = allWordsList.find(function (w) { return w.word === wordName; });
-  if (!item) return;
-
-  var newStatus = !getWordChecked(item);
-  cardEl.classList.toggle("checked", newStatus);
-  pendingChecks[wordName] = newStatus;
-  updateLiveHeader();
-  refreshLearnedCountDisplays(false);
-}
-
-function renderCurrentLearnCat() {
-  var wordList = document.getElementById("wordList");
-  var list = getCategoryWords(uiState.learnCat);
-  var offset = normalizeLearnPageOffset(uiState.learnCat);
-  var words = getWordsForPage(uiState.learnCat, offset);
-  var color = themeColors[uiState.learnCat] || "#2563EB";
-
-  var headerBanner = document.getElementById("learnHeaderBanner");
-  headerBanner.className = "learn-header-banner bg-" + uiState.learnCat;
-
-  document.getElementById("submitBtn").style.backgroundColor = color;
-
-  wordList.innerHTML = "";
-
-  if (words.length === 0 && allWordsList.length === 0) {
-    document.getElementById("learnHeaderText").textContent = uiState.learnCat + "： 単語データがありません";
-    updateLearnPageIndicator(uiState.learnCat);
+function refreshFlashSessionAfterDataLoad() {
+  // 完了画面表示中は、DB同期後も自動で次セットを始めない
+  if (flashSession.completed) {
     return;
   }
 
-  words.forEach(function (item) {
-    wordList.appendChild(createWordCard(item));
-  });
+  if (flashSession.cat !== uiState.learnCat) {
+    renderCurrentLearnCat(true);
+    return;
+  }
 
-  updateLearnPageIndicator(uiState.learnCat);
-  updateLiveHeader();
-  applyMaskStateUI();
-  syncLearnListLayoutAfterPaint();
+  if (!flashSession.wordNames.length) {
+    renderCurrentLearnCat(false);
+    return;
+  }
+
+  var currentName = flashSession.wordNames[flashSession.index];
+  if (
+    currentName &&
+    allWordsList.length > 0 &&
+    !allWordsList.some(function (w) { return getWordKey(w) === currentName; })
+  ) {
+    return;
+  }
+
+  updateFlashSessionUI({ preserveRevealed: true });
+}
+
+function renderCurrentLearnCat(forceNewSession) {
+  startFlashSession(uiState.learnCat, !!forceNewSession);
+  updateFlashSessionUI();
 }
 
 function updateLiveHeader() {
-  var actualTotalInCat = allWordsList.filter(function (w) { return w.category === uiState.learnCat; }).length;
-  var liveCatLearned = getLiveCategoryLearnedCount(uiState.learnCat);
+  var headerBanner = document.getElementById("learnHeaderBanner");
   var headerText = document.getElementById("learnHeaderText");
-  var catName = uiState.learnCat;
+  var modeLabel = getLearnModeLabel(uiState.learnCat);
 
-  if (actualTotalInCat === 0) {
-    headerText.textContent = "登録単語 0 語";
+  if (allWordsList.length === 0) {
+    headerBanner.hidden = false;
+    headerText.textContent = modeLabel + "： 単語データがありません";
     return;
   }
 
-  if (liveCatLearned >= actualTotalInCat) {
-    headerText.textContent = "全 " + actualTotalInCat + " 語 復習中 🔄";
+  if (uiState.mode === "learn") {
+    headerBanner.hidden = true;
     return;
   }
 
-  var nextGoal = getNextSmallGoal(catName, liveCatLearned, actualTotalInCat);
-  var remaining = Math.max(0, nextGoal - liveCatLearned);
-  var catGoals = SMALL_GOALS[catName] || [];
-  var isExactGoal = liveCatLearned > 0 && catGoals.indexOf(liveCatLearned) !== -1;
-  var nextLabel = "　つぎは " + nextGoal + "語（あと" + remaining + "語）";
-  var progressLabel;
-
-  if (isExactGoal) {
-    progressLabel = liveCatLearned + "語 おぼえた!! 🎉";
-  } else if (liveCatLearned > 0) {
-    progressLabel = liveCatLearned + "語 おぼえた";
-  } else {
-    progressLabel = "スタート";
-  }
-
-  headerText.textContent = progressLabel + nextLabel;
-}
-
-function submitProgress() {
-  var list = getCategoryWords(uiState.learnCat);
-  if (list.length === 0) return;
-
-  invalidateLearnPageOffsetsCache();
-  var currentOffset = uiState.pageByCat[uiState.learnCat] || 0;
-  uiState.pageByCat[uiState.learnCat] = getNextLearnPageOffset(uiState.learnCat, currentOffset);
-  persistUiState();
-
-  flushPendingChecksNow();
-  renderCurrentLearnCat();
-}
-
-function goBackLearnWords() {
-  var list = getCategoryWords(uiState.learnCat);
-  if (list.length === 0) return;
-
-  invalidateLearnPageOffsetsCache();
-  var currentOffset = uiState.pageByCat[uiState.learnCat] || 0;
-  uiState.pageByCat[uiState.learnCat] = getPreviousLearnPageOffset(uiState.learnCat, currentOffset);
-  persistUiState();
-
-  flushPendingChecksNow();
-  renderCurrentLearnCat();
+  headerBanner.hidden = false;
+  headerText.textContent = modeLabel;
 }
 
 function toggleStatusFilter(target) {
@@ -1073,7 +2128,7 @@ function toggleCatCheckbox(cat) {
 function createSearchItemRow(item) {
   var itemRow = document.createElement("div");
   itemRow.className = "search-item-row";
-  itemRow.dataset.word = item.word;
+  itemRow.dataset.word = getWordKey(item);
   itemRow.setAttribute("role", "listitem");
 
   if (getWordChecked(item)) {
@@ -1105,12 +2160,23 @@ function createSearchItemRow(item) {
 }
 
 function onSearchItemClick(wordName, rowEl) {
-  var item = allWordsList.find(function (w) { return w.word === wordName; });
+  var item = findWordByKey(wordName);
   if (!item) return;
 
   var newStatus = !getWordChecked(item);
   rowEl.classList.toggle("checked", newStatus);
   pendingChecks[wordName] = newStatus;
+  persistPendingChecksToStorage();
+  if (newStatus) {
+    item.isLearned = true;
+    recordTodayKnownPress(wordName);
+  } else {
+    item.isLearned = false;
+    delete todayCommittedLearned[wordName];
+    persistTodayCommittedLearned();
+    reconcileTodayAchievement({ allowUnmarkToday: true });
+    refreshLearnedCountDisplays(true);
+  }
   scheduleSearchCheckSync();
 
   if (selectedStatuses.length > 0) {
@@ -1172,22 +2238,19 @@ function updateSearchStatusBar(matchCount) {
   );
 }
 
-function onSearchFilterChanged() {
-  var query = (document.getElementById("searchInput").value || "").trim().toLowerCase();
-  var listEl = document.getElementById("searchResultList");
-  listEl.innerHTML = "";
+function scheduleSearchFilterFromInput() {
+  clearTimeout(searchInputTimer);
+  searchInputTimer = setTimeout(function () {
+    searchInputTimer = null;
+    onSearchFilterChanged();
+  }, 150);
+}
 
-  var matchCount = 0;
-  var hasCatFilter = (selectedCats.length > 0);
-  var hasStatusFilter = (selectedStatuses.length > 0);
+function collectSearchMatches(query, hasCatFilter, hasStatusFilter) {
+  var results = [];
 
-  var sortedList = [].concat(allWordsList);
-  sortedList.sort(function (a, b) {
-    return (a.originalIndex || 0) - (b.originalIndex || 0);
-  });
-
-  for (var i = 0; i < sortedList.length; i++) {
-    var item = sortedList[i];
+  for (var i = 0; i < allWordsList.length; i++) {
+    var item = allWordsList[i];
 
     if (hasCatFilter && selectedCats.indexOf(item.category) === -1) continue;
 
@@ -1205,11 +2268,62 @@ function onSearchFilterChanged() {
       if (!isPrefixMatch) continue;
     }
 
-    matchCount++;
-    listEl.appendChild(createSearchItemRow(item));
+    results.push(item);
   }
 
-  updateSearchStatusBar(matchCount);
+  return results;
+}
+
+function renderSearchMatches(listEl, matches, token) {
+  if (matches.length === 0) return;
+
+  if (matches.length <= SEARCH_RENDER_BATCH) {
+    var singleBatch = document.createDocumentFragment();
+    for (var i = 0; i < matches.length; i++) {
+      singleBatch.appendChild(createSearchItemRow(matches[i]));
+    }
+    listEl.appendChild(singleBatch);
+    return;
+  }
+
+  var index = 0;
+
+  function renderBatch() {
+    if (token !== searchRenderToken) return;
+
+    var batch = document.createDocumentFragment();
+    var end = Math.min(index + SEARCH_RENDER_BATCH, matches.length);
+
+    for (; index < end; index++) {
+      batch.appendChild(createSearchItemRow(matches[index]));
+    }
+
+    listEl.appendChild(batch);
+
+    if (index < matches.length) {
+      requestAnimationFrame(renderBatch);
+    }
+  }
+
+  renderBatch();
+}
+
+function onSearchFilterChanged() {
+  clearTimeout(searchInputTimer);
+  searchInputTimer = null;
+  searchRenderToken++;
+  var token = searchRenderToken;
+
+  var query = (document.getElementById("searchInput").value || "").trim().toLowerCase();
+  var listEl = document.getElementById("searchResultList");
+  listEl.innerHTML = "";
+
+  var hasCatFilter = (selectedCats.length > 0);
+  var hasStatusFilter = (selectedStatuses.length > 0);
+  var matches = collectSearchMatches(query, hasCatFilter, hasStatusFilter);
+
+  updateSearchStatusBar(matches.length);
+  renderSearchMatches(listEl, matches, token);
 }
 
 function renderRoadmap() {
@@ -1220,8 +2334,9 @@ function renderRoadmap() {
   var dynamicLearnedMap = buildLearnedDatesMap();
   var streakCount = getStreakCount();
 
-  document.getElementById("valStreak").textContent = streakCount + " 日";
-  document.getElementById("valTotalWords").textContent = totalLearned + " 語";
+  setDailyStatValue(document.getElementById("valStreak"), streakCount, "日");
+  setDailyStatValue(document.getElementById("valTotalWords"), totalLearned, "語");
+  refreshTodayLearnedDisplay();
 
   var tbody = document.getElementById("roadmapTableBody");
   tbody.innerHTML = "";
@@ -1279,6 +2394,11 @@ function renderRoadmap() {
 
       var tdDay = document.createElement("td");
       tdDay.textContent = symbol;
+      if (symbol === "⭐️") {
+        tdDay.className = "roadmap-day-star";
+      } else if (symbol === "⬜️" || symbol === "⚪️") {
+        tdDay.className = "roadmap-day-gray";
+      }
       tr.appendChild(tdDay);
     }
 

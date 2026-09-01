@@ -6,6 +6,9 @@
 var DB_SHEET_PROD = "db";
 var DB_SHEET_TEST = "db のコピー";
 var DB_SHEET_TEST_MISSING_ERROR = "参照するdbがありません";
+var PROD_CATEGORY_ORDER = ["基本", "介護", "医療", "社会"];
+// 未設定時はスクリプト実行者のメールへ送信。別アドレスへ送る場合は
+// スクリプトプロパティ PROD_CHECK_NOTIFY_EMAIL を設定する。
 
 function doGet(e) {
   var sheetInfo = resolveDbSheet(e);
@@ -85,7 +88,32 @@ function jsonResponse(payload) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
+function getInitialAppCacheKey(sheetName) {
+  return "initial_" + sheetName;
+}
+
+function invalidateInitialAppCache(sheetName) {
+  CacheService.getScriptCache().remove(getInitialAppCacheKey(sheetName));
+}
+
 function loadInitialAppData(sheet) {
+  var cacheKey = getInitialAppCacheKey(sheet.getName());
+  var cache = CacheService.getScriptCache();
+  var cached = cache.get(cacheKey);
+  if (cached) {
+    try {
+      return JSON.parse(cached);
+    } catch (cacheErr) {}
+  }
+
+  var payload = buildInitialAppData(sheet);
+  try {
+    cache.put(cacheKey, JSON.stringify(payload), 180);
+  } catch (putErr) {}
+  return payload;
+}
+
+function buildInitialAppData(sheet) {
   var lastRow = sheet.getLastRow();
   if (lastRow < 2) {
     return { allWords: [], categories: {}, roadmap: {} };
@@ -94,7 +122,6 @@ function loadInitialAppData(sheet) {
   var data = sheet.getRange(2, 1, lastRow, 10).getValues();
   var allWords = [];
   var learnedDates = [];
-  var catMap = { "基本": [], "介護": [], "医療": [], "社会": [] };
 
   for (var i = 0; i < data.length; i++) {
     var row = data[i];
@@ -109,20 +136,15 @@ function loadInitialAppData(sheet) {
 
     if (!word) continue;
 
-    var item = {
-      word: word,
-      category: cat,
-      ruby: ruby,
-      english: eng,
-      meaning: meaning,
-      example: example,
-      isLearned: isLearned
-    };
-
-    allWords.push(item);
-    if (catMap[cat]) {
-      catMap[cat].push(item);
-    }
+    allWords.push({
+      w: word,
+      c: cat,
+      r: ruby,
+      e: eng,
+      m: meaning,
+      x: example,
+      l: isLearned
+    });
 
     if (isLearned && learnedDate) {
       try {
@@ -134,26 +156,10 @@ function loadInitialAppData(sheet) {
     }
   }
 
-  var categoriesPayload = {};
-  var cats = ["基本", "介護", "医療", "社会"];
-  for (var c = 0; c < cats.length; c++) {
-    var cName = cats[c];
-    var list = catMap[cName] || [];
-    var learnedCount = list.filter(function (x) { return x.isLearned; }).length;
-    var unlearnedList = list.filter(function (x) { return !x.isLearned; });
-    categoriesPayload[cName] = {
-      words: unlearnedList.length > 0 ? unlearnedList.slice(0, 5) : list.slice(0, 5),
-      learnedCount: learnedCount,
-      targetCount: list.length,
-      isAllLearned: (list.length > 0 && unlearnedList.length === 0)
-    };
-  }
-
   var roadmapPayload = buildRoadmapPayload(learnedDates, allWords);
 
   return {
     allWords: allWords,
-    categories: categoriesPayload,
     roadmap: roadmapPayload
   };
 }
@@ -195,6 +201,11 @@ function submitCategoryUpdate(checkedWords, uncheckedWords, sheet) {
 
     if (isModified) {
       flagsRange.setValues(values);
+      invalidateInitialAppCache(sheet.getName());
+
+      if (sheet.getName() === DB_SHEET_PROD && checkedWords.length > 0) {
+        sendProdCheckNotifyEmail(values);
+      }
     }
 
     return { success: true };
@@ -214,12 +225,66 @@ function toWordSet(words) {
   return set;
 }
 
-function buildRoadmapPayload(learnedDates, allWords) {
-  var totalLearned = allWords.filter(function (x) { return x.isLearned; }).length;
-  var todayStr = Utilities.formatDate(new Date(), "Asia/Tokyo", "yyyy-MM-dd");
+function getProdCheckNotifyEmail() {
+  var fromProps = PropertiesService.getScriptProperties().getProperty("PROD_CHECK_NOTIFY_EMAIL");
+  if (fromProps) {
+    return String(fromProps).trim();
+  }
+  try {
+    return Session.getEffectiveUser().getEmail() || "";
+  } catch (err) {
+    return "";
+  }
+}
 
+function buildCategoryLearnedCounts(dbValues) {
+  var counts = { "基本": 0, "介護": 0, "医療": 0, "社会": 0 };
+
+  for (var i = 0; i < dbValues.length; i++) {
+    var word = String(dbValues[i][0] || "").trim();
+    if (!word) continue;
+
+    var cat = String(dbValues[i][2] || "").trim();
+    var isLearned = (dbValues[i][7] === true || String(dbValues[i][7]).toUpperCase() === "TRUE");
+    if (isLearned && counts.hasOwnProperty(cat)) {
+      counts[cat]++;
+    }
+  }
+
+  return counts;
+}
+
+function formatCategoryCountLines(counts) {
+  var lines = [];
+  for (var i = 0; i < PROD_CATEGORY_ORDER.length; i++) {
+    var cat = PROD_CATEGORY_ORDER[i];
+    lines.push(cat + "：" + (counts[cat] || 0));
+  }
+  return lines.join("\n");
+}
+
+function sendProdCheckNotifyEmail(dbValues) {
+  var to = getProdCheckNotifyEmail();
+  if (!to) return;
+
+  var counts = buildCategoryLearnedCounts(dbValues);
+  var nowStr = Utilities.formatDate(new Date(), "Asia/Tokyo", "yyyy/MM/dd HH:mm");
+  var body =
+    "本番dbで単語がチェックされました。\n\n" +
+    formatCategoryCountLines(counts) +
+    "\n\n" +
+    nowStr;
+
+  try {
+    MailApp.sendEmail(to, "【本番】単語がチェックされました", body);
+  } catch (mailErr) {
+    console.error("本番チェック通知メールの送信に失敗: " + mailErr);
+  }
+}
+
+function countStreakEndingAt(learnedDates, endDate) {
   var streak = 0;
-  var checkDate = new Date();
+  var checkDate = new Date(endDate);
 
   while (true) {
     var dKey = Utilities.formatDate(checkDate, "Asia/Tokyo", "yyyy-MM-dd");
@@ -227,13 +292,26 @@ function buildRoadmapPayload(learnedDates, allWords) {
       streak++;
       checkDate.setDate(checkDate.getDate() - 1);
     } else {
-      if (dKey === todayStr) {
-        checkDate.setDate(checkDate.getDate() - 1);
-        continue;
-      }
       break;
     }
   }
+  return streak;
+}
+
+function buildRoadmapPayload(learnedDates, allWords) {
+  var totalLearned = 0;
+  for (var i = 0; i < allWords.length; i++) {
+    var learned = allWords[i].l === true || allWords[i].isLearned === true;
+    if (learned) {
+      totalLearned++;
+    }
+  }
+  var todayStr = Utilities.formatDate(new Date(), "Asia/Tokyo", "yyyy-MM-dd");
+  var yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  var yesterdayStreak = countStreakEndingAt(learnedDates, yesterday);
+  var streak = learnedDates.indexOf(todayStr) !== -1 ? yesterdayStreak + 1 : yesterdayStreak;
 
   return {
     streakText: "⭐️ " + (streak > 0 ? streak : 0) + "日 連続達成中！",

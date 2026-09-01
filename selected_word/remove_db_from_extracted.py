@@ -40,7 +40,8 @@ def fetch_db_words() -> list[str]:
     words: list[str] = []
     seen: set[str] = set()
     for item in payload.get("allWords", []):
-        word = str(item.get("word", "")).strip()
+        # GAS は短縮キー w、旧形式は word
+        word = str(item.get("word") or item.get("w") or "").strip()
         if not word or word in seen:
             continue
         words.append(word)

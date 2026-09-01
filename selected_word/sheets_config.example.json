@@ -1,6 +1,0 @@
-{
-  "spreadsheet_id": "スプレッドシートIDをここに",
-  "credentials_path": "/absolute/path/to/service-account.json",
-  "sheet_name": "db のコピー1",
-  "input_csv": "geminii_explanaton.csv"
-}

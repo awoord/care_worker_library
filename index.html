@@ -1,58 +1,140 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="description" content="ことば学習アプリ。基本・介護・医療・社会の日本語単語を学習・管理できます。">
   <meta name="application-name" content="ことば学習">
   <meta name="theme-color" content="#F7F6F3">
   <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <title>ジャスミンさんのやさしい日本語</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://script.google.com" crossorigin>
+  <link rel="dns-prefetch" href="https://script.googleusercontent.com">
+  <link rel="stylesheet" href="style.css?v=20260301d8">
 </head>
+
 <body>
   <div class="container">
 
     <!-- 1. ことばパネル -->
     <div id="panelLearn" class="view-panel active">
-      <div class="learn-tab-bar" role="tablist" aria-label="カテゴリー">
-        <button type="button" class="learn-tab-btn cat-基本" data-cat="基本" role="tab">基本</button>
-        <button type="button" class="learn-tab-btn cat-介護" data-cat="介護" role="tab">介護</button>
-        <button type="button" class="learn-tab-btn cat-医療" data-cat="医療" role="tab">医療</button>
-        <button type="button" class="learn-tab-btn cat-社会" data-cat="社会" role="tab">社会</button>
+      <div class="learn-top">
+        <div class="learn-cat-row" role="tablist" aria-label="学習モード">
+          <button type="button" class="learn-tab-btn cat-auto" data-cat="auto" role="tab">すべて</button>
+          <button type="button" class="learn-tab-btn cat-基本" data-cat="基本" role="tab">基本</button>
+          <button type="button" class="learn-tab-btn cat-介護" data-cat="介護" role="tab">介護</button>
+          <button type="button" class="learn-tab-btn cat-医療" data-cat="医療" role="tab">医療</button>
+          <button type="button" class="learn-tab-btn cat-社会" data-cat="社会" role="tab">社会</button>
+        </div>
       </div>
 
-      <div id="learnHeaderBanner" class="learn-header-banner bg-基本">
+      <div id="learnHeaderBanner" class="learn-header-banner bg-基本" hidden>
         <div id="learnHeaderText" class="learn-header-text"></div>
       </div>
 
-      <div id="wordList" class="word-list word-list-scroll" role="list" aria-label="単語リスト">
-        <!-- 単語カードが動的に挿入されます -->
-      </div>
-
-      <div class="learn-nav-footer">
-        <div id="learnPageNav" class="learn-page-nav">
-          <div id="learnPageIndicator" class="learn-page-indicator" aria-live="polite">1 / 1</div>
+      <div class="learn-body">
+        <div id="flashStudy" class="flash-study">
+          <div class="flashcard-area">
+            <div class="flashcard-stack">
+              <div id="flashProgress" class="flash-progress" role="group" aria-live="polite" aria-label="1つ目 / 全5つ">
+                <div class="flash-test-mode-label">テストモード</div>
+                <div id="flashProgressDots" class="flash-progress-dots"></div>
+              </div>
+              <div id="flashcard" class="flashcard">
+                <div class="flashcard-front">
+                  <div id="flashReading" class="flash-reading"></div>
+                  <div id="flashWord" class="flash-word"></div>
+                </div>
+                <div id="flashcardBack" class="flashcard-back" role="button" tabindex="0" aria-label="タップで答えを表示"
+                  aria-hidden="true">
+                  <div id="flashEnglish" class="flash-english"></div>
+                  <div id="flashMeaning" class="flash-meaning"></div>
+                  <div id="flashExample" class="flash-example"></div>
+                </div>
+              </div>
+              <div class="flash-action-slot">
+                <button type="button" id="flashRevealBtn" class="flash-reveal-btn">見てみる</button>
+                <div id="flashAnswerBtns" class="flash-answer-btns" hidden aria-live="polite">
+                  <div class="flash-action-left">
+                    <button type="button" id="flashUnknownBtn" class="flash-unknown-btn">まだ</button>
+                  </div>
+                  <button type="button" id="flashKnownBtn" class="flash-known-btn">おぼえた</button>
+                </div>
+                <button type="button" id="flashUndoBtn" class="flash-undo-btn flash-undo-btn-study is-unavailable"
+                  aria-label="1つ戻す">←</button>
+              </div>
+            </div>
+          </div>
         </div>
-        <div class="action-container">
-          <button type="button" id="prevBtn" class="prev-btn">まえへ</button>
-          <button type="button" id="maskToggleBtn" class="mask-toggle-btn" aria-label="英語と意味を隠す">かくす</button>
-          <button type="button" id="submitBtn" class="submit-btn">つぎへ</button>
+
+        <div id="flashComplete" class="flash-complete" hidden>
+          <div class="flash-complete-head">
+            <p id="flashCompleteMessage" class="flash-complete-message">5つ おわり！</p>
+            <p id="flashCompleteDetail" class="flash-complete-detail" hidden></p>
+          </div>
+          <div class="flash-complete-actions">
+            <button type="button" id="flashRestartBtn" class="flash-restart-btn">もう5つ つづける</button>
+            <div class="flash-complete-finish-wrap">
+              <button type="button" id="flashFinishBtn" class="flash-finish-btn">おしまい</button>
+              <p class="flash-complete-skip-note">「まだ」のことばは あした また でます</p>
+              <button type="button" id="flashUndoBtnComplete" class="flash-undo-btn is-unavailable" aria-label="1つ戻す">←</button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- 2. まいにちパネル -->
+    <!-- 2. さがすパネル -->
+    <div id="panelSearch" class="view-panel">
+      <div class="search-filter-panel">
+        <div class="filter-chip-row filter-chip-row-cats">
+          <div id="chipCat-基本" class="filter-chip chip-cat-基本" role="button" tabindex="0">基本</div>
+          <div id="chipCat-介護" class="filter-chip chip-cat-介護" role="button" tabindex="0">介護</div>
+          <div id="chipCat-医療" class="filter-chip chip-cat-医療" role="button" tabindex="0">医療</div>
+          <div id="chipCat-社会" class="filter-chip chip-cat-社会" role="button" tabindex="0">社会</div>
+        </div>
+
+        <div class="filter-chip-row">
+          <div id="chipUnlearned" class="filter-chip chip-unlearned" role="button" tabindex="0">おぼえていない</div>
+          <div id="chipLearned" class="filter-chip chip-learned" role="button" tabindex="0">おぼえた</div>
+        </div>
+      </div>
+
+      <div id="searchStatusBar" class="search-status-bar" aria-live="polite">0 語</div>
+
+      <div id="searchResultList" class="search-result-scroll" role="list" aria-label="検索結果">
+        <!-- 検索結果リストが動的に挿入されます -->
+      </div>
+
+      <div class="search-control-area">
+        <div class="search-input-wrapper">
+          <span class="search-icon-box" aria-hidden="true">🔍</span>
+          <input type="search" id="searchInput" class="search-input-field" placeholder="ことば・よみ・English"
+            enterkeyhint="search" autocomplete="off">
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. きろくパネル -->
     <div id="panelDaily" class="view-panel">
       <div class="daily-container">
         <div class="daily-stats-row">
           <div class="daily-stat-card streak">
-            <span class="daily-stat-label">れんぞく達成</span>
-            <span id="valStreak" class="daily-stat-value" aria-live="polite">0 日</span>
+            <span class="daily-stat-label">れんぞく</span>
+            <span id="valStreak" class="daily-stat-value" aria-live="polite">0<span class="daily-stat-unit"> 日</span></span>
+          </div>
+          <div class="daily-stat-card today">
+            <span class="daily-stat-label">きょう</span>
+            <span id="valTodayWords" class="daily-stat-value" aria-live="polite">0<span class="daily-stat-unit"> 語</span></span>
           </div>
           <div class="daily-stat-card words">
-            <span class="daily-stat-label">おぼえた単語</span>
-            <span id="valTotalWords" class="daily-stat-value" aria-live="polite">0 語</span>
+            <span class="daily-stat-label">ぜんぶ</span>
+            <span id="valTotalWords" class="daily-stat-value" aria-live="polite">0<span class="daily-stat-unit"> 語</span></span>
           </div>
         </div>
 
@@ -79,50 +161,11 @@
       </div>
     </div>
 
-    <!-- 3. さがすパネル -->
-    <div id="panelSearch" class="view-panel">
-      <div class="search-filter-panel">
-        <div class="filter-chip-row">
-          <div id="chipLearned" class="filter-chip chip-learned" role="button" tabindex="0">おぼえた</div>
-          <div id="chipUnlearned" class="filter-chip chip-unlearned" role="button" tabindex="0">おぼえていない</div>
-        </div>
-
-        <div class="filter-chip-row filter-chip-row-cats">
-          <div id="chipCat-基本" class="filter-chip chip-cat-基本" role="button" tabindex="0">基本</div>
-          <div id="chipCat-介護" class="filter-chip chip-cat-介護" role="button" tabindex="0">介護</div>
-          <div id="chipCat-医療" class="filter-chip chip-cat-医療" role="button" tabindex="0">医療</div>
-          <div id="chipCat-社会" class="filter-chip chip-cat-社会" role="button" tabindex="0">社会</div>
-        </div>
-      </div>
-
-      <div id="searchStatusBar" class="search-status-bar" aria-live="polite">0 語</div>
-
-      <div id="searchResultList" class="search-result-scroll" role="list" aria-label="検索結果">
-        <!-- 検索結果リストが動的に挿入されます -->
-      </div>
-
-      <div class="search-control-area">
-        <div class="search-input-wrapper">
-          <span class="search-icon-box" aria-hidden="true">🔍</span>
-          <input type="search" id="searchInput" class="search-input-field" placeholder="ことば・よみ・English" enterkeyhint="search" autocomplete="off">
-        </div>
-      </div>
-    </div>
-
     <!-- 下部タブメニュー -->
     <nav class="bottom-nav-bar" aria-label="メインメニュー">
-      <button type="button" id="btnModeLearn" class="nav-btn active">
-        <span class="nav-icon" aria-hidden="true">📔</span>
-        <span class="nav-label">ことば</span>
-      </button>
-      <button type="button" id="btnModeDaily" class="nav-btn">
-        <span class="nav-icon" aria-hidden="true">⭐</span>
-        <span class="nav-label">まいにち</span>
-      </button>
-      <button type="button" id="btnModeSearch" class="nav-btn">
-        <span class="nav-icon" aria-hidden="true">🔎</span>
-        <span class="nav-label">さがす</span>
-      </button>
+      <button type="button" id="btnModeLearn" class="nav-btn active">ことば</button>
+      <button type="button" id="btnModeDaily" class="nav-btn">きろく</button>
+      <button type="button" id="btnModeSearch" class="nav-btn">さがす</button>
     </nav>
 
   </div>
@@ -131,6 +174,22 @@
     <div class="loading-box">読み込み中...</div>
   </div>
 
-  <script src="app.js"></script>
+  <script>
+    (function () {
+      var build = "__APP_BUILD__";
+      var storageKey = "care_worker_test_build";
+      try {
+        var prev = sessionStorage.getItem(storageKey);
+        sessionStorage.setItem(storageKey, build);
+        if (prev && prev !== build) {
+          var url = new URL(window.location.href);
+          url.searchParams.set("_cb", String(Date.now()));
+          window.location.replace(url.toString());
+        }
+      } catch (e) {}
+    })();
+  </script>
+  <script src="app.js?v=20260301d8"></script>
 </body>
+
 </html>

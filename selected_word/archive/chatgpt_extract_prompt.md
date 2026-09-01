@@ -1,5 +1,23 @@
 # ChatGPT 用：単語抽出プロンプト
 
+## 事前フィルタ（推奨）
+
+ChatGPT に渡す前に、ルールベースでノイズ候補を除外する:
+
+```bash
+cd selected_word
+python3 extract_noise_candidates.py
+```
+
+- 入力: `extracted.csv`
+- 出力: `noise_candidates.csv`（除外候補・理由付き）, `extracted_for_chatgpt.csv`（ChatGPT用）
+- 手動追加: `noise_blocklist.txt`（1行1語）
+- 厳しめ: `python3 extract_noise_candidates.py --mode strict`
+
+**ChatGPT には `extracted_for_chatgpt.csv` を渡す**（`extracted.csv` 全文より精度が上がりやすい）。
+
+---
+
 ## 推奨バッチサイズ
 
 | 項目 | 推奨 |

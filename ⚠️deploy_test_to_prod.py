@@ -16,7 +16,7 @@ ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 FTP_HOST = "www1165.conoha.ne.jp"
 FTP_USER = "ao@nihongo.site"
-#FTP_PASS = "highway#61"
+FTP_PASS = "highway#61"
 
 REMOTE_BASE_DIR = "/public_html/nihongo.site"
 
@@ -114,3 +114,4 @@ if __name__ == "__main__":
     except Exception as err:
         print(f"エラー: {err}", file=sys.stderr)
         sys.exit(1)
+ 

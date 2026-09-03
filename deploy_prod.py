@@ -17,7 +17,7 @@ ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 FTP_HOST = "www1165.conoha.ne.jp"
 FTP_USER = "ao@nihongo.site"
-FTP_PASS = "ighway#61"
+FTP_PASS = "highway#61"
 
 REMOTE_BASE_DIR = "/public_html/nihongo.site"
 
@@ -40,7 +40,9 @@ def ensure_prod_files_exist():
         if not os.path.isfile(path):
             missing.append(name)
     if missing:
-        raise FileNotFoundError(f"アップロード対象が見つかりません: {', '.join(missing)}")
+        raise FileNotFoundError(
+            f"アップロード対象が見つかりません: {', '.join(missing)}"
+        )
 
 
 def upload_prod_files():

@@ -13,9 +13,35 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>ジャスミンさんのやさしい日本語</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preload" as="style"
+    href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;600;700;800&display=swap"
+    onload="this.onload=null;this.rel='stylesheet'">
+  <noscript>
+    <link rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;600;700;800&display=swap">
+  </noscript>
   <link rel="preconnect" href="https://script.google.com" crossorigin>
   <link rel="dns-prefetch" href="https://script.googleusercontent.com">
-  <link rel="stylesheet" href="style.css?v=20260301d8">
+  <link rel="stylesheet" href="style.css?v=__APP_BUILD__">
+  <style>
+    /* 初回描画でカテゴリタブが内容幅に縮み丸く見えるのを防ぐ */
+    .learn-cat-row {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      width: 100%;
+    }
+
+    .learn-tab-btn {
+      width: 100%;
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      white-space: nowrap;
+    }
+  </style>
 </head>
 
 <body>
@@ -23,66 +49,106 @@
 
     <!-- 1. ことばパネル -->
     <div id="panelLearn" class="view-panel active">
-      <div class="learn-top">
+      <div id="learnHeaderBanner" class="learn-header-banner bg-基本" hidden>
+        <div id="learnHeaderText" class="learn-header-text"></div>
+      </div>
+
+      <div class="learn-study-column">
         <div class="learn-cat-row" role="tablist" aria-label="学習モード">
-          <button type="button" class="learn-tab-btn cat-auto" data-cat="auto" role="tab">すべて</button>
+          <button type="button" class="learn-tab-btn cat-auto" data-cat="auto" role="tab">おまかせ</button>
           <button type="button" class="learn-tab-btn cat-基本" data-cat="基本" role="tab">基本</button>
           <button type="button" class="learn-tab-btn cat-介護" data-cat="介護" role="tab">介護</button>
           <button type="button" class="learn-tab-btn cat-医療" data-cat="医療" role="tab">医療</button>
           <button type="button" class="learn-tab-btn cat-社会" data-cat="社会" role="tab">社会</button>
         </div>
-      </div>
 
-      <div id="learnHeaderBanner" class="learn-header-banner bg-基本" hidden>
-        <div id="learnHeaderText" class="learn-header-text"></div>
-      </div>
-
-      <div class="learn-body">
         <div id="flashStudy" class="flash-study">
-          <div class="flash-test-mode-label">テストモード</div>
-          <div class="flashcard-area">
-            <div class="flashcard-stack">
-              <div id="flashProgress" class="flash-progress" role="group" aria-live="polite" aria-label="1つ目 / 全5つ">
-                <div id="flashProgressDots" class="flash-progress-dots"></div>
-              </div>
-              <div id="flashcard" class="flashcard">
-                <div class="flashcard-front">
-                  <div id="flashReading" class="flash-reading"></div>
-                  <div id="flashWord" class="flash-word"></div>
-                </div>
-                <div id="flashcardBack" class="flashcard-back" role="button" tabindex="0" aria-label="タップで答えを表示"
-                  aria-hidden="true">
-                  <div id="flashEnglish" class="flash-english"></div>
-                  <div id="flashMeaning" class="flash-meaning"></div>
-                  <div id="flashExample" class="flash-example"></div>
-                </div>
-              </div>
-              <div class="flash-action-slot">
-                <button type="button" id="flashRevealBtn" class="flash-reveal-btn">見てみる</button>
-                <div id="flashAnswerBtns" class="flash-answer-btns" hidden aria-live="polite">
-                  <div class="flash-action-left">
-                    <button type="button" id="flashUnknownBtn" class="flash-unknown-btn">まだ</button>
+          <div class="flashcard-stack">
+            <div class="flashcard-block">
+              <div class="flashcard-fit">
+                <div class="flashcard-column">
+                  <div id="flashProgress" class="flash-progress" role="group" aria-live="polite" aria-label="1つ目 / 全5つ">
+                    <div id="flashProgressDots" class="flash-progress-dots"></div>
                   </div>
-                  <button type="button" id="flashKnownBtn" class="flash-known-btn">おぼえた</button>
+                  <div class="flashcard-size-box">
+                    <div id="flashcard" class="flashcard">
+                      <div class="flashcard-front">
+                        <div class="flash-head-stack">
+                          <div id="flashReading" class="flash-reading"></div>
+                          <div id="flashWord" class="flash-word"></div>
+                        </div>
+                      </div>
+                      <div id="flashcardBack" class="flashcard-back" aria-hidden="true">
+                        <div class="flash-back-stack">
+                          <div id="flashEnglish" class="flash-english"></div>
+                          <div id="flashMeaning" class="flash-meaning"></div>
+                          <div id="flashExample" class="flash-example"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
+              </div>
+            </div>
+            <div class="flash-action-slot">
+              <div class="flash-action-row">
                 <button type="button" id="flashUndoBtn" class="flash-undo-btn flash-undo-btn-study is-unavailable"
                   aria-label="1つ戻す">←</button>
+                <div class="flash-action-panel">
+                  <button type="button" id="flashRevealBtn" class="flash-reveal-btn">見てみる</button>
+                  <div id="flashAnswerBtns" class="flash-answer-btns" aria-live="polite" hidden>
+                    <button type="button" id="flashUnknownBtn" class="flash-unknown-btn flash-circle-btn">
+                      <span class="flash-circle-btn-icon flash-circle-btn-icon-text" aria-hidden="true">?</span>
+                      <span class="flash-circle-btn-label">知らない</span>
+                    </button>
+                    <button type="button" id="flashKnownBtn" class="flash-known-btn flash-circle-btn">
+                      <svg class="flash-circle-btn-icon flash-circle-btn-icon-check" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" d="M6 12.5 10.2 16.7 18 8.5" />
+                      </svg>
+                      <span class="flash-circle-btn-label">知ってる</span>
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
         <div id="flashComplete" class="flash-complete" hidden>
-          <div class="flash-complete-head">
-            <p id="flashCompleteMessage" class="flash-complete-message">5つ おわり！</p>
-            <p id="flashCompleteDetail" class="flash-complete-detail" hidden></p>
-          </div>
-          <div class="flash-complete-actions">
-            <button type="button" id="flashRestartBtn" class="flash-restart-btn">もう5つ つづける</button>
-            <div class="flash-complete-finish-wrap">
-              <button type="button" id="flashFinishBtn" class="flash-finish-btn">おしまい</button>
-              <p class="flash-complete-skip-note">「まだ」のことばは あした また でます</p>
-              <button type="button" id="flashUndoBtnComplete" class="flash-undo-btn is-unavailable" aria-label="1つ戻す">←</button>
+          <div class="flashcard-stack">
+            <div class="flashcard-block">
+              <div class="flashcard-fit">
+                <div class="flashcard-column flash-complete-column">
+                  <div class="flash-complete-word-spacer" aria-hidden="true"></div>
+                  <div class="flash-complete-head">
+                    <p id="flashCompleteMessage" class="flash-complete-message">その調子！！</p>
+                    <p id="flashCompleteDetail" class="flash-complete-detail" hidden></p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="flash-action-slot">
+              <div class="flash-action-row">
+                <button type="button" id="flashUndoBtnComplete" class="flash-undo-btn flash-undo-btn-study is-unavailable"
+                  aria-label="1つ戻す">←</button>
+                <div class="flash-action-panel">
+                  <div class="flash-complete-btns flash-answer-btns" aria-live="polite">
+                    <button type="button" id="flashFinishBtn" class="flash-unknown-btn flash-circle-btn">
+                      <svg class="flash-circle-btn-icon flash-circle-btn-icon-stop" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <rect x="5.5" y="5.5" width="13" height="13" rx="1.5" fill="currentColor" />
+                      </svg>
+                      <span class="flash-circle-btn-label">おしまい</span>
+                    </button>
+                    <button type="button" id="flashRestartBtn" class="flash-known-btn flash-circle-btn">
+                      <svg class="flash-circle-btn-icon flash-circle-btn-icon-play" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path fill="currentColor" d="M7.2 5.2v13.6l11.4-6.8z" />
+                      </svg>
+                      <span class="flash-circle-btn-label">つづける</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <p id="flashCompleteSkipNote" class="flash-complete-skip-note">「知らない」ことばは、あとでまたでてきます.</p>
             </div>
           </div>
         </div>
@@ -100,8 +166,8 @@
         </div>
 
         <div class="filter-chip-row">
-          <div id="chipUnlearned" class="filter-chip chip-unlearned" role="button" tabindex="0">おぼえていない</div>
-          <div id="chipLearned" class="filter-chip chip-learned" role="button" tabindex="0">おぼえた</div>
+          <div id="chipUnlearned" class="filter-chip chip-unlearned" role="button" tabindex="0">知らない</div>
+          <div id="chipLearned" class="filter-chip chip-learned" role="button" tabindex="0">知ってる</div>
         </div>
       </div>
 
@@ -133,7 +199,7 @@
             <span id="valTodayWords" class="daily-stat-value" aria-live="polite">0<span class="daily-stat-unit"> 語</span></span>
           </div>
           <div class="daily-stat-card words">
-            <span class="daily-stat-label">ぜんぶ</span>
+            <span class="daily-stat-label">これまで</span>
             <span id="valTotalWords" class="daily-stat-value" aria-live="polite">0<span class="daily-stat-unit"> 語</span></span>
           </div>
         </div>
@@ -141,6 +207,10 @@
         <div class="roadmap-title">学習ロードマップ</div>
         <div class="roadmap-scroll-wrapper">
           <table class="roadmap-table">
+            <colgroup>
+              <col class="roadmap-col-week">
+              <col span="7" class="roadmap-col-day">
+            </colgroup>
             <thead>
               <tr>
                 <th class="th-week">週</th>
@@ -174,22 +244,7 @@
     <div class="loading-box">読み込み中...</div>
   </div>
 
-  <script>
-    (function () {
-      var build = "__APP_BUILD__";
-      var storageKey = "care_worker_test_build";
-      try {
-        var prev = sessionStorage.getItem(storageKey);
-        sessionStorage.setItem(storageKey, build);
-        if (prev && prev !== build) {
-          var url = new URL(window.location.href);
-          url.searchParams.set("_cb", String(Date.now()));
-          window.location.replace(url.toString());
-        }
-      } catch (e) {}
-    })();
-  </script>
-  <script src="app.js?v=20260301d8"></script>
+  <script src="app.js?v=__APP_BUILD__"></script>
 </body>
 
 </html>

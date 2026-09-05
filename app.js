@@ -11,6 +11,7 @@ var AUTO_SESSION_PLAN = {
   "社会": 1
 };
 var CATEGORIES = ["基本", "介護", "医療", "社会"];
+var EXAM_DATE_JST = "2027-01-31";
 
 function isTestDeploy() {
   return /\/test(?:\/|$)/.test(window.location.pathname);
@@ -2557,10 +2558,14 @@ function appendTextWithVocabularyRuby(container, text) {
     return;
   }
 
+  var run = document.createElement("span");
+  run.className = "vocab-ruby-run";
+
   var entries = getVocabularyRubyEntries();
   var matches = findVocabularyRubyMatches(text, entries);
   if (!matches.length) {
-    container.textContent = text;
+    run.textContent = text;
+    container.appendChild(run);
     return;
   }
 
@@ -2586,7 +2591,8 @@ function appendTextWithVocabularyRuby(container, text) {
     fragment.appendChild(document.createTextNode(text.slice(cursor)));
   }
 
-  container.appendChild(fragment);
+  run.appendChild(fragment);
+  container.appendChild(run);
 }
 
 function buildWordTextBlocks(item) {
@@ -3137,6 +3143,60 @@ function onSearchFilterChanged() {
   renderSearchMatches(listEl, matches, token);
 }
 
+function getExamCountdownDays() {
+  var todayKey = getTodayJSTStr();
+  var todayParts = todayKey.split("-").map(Number);
+  var examParts = EXAM_DATE_JST.split("-").map(Number);
+  if (todayParts.length !== 3 || examParts.length !== 3) {
+    return null;
+  }
+  var todayUtc = Date.UTC(todayParts[0], todayParts[1] - 1, todayParts[2]);
+  var examUtc = Date.UTC(examParts[0], examParts[1] - 1, examParts[2]);
+  return Math.round((examUtc - todayUtc) / 86400000);
+}
+
+function updateExamCountdown() {
+  var root = document.getElementById("examCountdown");
+  var daysEl = document.getElementById("examCountdownDays");
+  var labelEl = root ? root.querySelector(".exam-countdown-label") : null;
+  var unitEl = root ? root.querySelector(".exam-countdown-unit") : null;
+  if (!root || !daysEl || !labelEl || !unitEl) {
+    return;
+  }
+
+  var days = getExamCountdownDays();
+  root.classList.remove("is-exam-day", "is-exam-over");
+
+  if (days === null) {
+    labelEl.textContent = "試験まで 残り";
+    daysEl.textContent = "—";
+    unitEl.hidden = false;
+    unitEl.textContent = "日";
+    return;
+  }
+
+  if (days > 0) {
+    labelEl.textContent = "試験まで 残り";
+    daysEl.textContent = String(days);
+    unitEl.hidden = false;
+    unitEl.textContent = "日";
+    return;
+  }
+
+  if (days === 0) {
+    root.classList.add("is-exam-day");
+    labelEl.textContent = "試験日";
+    daysEl.textContent = "きょう";
+    unitEl.hidden = true;
+    return;
+  }
+
+  root.classList.add("is-exam-over");
+  labelEl.textContent = "試験";
+  daysEl.textContent = "おわり";
+  unitEl.hidden = true;
+}
+
 function renderRoadmap() {
   if (!roadmapData) return;
 
@@ -3148,6 +3208,7 @@ function renderRoadmap() {
   setDailyStatValue(document.getElementById("valStreak"), streakCount, "日");
   setDailyStatValue(document.getElementById("valTotalWords"), totalLearned, "語");
   refreshTodayLearnedDisplay();
+  updateExamCountdown();
 
   var tbody = document.getElementById("roadmapTableBody");
   tbody.innerHTML = "";
@@ -3186,11 +3247,11 @@ function renderRoadmap() {
 
       if (targetKey < "2026-08-28") {
         symbol = "";
-      } else if (targetKey > "2027-01-31") {
+      } else if (targetKey > EXAM_DATE_JST) {
         symbol = "";
       } else if (dynamicLearnedMap[targetKey]) {
         symbol = "⭐️";
-      } else if (targetKey === "2027-01-31") {
+      } else if (targetKey === EXAM_DATE_JST) {
         symbol = "📘";
       } else if (targetKey > todayKey) {
         symbol = "⚪️";

@@ -114,4 +114,4 @@ if __name__ == "__main__":
     except Exception as err:
         print(f"エラー: {err}", file=sys.stderr)
         sys.exit(1)
- 
+  

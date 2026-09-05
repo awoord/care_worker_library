@@ -50,8 +50,8 @@
         /* 先頭行ルビの高さ（漢字基準行間の補正用。type-base 連動） */
         --vocab-inline-ruby-overhang-px: calc(var(--vocab-type-base) * 0.55);
         /* 文と文の行間（漢字同士の距離。--vocab-type-base の倍数） */
-        --vocab-gap-ratio-english-meaning: 0.42;
-        --vocab-gap-ratio-meaning-example: 0.36;
+        --vocab-gap-ratio-english-meaning: 0.46;
+        --vocab-gap-ratio-meaning-example: 0.40;
         --vocab-gap-english-meaning: calc(var(--vocab-type-base) * var(--vocab-gap-ratio-english-meaning));
         --vocab-gap-meaning-example: calc(var(--vocab-type-base) * var(--vocab-gap-ratio-meaning-example));
         --vocab-gap-english-meaning-kanji: max(0px, calc(var(--vocab-gap-english-meaning) - var(--vocab-inline-ruby-overhang-px)));
@@ -79,8 +79,8 @@
         --flash-action-gap: 8px;
         --flash-card-undo-gap: 10px;
         --flash-action-height: var(--flash-circle-btn-size);
-        --flash-circle-btn-size: clamp(81px, 21.3vw, 97px);
-        --flash-answer-btn-gap: clamp(44px, 13vw, 60px);
+        --flash-circle-btn-size: clamp(75px, 19.2vw, 88px);
+        --flash-answer-btn-gap: clamp(24px, 7.5vw, 36px);
         --flash-unknown-circle-bg: #42a5f5;
         --flash-known-circle-bg: #66bb2e;
         --flash-known-circle-border: #5aa825;
@@ -97,6 +97,7 @@
         --flash-action-lift: 10px;
         --learn-card-pad-x: clamp(12px, 3vw, 20px);
         --learn-card-pad-y: clamp(10px, 2.5vw, 16px);
+        --flash-back-bleed-x: 8px;
         --learn-front-pad-y: clamp(8px, 2vw, 12px);
         /* 語彙タイポグラフィ：意味を基準に比率で階層化（ブレークポイントは --vocab-type-base のみ変更） */
         --vocab-type-base: clamp(16px, 3.8vmin, 19px);
@@ -119,7 +120,7 @@
         --flash-front-optical-nudge: -5px;
         --flash-back-optical-shift: 0.08;
         --flash-back-optical-nudge: 5px;
-        --vocab-ratio-head-ruby-gap: 0.3;
+        --vocab-ratio-head-ruby-gap: 0.28;
         --learn-color-word: #2e3856;
         --learn-color-reading: #939bb4;
         --learn-color-meaning: #2e3856;
@@ -288,6 +289,10 @@ body {
         --search-gap-ratio-meaning-example: var(--vocab-gap-ratio-meaning-example);
         --search-gap-title-meaning: calc(var(--vocab-type-base) * var(--search-gap-ratio-title-meaning));
         --search-gap-meaning-example: calc(var(--vocab-type-base) * var(--search-gap-ratio-meaning-example));
+        /* 見出し↔意味はルビありの見た目に統一（ルビなしでもルビ分の空きを確保） */
+        --search-gap-title-meaning-unified: calc(var(--search-gap-title-meaning) + var(--vocab-inline-ruby-overhang-px));
+        /* 意味↔例文は本文どうし。ルビのはみ出し分は行間に含めない */
+        --search-gap-meaning-example-kanji: max(0px, calc(var(--search-gap-meaning-example) - var(--vocab-inline-ruby-overhang-px)));
         --search-inline-line-height: var(--vocab-inline-line-height);
 }
 
@@ -947,6 +952,7 @@ body.search-chrome-collapsed:has(#panelSearch.active) .bottom-nav-bar {
         letter-spacing: 0.04em;
         margin: 0;
         padding: 0;
+        text-align: center;
         text-box-trim: trim-both;
         text-box-edge: cap alphabetic;
 }
@@ -974,8 +980,10 @@ body.search-chrome-collapsed:has(#panelSearch.active) .bottom-nav-bar {
 
 .flashcard-back {
         grid-row: 2;
+        justify-self: center;
         min-height: 0;
-        width: 100%;
+        width: calc(100% + (var(--flash-back-bleed-x) * 2));
+        max-width: none;
         overflow-x: hidden;
         overflow-y: auto;
         -webkit-overflow-scrolling: touch;
@@ -986,7 +994,8 @@ body.search-chrome-collapsed:has(#panelSearch.active) .bottom-nav-bar {
         align-items: center;
         justify-content: center;
         gap: 0;
-        padding: clamp(8px, 2vmin, 14px) var(--space-xs);
+        padding: clamp(8px, 2vmin, 14px) 0;
+        margin-inline: 0;
         box-sizing: border-box;
         cursor: default;
         pointer-events: none;
@@ -1084,7 +1093,7 @@ body.search-chrome-collapsed:has(#panelSearch.active) .bottom-nav-bar {
         padding: 0 clamp(20px, 6vw, 28px);
         box-sizing: border-box;
         font-family: inherit;
-        font-size: var(--learn-font-btn);
+        font-size: clamp(13px, 3vw, 15px);
         font-weight: 700;
         line-height: var(--line-height-tight);
         letter-spacing: 0.04em;
@@ -1163,7 +1172,7 @@ body.search-chrome-collapsed:has(#panelSearch.active) .bottom-nav-bar {
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 5px;
+        gap: 4px;
         padding: 0;
         color: #ffffff;
         font-family: inherit;
@@ -1184,31 +1193,31 @@ body.search-chrome-collapsed:has(#panelSearch.active) .bottom-nav-bar {
 
 .flash-circle-btn-icon {
         display: block;
-        width: clamp(23px, 6.3vw, 29px);
-        height: clamp(23px, 6.3vw, 29px);
+        width: clamp(21px, 5.7vw, 26px);
+        height: clamp(21px, 5.7vw, 26px);
         flex-shrink: 0;
 }
 
 .flash-circle-btn-icon-text {
-        width: clamp(26px, 7vw, 32px);
-        height: clamp(26px, 7vw, 32px);
+        width: clamp(23px, 6.3vw, 29px);
+        height: clamp(23px, 6.3vw, 29px);
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: clamp(22px, 5.8vw, 28px);
+        font-size: clamp(20px, 5.2vw, 25px);
         font-weight: 700;
         line-height: 1;
 }
 
 .flash-circle-btn-icon-check {
-        width: clamp(30px, 8vw, 36px);
-        height: clamp(30px, 8vw, 36px);
+        width: clamp(27px, 7.2vw, 32px);
+        height: clamp(27px, 7.2vw, 32px);
 }
 
 .flash-circle-btn-icon-stop,
 .flash-circle-btn-icon-play {
-        width: clamp(30px, 8vw, 36px);
-        height: clamp(30px, 8vw, 36px);
+        width: clamp(27px, 7.2vw, 32px);
+        height: clamp(27px, 7.2vw, 32px);
 }
 
 .flash-circle-btn-icon-play {
@@ -1216,7 +1225,7 @@ body.search-chrome-collapsed:has(#panelSearch.active) .bottom-nav-bar {
 }
 
 .flash-circle-btn-label {
-        font-size: clamp(14px, 3.3vw, 17px);
+        font-size: clamp(13px, 3vw, 15px);
         font-weight: 700;
         line-height: 1.15;
         letter-spacing: 0.02em;
@@ -1531,7 +1540,8 @@ body.env-test .flash-progress {
         color: var(--learn-color-meaning);
         font-weight: 600;
         word-break: break-word;
-        max-width: 100%;
+        overflow-wrap: anywhere;
+        line-break: strict;
         flex-shrink: 0;
         width: 100%;
         text-align: center;
@@ -1549,6 +1559,7 @@ body.env-test .flash-progress {
 #panelLearn .word-meaning ruby,
 #panelLearn .word-example ruby {
         ruby-align: center;
+        ruby-overhang: none;
         line-height: 1;
         ruby-position: over;
         -webkit-ruby-position: before;
@@ -1575,7 +1586,8 @@ body.env-test .flash-progress {
         line-height: var(--vocab-inline-line-height);
         color: var(--learn-color-example);
         word-break: break-word;
-        max-width: 100%;
+        overflow-wrap: anywhere;
+        line-break: strict;
         flex-shrink: 0;
         width: 100%;
         text-align: center;
@@ -1584,6 +1596,15 @@ body.env-test .flash-progress {
 
 .flash-example:has(ruby) {
         margin-top: var(--vocab-gap-meaning-example-kanji);
+}
+
+.flash-meaning > .vocab-ruby-run,
+.flash-example > .vocab-ruby-run {
+        display: inline-block;
+        max-width: 100%;
+        text-align: center;
+        box-sizing: border-box;
+        vertical-align: top;
 }
 
 .flash-unknown-btn.is-pressed-feedback {
@@ -1805,12 +1826,17 @@ body.env-test .flash-progress {
         line-height: var(--vocab-inline-line-height);
 }
 
+#panelSearch .search-item-body .word-meaning,
+#panelSearch .search-item-body .word-example {
+        line-height: var(--search-inline-line-height);
+}
+
 #panelLearn .word-meaning {
         margin-top: var(--vocab-gap-english-meaning);
 }
 
 .search-item-body .word-meaning {
-        margin-top: var(--search-gap-title-meaning);
+        margin-top: var(--search-gap-title-meaning-unified);
 }
 
 #panelLearn .word-meaning:has(ruby) {
@@ -1818,6 +1844,7 @@ body.env-test .flash-progress {
 }
 
 .search-item-body .word-meaning:has(ruby) {
+        /* ルビが空きを埋めるので、見出し→本文漢字の距離はルビなしと同じ */
         margin-top: var(--search-gap-title-meaning);
 }
 
@@ -1834,7 +1861,7 @@ body.env-test .flash-progress {
 }
 
 .search-item-body .word-example:has(ruby) {
-        margin-top: var(--search-gap-meaning-example);
+        margin-top: var(--search-gap-meaning-example-kanji);
 }
 
 #panelLearn .word-head-stack,
@@ -2325,6 +2352,44 @@ body.env-test .flash-progress {
         flex-shrink: 0;
 }
 
+.exam-countdown {
+        flex-shrink: 0;
+        display: flex;
+        align-items: baseline;
+        justify-content: center;
+        gap: 0.28em;
+        padding: 2px 8px;
+        margin: 0;
+        font-family: inherit;
+        line-height: 1.2;
+        color: #5b657a;
+        text-align: center;
+}
+
+.exam-countdown-label {
+        font-size: var(--daily-font-section);
+        font-weight: 700;
+        letter-spacing: 0.02em;
+}
+
+.exam-countdown-days {
+        font-size: calc(var(--daily-font-section) * 1.35);
+        font-weight: 800;
+        font-variant-numeric: tabular-nums;
+        letter-spacing: -0.02em;
+        color: #4563e8;
+}
+
+.exam-countdown-unit {
+        font-size: var(--daily-font-section);
+        font-weight: 700;
+}
+
+.exam-countdown.is-exam-day .exam-countdown-days,
+.exam-countdown.is-exam-over .exam-countdown-days {
+        color: #5b657a;
+}
+
 .roadmap-scroll-wrapper {
         flex: 1;
         overflow-y: auto;
@@ -2812,7 +2877,8 @@ body.env-test .flash-progress {
         }
 
         .flashcard-back {
-                padding: clamp(6px, 1.8vmin, 10px) var(--space-xs);
+                padding: clamp(6px, 1.8vmin, 10px) 0;
+                --flash-back-bleed-x: 8px;
         }
 
         #panelDaily.active {
@@ -2825,9 +2891,10 @@ body.env-test .flash-progress {
                 min-height: 0;
         }
 
-        #panelDaily .roadmap-title {
+        #panelDaily .exam-countdown {
                 flex-shrink: 0;
                 line-height: 1.2;
+                padding: 4px 6px;
         }
 
         #panelDaily {
@@ -3041,7 +3108,7 @@ body.env-test .flash-progress {
                 --vocab-ratio-search-title: 1.34;
                 --vocab-ratio-search-english: 1.1;
                 --learn-font-word: clamp(30px, calc(var(--vocab-type-base) * var(--vocab-ratio-learn-title)), 46px);
-                --flash-answer-btn-gap: clamp(56px, 8vw, 88px);
+                --flash-answer-btn-gap: clamp(32px, 5vw, 52px);
                 --learn-font-progress: clamp(11px, 1.8vw, 12px);
                 --learn-font-cat: clamp(15px, 2.4vw, 17px);
                 --learn-font-btn: clamp(17px, 2.5vw, 19px);
@@ -3127,7 +3194,8 @@ body.env-test .flash-progress {
         }
 
         .flashcard-back {
-                padding: clamp(10px, 1.8vw, 14px) var(--space-xs);
+                padding: clamp(10px, 1.8vw, 14px) 0;
+                --flash-back-bleed-x: 8px;
         }
 
         .flash-progress-dots {
@@ -3153,7 +3221,7 @@ body.env-test .flash-progress {
         }
 
         .flash-circle-btn {
-                --flash-circle-btn-size: clamp(78px, 20.4vw, 93px);
+                --flash-circle-btn-size: clamp(72px, 18.4vw, 84px);
         }
 
         .flash-undo-btn {
@@ -3165,9 +3233,30 @@ body.env-test .flash-progress {
                 gap: var(--space-md);
         }
 
+        #panelDaily .daily-container {
+                gap: var(--space-sm);
+                padding-bottom: var(--space-sm);
+        }
+
+        #panelDaily .exam-countdown {
+                padding: 2px 4px;
+                margin-top: auto;
+                margin-bottom: auto;
+                line-height: 1.1;
+        }
+
+        #panelDaily .exam-countdown-days {
+                font-size: calc(var(--daily-font-section) * 1.2);
+        }
+
         .daily-stat-card {
                 padding: var(--space-md) 6px;
                 gap: 6px;
+        }
+
+        #panelDaily .roadmap-scroll-wrapper {
+                flex: 0 1 auto;
+                max-height: 100%;
         }
 
         .roadmap-table th {
@@ -3242,7 +3331,7 @@ body.env-test .flash-progress {
                 --learn-font-progress: 12px;
                 --learn-font-cat: 17px;
                 --learn-font-btn: 20px;
-                --flash-answer-btn-gap: 88px;
+                --flash-answer-btn-gap: 52px;
         }
 
         .flashcard-stack {
@@ -3292,9 +3381,30 @@ body.env-test .flash-progress {
                 gap: var(--space-md);
         }
 
+        #panelDaily .daily-container {
+                gap: var(--space-sm);
+                padding-bottom: var(--space-sm);
+        }
+
+        #panelDaily .exam-countdown {
+                padding: 2px 4px;
+                margin-top: auto;
+                margin-bottom: auto;
+                line-height: 1.1;
+        }
+
+        #panelDaily .exam-countdown-days {
+                font-size: calc(var(--daily-font-section) * 1.2);
+        }
+
         .daily-stat-card {
                 padding: var(--space-md) 8px;
                 gap: 8px;
+        }
+
+        #panelDaily .roadmap-scroll-wrapper {
+                flex: 0 1 auto;
+                max-height: 100%;
         }
 
         .roadmap-table th {
@@ -3344,7 +3454,7 @@ body.env-test .flash-progress {
         }
 
         .flash-circle-btn {
-                --flash-circle-btn-size: clamp(85px, 19.4vw, 97px);
+                --flash-circle-btn-size: clamp(76px, 17.5vw, 88px);
         }
 
         .flash-undo-btn {
@@ -3361,7 +3471,8 @@ body.env-test .flash-progress {
         }
 
         .flashcard-back {
-                padding: var(--space-md) var(--space-sm);
+                padding: var(--space-md) 0;
+                --flash-back-bleed-x: 10px;
         }
 
         .flash-progress-dots {
@@ -3398,8 +3509,8 @@ body.env-test .flash-progress {
                 --learn-font-word: clamp(22px, calc(var(--vocab-type-base) * var(--vocab-ratio-learn-title)), 32px);
                 --learn-font-btn: clamp(12px, 3.6vh, 14px);
                 --flash-undo-size: 24px;
-                --flash-circle-btn-size: clamp(62px, 13.6vh, 81px);
-                --flash-answer-btn-gap: clamp(16px, 4vh, 24px);
+                --flash-circle-btn-size: clamp(56px, 12.2vh, 75px);
+                --flash-answer-btn-gap: clamp(12px, 3.2vh, 24px);
                 --flash-landscape-action-col: clamp(108px, 28vw, 148px);
         }
 
@@ -3527,7 +3638,8 @@ body.env-test .flash-progress {
         }
 
         .flashcard-back {
-                padding: clamp(4px, 1.2vh, 8px) var(--space-xs);
+                padding: clamp(4px, 1.2vh, 8px) 0;
+                --flash-back-bleed-x: 6px;
         }
 
         .flash-action-slot {

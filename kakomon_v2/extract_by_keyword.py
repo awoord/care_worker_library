@@ -7,7 +7,7 @@ kaigo_kakomon_all.txt からキーワードを含む問題を抽出する。
   python3 extract_by_keyword.py 介護福祉職 判断   # 空白区切りは AND（全語を含む）
   python3 extract_by_keyword.py          # 対話入力
 
-結果は keyword_extract/キーワード.txt に保存する。
+結果は ../kewword_extract/キーワード.txt に保存する。
 各問題の末尾に過去問ドットコムの解説ページURLを付ける。
 """
 
@@ -24,7 +24,7 @@ from kakomonn_links import question_url
 
 DIR = Path(__file__).resolve().parent
 KAKOMON_TXT = DIR / "kaigo_kakomon_all.txt"
-OUTPUT_DIR = DIR / "keyword_extract"
+OUTPUT_DIR = DIR.parent / "kewword_extract"
 
 RE_INDEX = re.compile(r"^【(\d+)-(\d+)｜(.+)】\s*$")
 RE_CHOICE = re.compile(r"^[1-5](?:[。．.\s]|$)")

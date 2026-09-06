@@ -86,7 +86,7 @@
 3。近所の人や民生委員、小学校の教え子は、「個人因子」にあたる。
 4。小学校の教員をしていたことは、「環境因子」にあたる。
 5。トイレの場所がわからなくなることは、「健康状態」にあたる。
-解説: https://kaigofukushi.kakomonn.com/questions/41910
+解説: https://kaigofukushi.kakomonn.com/questions/41863
 
 【31-110｜介護過程】
 Ｇさん(79歳、男性)は認知症対応型共同生活介護(グループホーム)に入居している。短期目標を「なじみの店で買物ができる(2か月)」として、月3回の買物を計画し実施した。初回は順調であったが、2回目にレジで後ろに並ぶ人から、「遅い、早くして」と言われて、Ｈ介護福祉職が支払った。ＧさんはＨ介護福祉職に、「ほしい物を選んでも、自分で支払わないと買った気にならん」と言い、その後、楽しみにしていた買物に行かなくなった。
@@ -96,7 +96,7 @@
 3。心身機能
 4。環境因子
 5。活動
-解説: https://kaigofukushi.kakomonn.com/questions/41953
+解説: https://kaigofukushi.kakomonn.com/questions/41908
 
 【30-49｜障害の理解】
 障害の理解（10問）
@@ -106,7 +106,7 @@ ICF (International Classification of Functioning. Disability and Health :国際�
 3。障害は、専門職による個別的な治療で解決する。
 4。障害は、環境によって作り出されるものである。
 5。障害への対処では、個人のよりよい適応と行動変容が目標とされる。
-解説: https://kaigofukushi.kakomonn.com/questions/33183
+解説: https://kaigofukushi.kakomonn.com/questions/33221
 
 【29-49｜障害の理解】
 障害の理解（10問）
@@ -117,7 +117,7 @@ ICF (International Classification of Functioning. Disability and Health :国際�
 3。ボランティアをしていること
 4。仲の良い友人がいること
 5。映画鑑賞が趣味であること
-解説: https://kaigofukushi.kakomonn.com/questions/28110
+解説: https://kaigofukushi.kakomonn.com/questions/28148
 
 【29-106｜介護過程】
 介護過程におけるアセスメント(assessment)の目的として、最も適切なものを1 つ選びなさい。
@@ -126,7 +126,7 @@ ICF (International Classification of Functioning. Disability and Health :国際�
 3。生活課題の明確化
 4。ＩＣＦ(International Classification of Functioning、 Disability and Health：国際生活機能分類)の視点による情報の分類
 5。1 つの場面に焦点を当てた観察
-解説: https://kaigofukushi.kakomonn.com/questions/28168
+解説: https://kaigofukushi.kakomonn.com/questions/28122
 
 【29-112｜介護過程】
 Eさん（67歳、女性、要介護3）は、1年前、くも膜下出血（subarachnoid hemorrhage）で倒れて、左片麻痺、体幹機能の低下が残った。排泄訓練を目的として介護老人保健施設に入所した。
@@ -137,4 +137,4 @@ ICF（International Classification of Functioning, Disability and Health:国際�
 3。手すりを使っての立位の保持
 4。「おむつは嫌」という気持ちの表出
 5。車いすから便座への移乗
-解説: https://kaigofukushi.kakomonn.com/questions/28174
+解説: https://kaigofukushi.kakomonn.com/questions/28128

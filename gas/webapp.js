@@ -13,6 +13,10 @@ var FLASH_CURSORS_PROP_TEST = "FLASH_CURSORS_test";
 // スクリプトプロパティ PROD_CHECK_NOTIFY_EMAIL を設定する。
 
 function doGet(e) {
+  if (isKaigoApp(e)) {
+    return handleKaigoGet(e);
+  }
+
   var sheetInfo = resolveDbSheet(e);
   if (sheetInfo.error) {
     return jsonResponse({ error: sheetInfo.error, allWords: [], categories: {}, roadmap: {} });
@@ -26,6 +30,10 @@ function doGet(e) {
 function doPost(e) {
   try {
     var params = parsePostParams(e);
+    if (isKaigoApp(e, params)) {
+      return handleKaigoPost(e, params);
+    }
+
     var sheetInfo = resolveDbSheet(e, params);
     if (sheetInfo.error) {
       return jsonResponse({ error: sheetInfo.error });
@@ -429,4 +437,421 @@ function buildRoadmapPayload(learnedDates, allWords) {
     learnedDates: learnedDates,
     todayStr: todayStr
   };
+}
+
+// ==========================================================
+// 公開版（/kaigo/words/）: マスタは db 参照、進捗は progress シート
+// J 本番（ルート）の db 学習列は変更しない
+// スクリプトプロパティ GOOGLE_CLIENT_ID に OAuth クライアント ID を設定
+// ==========================================================
+
+var KAIGO_PROGRESS_SHEET = "progress";
+var KAIGO_WORDS_CACHE_KEY = "initial_kaigo_words_v1";
+
+function isKaigoApp(e, params) {
+  params = params || {};
+  if (e && e.parameter && e.parameter.app === "kaigo") {
+    return true;
+  }
+  if (params.app === "kaigo") {
+    return true;
+  }
+  return false;
+}
+
+function handleKaigoGet(e) {
+  var wordsSheet = resolveKaigoWordsSheet();
+  if (wordsSheet.error) {
+    return jsonResponse({
+      error: wordsSheet.error,
+      allWords: [],
+      categories: {},
+      roadmap: {},
+      auth: { requiredForSave: true }
+    });
+  }
+
+  var base = loadKaigoWordsBase(wordsSheet.sheet);
+  var idToken = extractIdToken(e, null);
+  var authInfo = null;
+
+  if (idToken) {
+    authInfo = verifyGoogleIdToken(idToken);
+    if (authInfo.error) {
+      return jsonResponse({
+        error: authInfo.error,
+        allWords: base.allWords,
+        roadmap: buildRoadmapPayload([], base.allWords),
+        cursors: {},
+        auth: { requiredForSave: true, loggedIn: false }
+      });
+    }
+    applyKaigoProgressToWords(base.allWords, authInfo.userId);
+    var learnedDates = collectLearnedDatesFromWords(base.allWords);
+    base.roadmap = buildRoadmapPayload(learnedDates, base.allWords);
+    base.cursors = loadKaigoFlashCursors(authInfo.userId);
+    base.auth = {
+      requiredForSave: true,
+      loggedIn: true,
+      userId: authInfo.userId,
+      email: authInfo.email || ""
+    };
+    return jsonResponse(base);
+  }
+
+  // ゲスト: 学習フラグなし
+  clearLearnedFlags(base.allWords);
+  base.roadmap = buildRoadmapPayload([], base.allWords);
+  base.cursors = {};
+  base.auth = { requiredForSave: true, loggedIn: false };
+  return jsonResponse(base);
+}
+
+function handleKaigoPost(e, params) {
+  var idToken = extractIdToken(e, params);
+  if (!idToken) {
+    return jsonResponse({ error: "ログインが必要です", needAuth: true });
+  }
+
+  var authInfo = verifyGoogleIdToken(idToken);
+  if (authInfo.error) {
+    return jsonResponse({ error: authInfo.error, needAuth: true });
+  }
+
+  if (params.action === "load") {
+    var wordsSheet = resolveKaigoWordsSheet();
+    if (wordsSheet.error) {
+      return jsonResponse({ error: wordsSheet.error, needAuth: false });
+    }
+    var base = loadKaigoWordsBase(wordsSheet.sheet);
+    applyKaigoProgressToWords(base.allWords, authInfo.userId);
+    var learnedDates = collectLearnedDatesFromWords(base.allWords);
+    base.roadmap = buildRoadmapPayload(learnedDates, base.allWords);
+    base.cursors = loadKaigoFlashCursors(authInfo.userId);
+    base.auth = {
+      requiredForSave: true,
+      loggedIn: true,
+      userId: authInfo.userId,
+      email: authInfo.email || ""
+    };
+    return jsonResponse(base);
+  }
+
+  var checkedWords = params.checkedWords || [];
+  var uncheckedWords = params.uncheckedWords || [];
+  var hasChecks = checkedWords.length > 0 || uncheckedWords.length > 0;
+
+  if (hasChecks) {
+    var updateResult = submitKaigoProgressUpdate(authInfo.userId, checkedWords, uncheckedWords);
+    if (updateResult && updateResult.error) {
+      return jsonResponse(updateResult);
+    }
+  }
+
+  if (params.cursors) {
+    saveKaigoFlashCursors(authInfo.userId, params.cursors);
+  }
+
+  // 保存後の最新進捗を返す（リロードと同じ形）
+  var wordsSheet = resolveKaigoWordsSheet();
+  if (wordsSheet.error) {
+    return jsonResponse({
+      success: true,
+      auth: { loggedIn: true, userId: authInfo.userId, email: authInfo.email || "" },
+      error: wordsSheet.error
+    });
+  }
+  var base = loadKaigoWordsBase(wordsSheet.sheet);
+  applyKaigoProgressToWords(base.allWords, authInfo.userId);
+  var learnedDates = collectLearnedDatesFromWords(base.allWords);
+  base.roadmap = buildRoadmapPayload(learnedDates, base.allWords);
+  base.cursors = loadKaigoFlashCursors(authInfo.userId);
+  base.success = true;
+  base.auth = {
+    requiredForSave: true,
+    loggedIn: true,
+    userId: authInfo.userId,
+    email: authInfo.email || ""
+  };
+  base.savedChecks = checkedWords.length;
+  base.savedUnchecks = uncheckedWords.length;
+  return jsonResponse(base);
+}
+
+function resolveKaigoWordsSheet() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(DB_SHEET_PROD);
+  if (!sheet) {
+    return { error: DB_SHEET_PROD + "シートが見つかりません" };
+  }
+  return { sheet: sheet };
+}
+
+function ensureKaigoProgressSheet() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(KAIGO_PROGRESS_SHEET);
+  if (sheet) {
+    return sheet;
+  }
+  sheet = ss.insertSheet(KAIGO_PROGRESS_SHEET);
+  sheet.getRange(1, 1, 1, 4).setValues([["user_id", "word", "learned", "date"]]);
+  return sheet;
+}
+
+function extractIdToken(e, params) {
+  params = params || {};
+  if (params.idToken) {
+    return String(params.idToken).trim();
+  }
+  if (e && e.parameter && e.parameter.idToken) {
+    return String(e.parameter.idToken).trim();
+  }
+  if (e && e.parameter && e.parameter.id_token) {
+    return String(e.parameter.id_token).trim();
+  }
+  return "";
+}
+
+function getGoogleClientId() {
+  var id = PropertiesService.getScriptProperties().getProperty("GOOGLE_CLIENT_ID");
+  return id ? String(id).trim() : "";
+}
+
+function verifyGoogleIdToken(idToken) {
+  var clientId = getGoogleClientId();
+  if (!clientId) {
+    return { error: "サーバーに GOOGLE_CLIENT_ID が設定されていません" };
+  }
+  if (!idToken) {
+    return { error: "idToken がありません" };
+  }
+
+  try {
+    var url =
+      "https://oauth2.googleapis.com/tokeninfo?id_token=" +
+      encodeURIComponent(idToken);
+    var res = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+    if (res.getResponseCode() !== 200) {
+      return { error: "ログインの検証に失敗しました" };
+    }
+    var data = JSON.parse(res.getContentText());
+    if (String(data.aud || "") !== clientId) {
+      return { error: "クライアントIDが一致しません" };
+    }
+    if (!data.sub) {
+      return { error: "ユーザーIDを取得できません" };
+    }
+    return {
+      userId: String(data.sub),
+      email: String(data.email || "")
+    };
+  } catch (err) {
+    return { error: "ログイン検証エラー: " + err };
+  }
+}
+
+function loadKaigoWordsBase(sheet) {
+  var cache = CacheService.getScriptCache();
+  var cached = cache.get(KAIGO_WORDS_CACHE_KEY);
+  if (cached) {
+    try {
+      return JSON.parse(cached);
+    } catch (cacheErr) {}
+  }
+
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) {
+    return { allWords: [], categories: {}, roadmap: {} };
+  }
+
+  var data = sheet.getRange(2, 1, lastRow, 10).getValues();
+  var allWords = [];
+
+  for (var i = 0; i < data.length; i++) {
+    var row = data[i];
+    var word = String(row[1] || "").trim();
+    if (!word) continue;
+    allWords.push({
+      w: word,
+      c: String(row[3] || "").trim(),
+      r: String(row[4] || "").trim(),
+      e: String(row[5] || "").trim(),
+      m: String(row[6] || "").trim(),
+      x: String(row[7] || "").trim(),
+      l: false,
+      d: ""
+    });
+  }
+
+  var payload = { allWords: allWords, categories: {} };
+  try {
+    cache.put(KAIGO_WORDS_CACHE_KEY, JSON.stringify(payload), 180);
+  } catch (putErr) {}
+  return payload;
+}
+
+function clearLearnedFlags(allWords) {
+  for (var i = 0; i < allWords.length; i++) {
+    allWords[i].l = false;
+    allWords[i].d = "";
+  }
+}
+
+function collectLearnedDatesFromWords(allWords) {
+  var learnedDates = [];
+  for (var i = 0; i < allWords.length; i++) {
+    var d = allWords[i].d;
+    if (allWords[i].l && d && learnedDates.indexOf(d) === -1) {
+      learnedDates.push(d);
+    }
+  }
+  return learnedDates;
+}
+
+function loadKaigoProgressMap(userId) {
+  var sheet = ensureKaigoProgressSheet();
+  var lastRow = sheet.getLastRow();
+  var map = {};
+  if (lastRow < 2) {
+    return map;
+  }
+
+  var values = sheet.getRange(2, 1, lastRow, 4).getValues();
+  for (var i = 0; i < values.length; i++) {
+    var uid = String(values[i][0] || "").trim();
+    if (uid !== userId) continue;
+    var word = String(values[i][1] || "").trim();
+    if (!word) continue;
+    var learned = values[i][2] === true || String(values[i][2]).toUpperCase() === "TRUE";
+    var dateVal = values[i][3];
+    var dateStr = "";
+    if (learned && dateVal) {
+      try {
+        dateStr = Utilities.formatDate(new Date(dateVal), "Asia/Tokyo", "yyyy-MM-dd");
+      } catch (dateErr) {
+        dateStr = String(dateVal).slice(0, 10);
+      }
+    }
+    map[word] = { learned: learned, date: dateStr };
+  }
+  return map;
+}
+
+function applyKaigoProgressToWords(allWords, userId) {
+  var map = loadKaigoProgressMap(userId);
+  for (var i = 0; i < allWords.length; i++) {
+    var word = allWords[i].w;
+    var entry = map[word];
+    if (entry && entry.learned) {
+      allWords[i].l = true;
+      allWords[i].d = entry.date || "";
+    } else {
+      allWords[i].l = false;
+      allWords[i].d = "";
+    }
+  }
+}
+
+function submitKaigoProgressUpdate(userId, checkedWords, uncheckedWords) {
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(10000)) {
+    return { error: "サーバーが混み合っています。再度お試しください。" };
+  }
+
+  try {
+    var sheet = ensureKaigoProgressSheet();
+    var lastRow = sheet.getLastRow();
+    var rowByWord = {};
+    var values = [];
+
+    if (lastRow >= 2) {
+      values = sheet.getRange(2, 1, lastRow, 4).getValues();
+      for (var i = 0; i < values.length; i++) {
+        if (String(values[i][0] || "").trim() !== userId) continue;
+        var w = String(values[i][1] || "").trim();
+        if (w) {
+          rowByWord[w] = i;
+        }
+      }
+    }
+
+    var checkedSet = toWordSet(checkedWords);
+    var uncheckedSet = toWordSet(uncheckedWords);
+    var today = new Date();
+    var toAppend = [];
+    var changedExisting = false;
+
+    for (var word in checkedSet) {
+      if (!checkedSet.hasOwnProperty(word)) continue;
+      if (rowByWord.hasOwnProperty(word)) {
+        var idx = rowByWord[word];
+        values[idx][2] = true;
+        values[idx][3] = today;
+        changedExisting = true;
+      } else {
+        toAppend.push([userId, word, true, today]);
+        rowByWord[word] = -1;
+      }
+    }
+
+    for (var uWord in uncheckedSet) {
+      if (!uncheckedSet.hasOwnProperty(uWord)) continue;
+      if (rowByWord.hasOwnProperty(uWord) && rowByWord[uWord] >= 0) {
+        var uIdx = rowByWord[uWord];
+        values[uIdx][2] = false;
+        values[uIdx][3] = "";
+        changedExisting = true;
+      }
+    }
+
+    if (changedExisting && values.length) {
+      sheet.getRange(2, 1, values.length + 1, 4).setValues(values);
+    }
+    if (toAppend.length) {
+      var startRow = sheet.getLastRow() + 1;
+      sheet.getRange(startRow, 1, startRow + toAppend.length - 1, 4).setValues(toAppend);
+    }
+
+    return { success: true };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function getKaigoCursorsPropertyKey(userId) {
+  return "FLASH_CURSORS_kaigo_" + userId;
+}
+
+function loadKaigoFlashCursors(userId) {
+  try {
+    var raw = PropertiesService.getScriptProperties().getProperty(getKaigoCursorsPropertyKey(userId));
+    if (!raw) {
+      return {};
+    }
+    return normalizeCursorsMap(JSON.parse(raw));
+  } catch (err) {
+    return {};
+  }
+}
+
+function saveKaigoFlashCursors(userId, incoming) {
+  var incomingMap = normalizeCursorsMap(incoming);
+  if (!Object.keys(incomingMap).length) {
+    return;
+  }
+
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(10000)) {
+    throw new Error("サーバーが混み合っています。再度お試しください。");
+  }
+
+  try {
+    var merged = mergeCursorsByTime(loadKaigoFlashCursors(userId), incomingMap);
+    PropertiesService.getScriptProperties().setProperty(
+      getKaigoCursorsPropertyKey(userId),
+      JSON.stringify(merged)
+    );
+  } finally {
+    lock.releaseLock();
+  }
 }

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
 kaigo_kakomon_all.txt からキーワードを含む問題を抽出する。
+対象は第33回〜第38回。
 
 使い方:
   python3 extract_by_keyword.py レビー小体
@@ -9,6 +10,7 @@ kaigo_kakomon_all.txt からキーワードを含む問題を抽出する。
 
 結果は ../kewword_extract/キーワード.txt に保存する。
 各問題の末尾に過去問ドットコムの解説ページURLを付ける。
+総合問題は同一事例の冒頭文も付けて出力する。
 """
 
 from __future__ import annotations
@@ -25,9 +27,14 @@ from kakomonn_links import question_url
 DIR = Path(__file__).resolve().parent
 KAKOMON_TXT = DIR / "kaigo_kakomon_all.txt"
 OUTPUT_DIR = DIR.parent / "kewword_extract"
+# 抽出対象の出題回（この範囲のみ検索する）
+SESSION_MIN = 33
+SESSION_MAX = 38
 
 RE_INDEX = re.compile(r"^【(\d+)-(\d+)｜(.+)】\s*$")
 RE_CHOICE = re.compile(r"^[1-5](?:[。．.\s]|$)")
+# 総合問題の事例ブロック冒頭（共有事例の開始）
+RE_CASE_INTRO = re.compile(r"(?:〔\s*事|次の事例を読んで|（総合問題)")
 # ファイル名に使えない文字（macOS/Windows 共通で危ないもの）
 RE_UNSAFE_FILENAME = re.compile(r'[\\/:*?"<>|\0]')
 
@@ -188,8 +195,70 @@ def load_questions(path: Path) -> list[Question]:
     text = path.read_text(encoding="utf-8")
     questions: list[Question] = []
     for index_line, body, leading in split_blocks(text):
-        questions.append(parse_question(index_line, body, leading))
+        q = parse_question(index_line, body, leading)
+        session = int(q.session)
+        if SESSION_MIN <= session <= SESSION_MAX:
+            questions.append(q)
+    enrich_sogo_case_contexts(questions)
     return questions
+
+
+def is_case_intro(context: str) -> bool:
+    """共有事例の冒頭（次の事例を読んで／〔事例〕など）かどうか。"""
+    return bool(context and RE_CASE_INTRO.search(context))
+
+
+def enrich_sogo_case_contexts(questions: list[Question]) -> None:
+    """総合問題で、同一事例セットの後続問にも冒頭の事例全文を付ける。
+
+    新しい回では事例が問1の前にだけ置かれ、問2・問3には
+    「その後…」などの追記だけが付く。抽出時は冒頭事例＋追記を出す。
+    （第29〜31回のように各問の本文に事例が重複掲載されている形式はそのまま）
+    """
+    i = 0
+    n = len(questions)
+    while i < n:
+        q = questions[i]
+        if q.subject != "総合問題":
+            i += 1
+            continue
+
+        j = i + 1
+        while (
+            j < n
+            and questions[j].subject == "総合問題"
+            and questions[j].session == q.session
+        ):
+            j += 1
+
+        # 同一回の総合問題連続区間を、事例冒頭ごとにセット分割
+        sets: list[list[int]] = []
+        current: list[int] = []
+        for k in range(i, j):
+            if current and is_case_intro(questions[k].context):
+                sets.append(current)
+                current = [k]
+            else:
+                current.append(k)
+        if current:
+            sets.append(current)
+
+        for group in sets:
+            base = questions[group[0]].context
+            if not base:
+                continue
+            for offset, k in enumerate(group):
+                if offset == 0:
+                    continue
+                extra = questions[k].context
+                if not extra:
+                    questions[k].context = base
+                elif extra == base or extra in base:
+                    questions[k].context = base
+                else:
+                    questions[k].context = f"{base}\n{extra}"
+
+        i = j
 
 
 def searchable_text(q: Question) -> str:

@@ -1,0 +1,56 @@
+/kaigo/words/ 公開版のセットアップ手順
+================================
+
+このディレクトリは公開用の単語アプリです。
+ルート https://nihongo.site/ は J 用のまま残します。
+
+できること
+----------
+- ゲスト: チェック操作できるが、リロードすると消える（サーバー非保存）
+- Googleログイン後: progress シートに保存（J の db 学習列は触らない）
+
+
+1. Google Cloud で OAuth クライアントを作る
+------------------------------------------
+1) https://console.cloud.google.com/ でプロジェクト作成
+2) 「APIとサービス」→「OAuth同意画面」を設定（外部、テストユーザーに自分を追加可）
+3) 「認証情報」→「OAuth クライアント ID」→ アプリケーションの種類「ウェブ」
+4) 承認済みの JavaScript 生成元:
+     https://nihongo.site
+5) クライアント ID を控える（例: xxxxx.apps.googleusercontent.com）
+
+
+2. フロントにクライアント ID を入れる
+------------------------------------
+kaigo/words/app.js 先頭の:
+
+  var GOOGLE_CLIENT_ID = "";
+
+を自分のクライアント ID に書き換える。
+
+
+3. GAS（webapp.js）を更新する
+----------------------------
+1) スプレッドシートに紐づく Apps Script に gas/webapp.js の内容を反映
+2) スクリプトプロパティに設定:
+     キー: GOOGLE_CLIENT_ID
+     値: 上記と同じクライアント ID
+3) 必要ならウェブアプリを「新バージョンとしてデプロイ」
+4) 初回ログイン保存時に「progress」シートが自動作成される
+   （列: user_id / word / learned / date）
+
+
+4. 静的ファイルをアップロード
+----------------------------
+  python3 kaigo/words/deploy_kaigo_words.py
+
+公開URL:
+  https://nihongo.site/kaigo/words/
+
+
+確認
+----
+- ゲストでチェック → リロードで消える
+- Googleログイン → チェックが残る
+- 別アカウントでは混ざらない
+- https://nihongo.site/ （J）のチェックが変わっていない

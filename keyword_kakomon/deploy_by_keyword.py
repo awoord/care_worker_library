@@ -63,7 +63,8 @@ PREVIEW_ROOT = DIR / "preview"
 SESSION_MIN = 33
 SESSION_MAX = 38
 
-RE_CHOICE_LINE = re.compile(r"^([1-5])[。．.\s]*(.*)$")
+# 選択肢は「1 本文」「1．本文」のように番号のあとに区切りが必要（「1週間」は除外）
+RE_CHOICE_LINE = re.compile(r"^([1-5])(?:[。．.\s]+)(.*)$")
 
 # よく使うキーワードの読みやすいパス名
 KNOWN_SLUGS = {

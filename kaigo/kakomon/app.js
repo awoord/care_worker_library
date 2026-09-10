@@ -299,11 +299,29 @@ function appendHighlightedRuby(container, text, terms) {
 
 /* 国試どおり問題文の定型句を太字にする（長い語句から優先） */
 var STEM_BOLD_PHRASES = [
+  "最も注意しなければならないもの",
+  "主観的に記録したもの",
+  "最も配慮すべき構成要素",
+  "最も緊急度の高いもの",
+  "最も優先度の高いもの",
+  "最も可能性の高いもの",
+  "最も可能性が高いもの",
+  "最も割合が高いもの",
+  "最も起こりやすいもの",
+  "最も優先されるもの",
+  "最も優先すべきもの",
+  "最もふさわしいもの",
+  "最も多かったもの",
   "最も適切なもの",
+  "最も近い数値",
+  "最も多いもの",
   "適切なもの",
   "正しいもの",
   "そのほか"
 ];
+
+/* 「1つ選びなさい」等の直前の「1つ／１つ」だけ太字（本文中の別用途は除外） */
+var STEM_BOLD_ONE_RE = /[1１]\s*つ(?=\s*選び)/g;
 
 function findNextStemBoldMatch(text, from) {
   var best = null;
@@ -319,6 +337,19 @@ function findNextStemBoldMatch(text, from) {
       (idx === best.start && phrase.length > best.end - best.start)
     ) {
       best = { start: idx, end: idx + phrase.length, phrase: phrase };
+    }
+  }
+  STEM_BOLD_ONE_RE.lastIndex = from;
+  var one = STEM_BOLD_ONE_RE.exec(text);
+  if (one) {
+    var oneStart = one.index;
+    var oneEnd = oneStart + one[0].length;
+    if (
+      !best ||
+      oneStart < best.start ||
+      (oneStart === best.start && oneEnd - oneStart > best.end - best.start)
+    ) {
+      best = { start: oneStart, end: oneEnd, phrase: one[0] };
     }
   }
   return best;
@@ -622,9 +653,10 @@ function wireAllSessionYearSelects() {
   wireSessionYearSelect(document.getElementById("jumpRound"));
 }
 
-function countSubjectsInRange(questions, sessionFrom, sessionTo, type) {
+function countSubjectsForFilters(questions, sessionFrom, sessionTo, type, terms) {
   var range = normalizeRange(sessionFrom, sessionTo);
   var typeFilter = String(type || "").trim();
+  var norms = (terms || []).map(normalizeForSearch).filter(Boolean);
   var counts = {};
   var total = 0;
   for (var i = 0; i < questions.length; i++) {
@@ -636,6 +668,19 @@ function countSubjectsInRange(questions, sessionFrom, sessionTo, type) {
     if (typeFilter && questionType(q) !== typeFilter) {
       continue;
     }
+    if (norms.length) {
+      var hay = questionSearchText(q);
+      var ok = true;
+      for (var t = 0; t < norms.length; t++) {
+        if (hay.indexOf(norms[t]) === -1) {
+          ok = false;
+          break;
+        }
+      }
+      if (!ok) {
+        continue;
+      }
+    }
     var s = String(q.subject || "").trim();
     if (!s) {
       continue;
@@ -646,6 +691,11 @@ function countSubjectsInRange(questions, sessionFrom, sessionTo, type) {
   return { counts: counts, total: total };
 }
 
+function getFilterKeywordTerms() {
+  var input = document.getElementById("searchInput");
+  return parseTerms(input ? input.value : "");
+}
+
 function updateSubjectOptionCounts() {
   var el = document.getElementById("subjectSelect");
   if (!el || !questionsReady) {
@@ -653,11 +703,13 @@ function updateSubjectOptionCounts() {
   }
   var range = getSelectedRange();
   var type = getSelectedType();
-  var result = countSubjectsInRange(
+  var terms = getFilterKeywordTerms();
+  var result = countSubjectsForFilters(
     allQuestions,
     range.from,
     range.to,
-    type
+    type,
+    terms
   );
   for (var i = 0; i < el.options.length; i++) {
     var opt = el.options[i];
@@ -1331,6 +1383,9 @@ function boot() {
   if (typeEl) {
     typeEl.addEventListener("change", refreshSubjectCounts);
   }
+  if (input) {
+    input.addEventListener("input", refreshSubjectCounts);
+  }
 
   function submitFilter() {
     var range = getSelectedRange();
@@ -1344,6 +1399,7 @@ function boot() {
       jumpNumberEl.value = "";
     }
     writeFilterStateToUrl(q, range.from, range.to, subject, type);
+    updateSubjectOptionCounts();
     runFilterSearch(q);
   }
 
@@ -1377,13 +1433,13 @@ function boot() {
 
     fillSessionSelects();
     var state = readStateFromUrl();
-    fillSubjectSelect(collectSubjects(allQuestions), state.subject);
     fromEl.value = String(state.from);
     toEl.value = String(state.to);
     input.value = state.q;
     if (typeEl) {
       typeEl.value = state.type || "";
     }
+    fillSubjectSelect(collectSubjects(allQuestions), state.subject);
     // 試作中は暫定で第38回・問題1を初期選択
     if (jumpRoundEl) {
       jumpRoundEl.value = state.round || "38";

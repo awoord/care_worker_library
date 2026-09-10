@@ -40,6 +40,19 @@ SESSION_MAX = 38
 
 RE_INDEX = re.compile(r"^【(\d+)-(\d+)｜(.+)】\s*$")
 RE_CHOICE = re.compile(r"^[1-5](?:[。．.\s]|$)")
+# 「1 週間の…選びなさい」など、数字始まりの問題文を選択肢と誤認しない
+RE_STEM_MARKER = re.compile(r"選びなさい|選びなさい。|答えなさい|答えなさい。")
+
+
+def is_choice_line(stripped: str) -> bool:
+    """選択肢行か判定する。数字＋区切りで始まるが問題文のものは除外。"""
+    if not RE_CHOICE.match(stripped):
+        return False
+    if RE_STEM_MARKER.search(stripped):
+        return False
+    return True
+
+
 # 総合問題の事例ブロック冒頭（共有事例の開始）
 RE_CASE_INTRO = re.compile(r"(?:〔\s*事|次の事例を読んで|（総合問題)")
 # 「問題31，問題32」「問題114から問題116まで」など
@@ -180,7 +193,7 @@ def split_body_and_trailing(body_lines: list[str]) -> tuple[list[str], list[str]
             trailing.append(line)
             continue
 
-        if RE_CHOICE.match(stripped):
+        if is_choice_line(stripped):
             in_choices = True
             stem_and_choices.append(line)
             continue
@@ -219,7 +232,7 @@ def parse_question(
                 stem_parts.append("")
             continue
 
-        if RE_CHOICE.match(stripped):
+        if is_choice_line(stripped):
             in_choices = True
             choices.append(stripped)
             continue

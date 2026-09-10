@@ -49,6 +49,29 @@ function getApiUrl(extraParams) {
   return GAS_BASE_URL + "?" + parts.join("&");
 }
 
+function postKaigoJson(payload) {
+  return new Promise(function (resolve, reject) {
+    var xhr = new XMLHttpRequest();
+    xhr.open("POST", getApiUrl(), true);
+    xhr.setRequestHeader("Content-Type", "text/plain;charset=utf-8");
+    xhr.onload = function () {
+      if (xhr.status < 200 || xhr.status >= 300) {
+        reject(new Error("POST failed: " + xhr.status));
+        return;
+      }
+      try {
+        resolve(JSON.parse(xhr.responseText));
+      } catch (err) {
+        reject(err);
+      }
+    };
+    xhr.onerror = function () {
+      reject(new Error("network error"));
+    };
+    xhr.send(JSON.stringify(payload));
+  });
+}
+
 function isLoggedIn() {
   return !!(authState.loggedIn && authState.idToken);
 }
@@ -156,9 +179,34 @@ function handleGoogleCredentialResponse(response) {
   loadDataFromDB(false);
 }
 
+function clearUserPersistedProgress(userId) {
+  if (!userId) return;
+  var suffix = "_kaigo_" + userId;
+  var bases = [
+    "saved_pending_checks",
+    "saved_today_committed_learned",
+    "saved_today_skipped_words",
+    "saved_achieved_dates",
+    "care_worker_words_cache_v3",
+    "flash_category_cursors_v1",
+    "saved_tracked_jst_date_key",
+    "saved_main_mode",
+    "saved_learn_cat"
+  ];
+  try {
+    for (var i = 0; i < bases.length; i++) {
+      localStorage.removeItem(bases[i] + suffix);
+    }
+    sessionStorage.removeItem("care_worker_flash_session_v2" + suffix);
+    sessionStorage.removeItem("saved_local_learned_overrides" + suffix);
+  } catch (err) {}
+}
+
 function logoutGoogle() {
+  var previousUserId = authState.userId;
   setAuthFromToken("", {});
   clearGuestPersistedProgress();
+  clearUserPersistedProgress(previousUserId);
   pendingChecks = {};
   todayCommittedLearned = {};
   localLearnedOverrides = {};
@@ -250,18 +298,10 @@ function fetchAppData() {
     });
   }
 
-  return fetch(getApiUrl(), {
-    method: "POST",
-    headers: {
-      "Content-Type": "text/plain;charset=utf-8"
-    },
-    body: JSON.stringify({
-      app: "kaigo",
-      action: "load",
-      idToken: authState.idToken
-    })
-  }).then(function (res) {
-    return res.json();
+  return postKaigoJson({
+    app: "kaigo",
+    action: "load",
+    idToken: authState.idToken
   }).then(function (payload) {
     if (payload && payload.needAuth) {
       setAuthFromToken("", {});
@@ -1227,19 +1267,7 @@ function sendFlashCursorsToServer() {
 
   flashCursorsSendPromise = flashCursorsSendPromise
     .then(function () {
-      return fetch(getApiUrl(), {
-        method: "POST",
-        headers: {
-          "Content-Type": "text/plain;charset=utf-8"
-        },
-        body: JSON.stringify(postPayload),
-        keepalive: true
-      }).then(function (res) {
-        if (!res.ok) {
-          throw new Error("Cursor POST failed: " + res.status);
-        }
-        return res.json();
-      }).then(function (body) {
+      return postKaigoJson(postPayload).then(function (body) {
         if (body && body.needAuth) {
           throw new Error(body.error || "needAuth");
         }
@@ -2390,6 +2418,7 @@ function flushPendingChecksOnce() {
 
   var postPayload = {
     app: "kaigo",
+    action: "saveProgress",
     idToken: authState.idToken,
     category: uiState.learnCat,
     checkedWords: checkedWords,
@@ -2398,19 +2427,7 @@ function flushPendingChecksOnce() {
     cursors: loadFlashCategoryCursors()
   };
 
-  return fetch(getApiUrl(), {
-    method: "POST",
-    headers: {
-      "Content-Type": "text/plain;charset=utf-8"
-    },
-    body: JSON.stringify(postPayload),
-    keepalive: true
-  }).then(function (res) {
-    if (!res.ok) {
-      throw new Error("POST failed: " + res.status);
-    }
-    return res.json();
-  }).then(function (body) {
+  return postKaigoJson(postPayload).then(function (body) {
     if (body && body.needAuth) {
       throw new Error(body.error || "needAuth");
     }
@@ -2421,6 +2438,9 @@ function flushPendingChecksOnce() {
     if (!body || body.success !== true) {
       throw new Error("進捗の保存に失敗しました。もう一度ログインして試してください。");
     }
+    if (typeof body.savedChecks === "number" && body.savedChecks < checkedWords.length) {
+      throw new Error("進捗の一部が保存されませんでした（saved=" + body.savedChecks + ")");
+    }
     if (body.auth && body.auth.loggedIn) {
       authState.userId = body.auth.userId || authState.userId;
       authState.email = body.auth.email || authState.email;
@@ -2430,31 +2450,20 @@ function flushPendingChecksOnce() {
       });
       updateAuthBarUI();
     }
-    if (body.allWords) {
-      var payload = normalizeApiPayload(body);
-      writeWordsCache(payload);
-      applyAppData(payload, { isInitial: false, fromCache: false });
-      applyLocalLearnedSnapshot(snapshot);
-      finalizeCommittedChecks(wordsToCommit);
-      refreshLearnedCountDisplays(uiState.mode === "daily");
-      if (uiState.mode === "learn") {
-        refreshFlashSessionAfterDataLoad();
-      } else if (uiState.mode === "search") {
-        onSearchFilterChanged();
-      }
-      return flushPendingChecksOnce();
+    if (!body.allWords) {
+      throw new Error("進捗保存の応答が不正です");
     }
-    return loadDataFromDB(false).then(function () {
-      applyLocalLearnedSnapshot(snapshot);
-      finalizeCommittedChecks(wordsToCommit);
-      refreshLearnedCountDisplays(uiState.mode === "daily");
-      if (uiState.mode === "learn") {
-        refreshFlashSessionAfterDataLoad();
-      } else if (uiState.mode === "search") {
-        onSearchFilterChanged();
-      }
-      return flushPendingChecksOnce();
-    });
+    var payload = normalizeApiPayload(body);
+    writeWordsCache(payload);
+    applyAppData(payload, { isInitial: false, fromCache: false, fromServerSave: true });
+    finalizeCommittedChecks(wordsToCommit);
+    refreshLearnedCountDisplays(uiState.mode === "daily");
+    if (uiState.mode === "learn") {
+      refreshFlashSessionAfterDataLoad();
+    } else if (uiState.mode === "search") {
+      onSearchFilterChanged();
+    }
+    return flushPendingChecksOnce();
   }).catch(function (err) {
     rollbackPendingCommit(snapshot, committedSnapshot, wordsToCommit);
     console.error("DB送信エラー:", err);
@@ -2524,7 +2533,16 @@ function applyAppData(res, options) {
   });
   allWordsList = rawWords;
   invalidateVocabularyRubyEntries();
-  mergePendingAndOverrideLearnedState();
+
+  // サーバー応答を正とする（ブラウザだけの偽進捗を消す）
+  if (isLoggedIn() && !options.fromCache) {
+    localLearnedOverrides = {};
+    persistLocalLearnedOverrides();
+    syncTodayCommittedFromWords_();
+  } else {
+    mergePendingAndOverrideLearnedState();
+  }
+
   if (!options.fromCache) {
     applyServerFlashCursors(res.cursors);
     scheduleFlashCursorsSync();
@@ -2574,6 +2592,22 @@ function applyAppData(res, options) {
   } else if (uiState.mode === "search") {
     onSearchFilterChanged();
   }
+}
+
+function syncTodayCommittedFromWords_() {
+  var todayKey = getTodayJSTStr();
+  var next = {};
+  for (var i = 0; i < allWordsList.length; i++) {
+    var item = allWordsList[i];
+    if (!item || !item.isLearned) continue;
+    var wordName = getWordKey(item);
+    if (!wordName) continue;
+    if (getWordLearnedDateKey(item) === todayKey) {
+      next[wordName] = true;
+    }
+  }
+  todayCommittedLearned = next;
+  persistTodayCommittedLearned();
 }
 
 function updateSearchStatusBarPlaceholder() {
@@ -2839,6 +2873,13 @@ function invalidateVocabularyRubyEntries() {
   vocabularyRubyEntries = null;
 }
 
+function isKanaOnlyWord(word) {
+  /* ひらがな・カタカナのみの語にはルビを付けない */
+  return /^[\u3041-\u3096\u309D-\u309E\u30A1-\u30F6\u30F8-\u30FFァ-ヶー・･]+$/.test(
+    word || ""
+  );
+}
+
 function getVocabularyRubyEntries() {
   if (vocabularyRubyEntries) {
     return vocabularyRubyEntries;
@@ -2850,6 +2891,9 @@ function getVocabularyRubyEntries() {
     var word = getWordKey(item);
     var ruby = (item.ruby || item.r || "").trim();
     if (!word || !ruby || word.length < MIN_VOCAB_RUBY_LENGTH) {
+      continue;
+    }
+    if (isKanaOnlyWord(word)) {
       continue;
     }
     if (!byWord[word]) {
@@ -2877,6 +2921,9 @@ function findVocabularyRubyMatches(text, entries) {
   var matches = [];
   for (var i = 0; i < entries.length; i++) {
     var entry = entries[i];
+    if (!entry.word || isKanaOnlyWord(entry.word)) {
+      continue;
+    }
     if (text.indexOf(entry.word) === -1) {
       continue;
     }

@@ -1,0 +1,4 @@
+preview/*
+!preview/.gitkeep
+__pycache__/
+*.pyc

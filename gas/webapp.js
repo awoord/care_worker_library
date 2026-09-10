@@ -518,31 +518,19 @@ function handleKaigoPost(e, params) {
     return jsonResponse({ error: authInfo.error, needAuth: true });
   }
 
-  if (params.action === "load") {
-    var wordsSheet = resolveKaigoWordsSheet();
-    if (wordsSheet.error) {
-      return jsonResponse({ error: wordsSheet.error, needAuth: false });
-    }
-    var base = loadKaigoWordsBase(wordsSheet.sheet);
-    applyKaigoProgressToWords(base.allWords, authInfo.userId);
-    var learnedDates = collectLearnedDatesFromWords(base.allWords);
-    base.roadmap = buildRoadmapPayload(learnedDates, base.allWords);
-    base.cursors = loadKaigoFlashCursors(authInfo.userId);
-    base.auth = {
-      requiredForSave: true,
-      loggedIn: true,
-      userId: authInfo.userId,
-      email: authInfo.email || ""
-    };
-    return jsonResponse(base);
+  var action = String(params.action || "").trim();
+
+  if (action === "load") {
+    return jsonResponse(buildKaigoUserPayload_(authInfo));
   }
 
-  var checkedWords = params.checkedWords || [];
-  var uncheckedWords = params.uncheckedWords || [];
+  var checkedWords = normalizeWordList_(params.checkedWords);
+  var uncheckedWords = normalizeWordList_(params.uncheckedWords);
   var hasChecks = checkedWords.length > 0 || uncheckedWords.length > 0;
+  var updateResult = null;
 
-  if (hasChecks) {
-    var updateResult = submitKaigoProgressUpdate(authInfo.userId, checkedWords, uncheckedWords);
+  if (hasChecks || action === "saveProgress") {
+    updateResult = submitKaigoProgressUpdate(authInfo.userId, checkedWords, uncheckedWords);
     if (updateResult && updateResult.error) {
       return jsonResponse(updateResult);
     }
@@ -552,49 +540,118 @@ function handleKaigoPost(e, params) {
     saveKaigoFlashCursors(authInfo.userId, params.cursors);
   }
 
-  // 保存後の最新進捗を返す（リロードと同じ形）
+  var payload = buildKaigoUserPayload_(authInfo);
+  payload.success = true;
+  payload.savedChecks = checkedWords.length;
+  payload.savedUnchecks = uncheckedWords.length;
+  payload.progressCount = countLearnedInProgressMap_(loadKaigoProgressMap(authInfo.userId));
+  if (updateResult) {
+    payload.sheetSynced = updateResult.sheetSynced === true;
+    payload.sheetRows = updateResult.sheetRows || 0;
+    payload.sheetError = updateResult.sheetError || "";
+  }
+  return jsonResponse(payload);
+}
+
+function normalizeWordList_(words) {
+  if (!words) return [];
+  if (Object.prototype.toString.call(words) !== "[object Array]") {
+    words = [words];
+  }
+  var out = [];
+  for (var i = 0; i < words.length; i++) {
+    var w = String(words[i] || "").trim();
+    if (w) out.push(w);
+  }
+  return out;
+}
+
+function buildKaigoUserPayload_(authInfo) {
   var wordsSheet = resolveKaigoWordsSheet();
   if (wordsSheet.error) {
-    return jsonResponse({
-      success: true,
-      auth: { loggedIn: true, userId: authInfo.userId, email: authInfo.email || "" },
-      error: wordsSheet.error
-    });
+    return {
+      error: wordsSheet.error,
+      allWords: [],
+      roadmap: {},
+      cursors: {},
+      auth: {
+        requiredForSave: true,
+        loggedIn: true,
+        userId: authInfo.userId,
+        email: authInfo.email || ""
+      }
+    };
   }
   var base = loadKaigoWordsBase(wordsSheet.sheet);
+  var progressMap = loadKaigoProgressMap(authInfo.userId);
   applyKaigoProgressToWords(base.allWords, authInfo.userId);
+  // Properties にある進捗をシートへも反映（可視化の遅れを回収）
+  var sheetSync = syncKaigoProgressSheetBestEffort_(authInfo.userId, progressMap);
   var learnedDates = collectLearnedDatesFromWords(base.allWords);
   base.roadmap = buildRoadmapPayload(learnedDates, base.allWords);
   base.cursors = loadKaigoFlashCursors(authInfo.userId);
-  base.success = true;
   base.auth = {
     requiredForSave: true,
     loggedIn: true,
     userId: authInfo.userId,
     email: authInfo.email || ""
   };
-  base.savedChecks = checkedWords.length;
-  base.savedUnchecks = uncheckedWords.length;
-  return jsonResponse(base);
+  base.sheetSynced = sheetSync.ok === true;
+  base.sheetRows = sheetSync.rows || 0;
+  base.sheetError = sheetSync.error || "";
+  return base;
+}
+
+function countLearnedInProgressMap_(map) {
+  var n = 0;
+  for (var word in map) {
+    if (map.hasOwnProperty(word) && map[word] && map[word].learned) n++;
+  }
+  return n;
+}
+
+function getKaigoSpreadsheet_() {
+  var props = PropertiesService.getScriptProperties();
+  var id = props.getProperty("KAIGO_SPREADSHEET_ID");
+  if (id) {
+    return SpreadsheetApp.openById(String(id).trim());
+  }
+  var active = SpreadsheetApp.getActiveSpreadsheet();
+  if (active) {
+    // 次回以降のため ID を記憶
+    try {
+      props.setProperty("KAIGO_SPREADSHEET_ID", active.getId());
+    } catch (err) {}
+    return active;
+  }
+  throw new Error("スプレッドシートを開けません");
 }
 
 function resolveKaigoWordsSheet() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName(DB_SHEET_PROD);
-  if (!sheet) {
-    return { error: DB_SHEET_PROD + "シートが見つかりません" };
+  try {
+    var ss = getKaigoSpreadsheet_();
+    var sheet = ss.getSheetByName(DB_SHEET_PROD);
+    if (!sheet) {
+      return { error: DB_SHEET_PROD + "シートが見つかりません" };
+    }
+    return { sheet: sheet };
+  } catch (err) {
+    return { error: String(err) };
   }
-  return { sheet: sheet };
 }
 
 function ensureKaigoProgressSheet() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = getKaigoSpreadsheet_();
   var sheet = ss.getSheetByName(KAIGO_PROGRESS_SHEET);
-  if (sheet) {
-    return sheet;
+  if (!sheet) {
+    sheet = ss.insertSheet(KAIGO_PROGRESS_SHEET);
   }
-  sheet = ss.insertSheet(KAIGO_PROGRESS_SHEET);
-  sheet.getRange(1, 1, 1, 4).setValues([["user_id", "word", "learned", "date"]]);
+  var header = sheet.getRange(1, 1, 1, 4).getValues()[0];
+  if (String(header[0] || "").trim() !== "user_id") {
+    sheet.getRange(1, 1, 1, 4).setValues([["user_id", "word", "learned", "date"]]);
+  }
+  // user_id を文字列として扱う（長い Google の sub が数値化されるのを防ぐ）
+  sheet.getRange("A:A").setNumberFormat("@");
   return sheet;
 }
 
@@ -708,10 +765,65 @@ function collectLearnedDatesFromWords(allWords) {
   return learnedDates;
 }
 
+function getKaigoProgressPropKey_(userId) {
+  return "KAIGO_PROG_V1_" + userId;
+}
+
+function loadKaigoProgressMapFromProps_(userId) {
+  var map = {};
+  try {
+    var raw = PropertiesService.getScriptProperties().getProperty(getKaigoProgressPropKey_(userId));
+    if (!raw) return map;
+    var parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") return map;
+    for (var word in parsed) {
+      if (!parsed.hasOwnProperty(word)) continue;
+      var entry = parsed[word];
+      if (!entry) continue;
+      var learned = entry === true || entry.learned === true || String(entry.learned).toUpperCase() === "TRUE";
+      var dateStr = "";
+      if (typeof entry === "object" && entry.date) {
+        dateStr = String(entry.date).slice(0, 10);
+      } else if (learned && typeof entry === "string") {
+        dateStr = entry.slice(0, 10);
+      }
+      map[word] = { learned: learned, date: learned ? dateStr : "" };
+    }
+  } catch (err) {}
+  return map;
+}
+
+function saveKaigoProgressMapToProps_(userId, map) {
+  var compact = {};
+  for (var word in map) {
+    if (!map.hasOwnProperty(word) || !map[word] || !map[word].learned) continue;
+    compact[word] = { learned: true, date: map[word].date || "" };
+  }
+  PropertiesService.getScriptProperties().setProperty(
+    getKaigoProgressPropKey_(userId),
+    JSON.stringify(compact)
+  );
+}
+
 function loadKaigoProgressMap(userId) {
+  // Properties を正とする（シートは可視化・バックアップ）
+  var map = loadKaigoProgressMapFromProps_(userId);
+  if (Object.keys(map).length > 0) {
+    return map;
+  }
+
+  // 移行: シートにだけある旧データを取り込む
+  var sheetMap = loadKaigoProgressMapFromSheet_(userId);
+  if (Object.keys(sheetMap).length > 0) {
+    saveKaigoProgressMapToProps_(userId, sheetMap);
+  }
+  return sheetMap;
+}
+
+function loadKaigoProgressMapFromSheet_(userId) {
+  var map = {};
   var sheet = ensureKaigoProgressSheet();
   var lastRow = sheet.getLastRow();
-  var map = {};
   if (lastRow < 2) {
     return map;
   }
@@ -737,6 +849,59 @@ function loadKaigoProgressMap(userId) {
   return map;
 }
 
+function writeKaigoProgressSheet_(userId, map) {
+  var sheet = ensureKaigoProgressSheet();
+  var lastRow = sheet.getLastRow();
+  var keep = [];
+
+  if (lastRow >= 2) {
+    var values = sheet.getRange(2, 1, lastRow, 4).getValues();
+    for (var i = 0; i < values.length; i++) {
+      var uid = String(values[i][0] || "").trim();
+      if (uid.charAt(0) === "'") uid = uid.slice(1);
+      if (uid && uid !== String(userId)) {
+        keep.push([
+          String(values[i][0] || ""),
+          String(values[i][1] || ""),
+          values[i][2] === true || String(values[i][2]).toUpperCase() === "TRUE",
+          values[i][3] || ""
+        ]);
+      }
+    }
+    sheet.getRange(2, 1, lastRow, 4).clearContent();
+  }
+
+  for (var word in map) {
+    if (!map.hasOwnProperty(word) || !map[word] || !map[word].learned) continue;
+    keep.push([
+      String(userId),
+      String(word),
+      true,
+      String(map[word].date || "")
+    ]);
+  }
+
+  if (keep.length > 0) {
+    // getRange(row, column, numRows, numColumns) の第3引数は「行数」
+    var range = sheet.getRange(2, 1, keep.length, 4);
+    range.setValues(keep);
+    sheet.getRange(2, 1, keep.length, 1).setNumberFormat("@");
+  }
+
+  SpreadsheetApp.flush();
+  return keep.length;
+}
+
+function syncKaigoProgressSheetBestEffort_(userId, map) {
+  try {
+    var n = writeKaigoProgressSheet_(userId, map);
+    return { ok: true, rows: n };
+  } catch (err) {
+    console.error("progress sheet sync failed: " + err);
+    return { ok: false, error: String(err) };
+  }
+}
+
 function applyKaigoProgressToWords(allWords, userId) {
   var map = loadKaigoProgressMap(userId);
   for (var i = 0; i < allWords.length; i++) {
@@ -754,65 +919,39 @@ function applyKaigoProgressToWords(allWords, userId) {
 
 function submitKaigoProgressUpdate(userId, checkedWords, uncheckedWords) {
   var lock = LockService.getScriptLock();
-  if (!lock.tryLock(10000)) {
+  if (!lock.tryLock(15000)) {
     return { error: "サーバーが混み合っています。再度お試しください。" };
   }
 
   try {
-    var sheet = ensureKaigoProgressSheet();
-    var lastRow = sheet.getLastRow();
-    var rowByWord = {};
-    var values = [];
+    checkedWords = normalizeWordList_(checkedWords);
+    uncheckedWords = normalizeWordList_(uncheckedWords);
+    var map = loadKaigoProgressMap(userId);
+    var today = Utilities.formatDate(new Date(), "Asia/Tokyo", "yyyy-MM-dd");
+    var i;
 
-    if (lastRow >= 2) {
-      values = sheet.getRange(2, 1, lastRow, 4).getValues();
-      for (var i = 0; i < values.length; i++) {
-        if (String(values[i][0] || "").trim() !== userId) continue;
-        var w = String(values[i][1] || "").trim();
-        if (w) {
-          rowByWord[w] = i;
-        }
-      }
+    for (i = 0; i < checkedWords.length; i++) {
+      map[checkedWords[i]] = { learned: true, date: today };
+    }
+    for (i = 0; i < uncheckedWords.length; i++) {
+      map[uncheckedWords[i]] = { learned: false, date: "" };
     }
 
-    var checkedSet = toWordSet(checkedWords);
-    var uncheckedSet = toWordSet(uncheckedWords);
-    var today = new Date();
-    var toAppend = [];
-    var changedExisting = false;
+    // 本体は Properties（必須）
+    saveKaigoProgressMapToProps_(userId, map);
 
-    for (var word in checkedSet) {
-      if (!checkedSet.hasOwnProperty(word)) continue;
-      if (rowByWord.hasOwnProperty(word)) {
-        var idx = rowByWord[word];
-        values[idx][2] = true;
-        values[idx][3] = today;
-        changedExisting = true;
-      } else {
-        toAppend.push([userId, word, true, today]);
-        rowByWord[word] = -1;
-      }
-    }
+    // シートは可視化用（失敗しても保存自体は成功）
+    var sheetSync = syncKaigoProgressSheetBestEffort_(userId, map);
 
-    for (var uWord in uncheckedSet) {
-      if (!uncheckedSet.hasOwnProperty(uWord)) continue;
-      if (rowByWord.hasOwnProperty(uWord) && rowByWord[uWord] >= 0) {
-        var uIdx = rowByWord[uWord];
-        values[uIdx][2] = false;
-        values[uIdx][3] = "";
-        changedExisting = true;
-      }
-    }
-
-    if (changedExisting && values.length) {
-      sheet.getRange(2, 1, values.length + 1, 4).setValues(values);
-    }
-    if (toAppend.length) {
-      var startRow = sheet.getLastRow() + 1;
-      sheet.getRange(startRow, 1, startRow + toAppend.length - 1, 4).setValues(toAppend);
-    }
-
-    return { success: true };
+    return {
+      success: true,
+      progressCount: countLearnedInProgressMap_(map),
+      sheetSynced: sheetSync.ok === true,
+      sheetRows: sheetSync.rows || 0,
+      sheetError: sheetSync.error || ""
+    };
+  } catch (err) {
+    return { error: "進捗保存エラー: " + err };
   } finally {
     lock.releaseLock();
   }

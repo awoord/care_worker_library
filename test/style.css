@@ -65,7 +65,7 @@
         --flash-word-view-ratio: 0.382;
         --flash-word-in-card-ratio: 0.191;
         --flash-card-stack-head: calc(9px + clamp(6px, 1.2vh, 10px));
-        --page-inline-pad: clamp(16px, 4vw, 24px);
+        --page-inline-pad: clamp(8px, 2vw, 12px);
         --page-block-gap: clamp(6px, 1.5vh, 10px);
         --flash-action-nav-gap: clamp(8px, 1.5vh, 12px);
         --flash-card-max-width: 600px;

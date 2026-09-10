@@ -1,0 +1,9 @@
+# J専用（ログインなし）の秘密URL
+# このファイルとトークンは生徒以外に公開しないこと。
+# ルート https://nihongo.site/ とは別。リダイレクトはしない。
+
+TOKEN=NrtaCnSFK08mJF-SnlCWBmmr
+URL=https://nihongo.site/kaigo/p/NrtaCnSFK08mJF-SnlCWBmmr/
+
+# デプロイ（ルートは触れない。test/ からコピー → 本番 db）:
+#   python3 kaigo/p/deploy_private.py

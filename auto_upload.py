@@ -2,7 +2,6 @@ import io
 import os
 import re
 import subprocess
-import sys
 import time
 from ftplib import FTP_TLS
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
@@ -19,6 +18,7 @@ REMOTE_TEST_DIR = "/public_html/nihongo.site/test"
 WATCH_FILES = (
     "test/style.css",
     "test/app.js",
+    "test/ruby.json",
 )
 
 LOCAL_INDEX = "test/index.html"
@@ -43,7 +43,7 @@ HTACCESS_CONTENT = """
 FileETag None
 """
 
-last_mtimes = {file: 0 for file in WATCH_FILES}
+last_mtimes: dict[str, float] = {name: 0.0 for name in WATCH_FILES}
 
 
 def make_cache_bust_version():
@@ -70,7 +70,13 @@ def read_index_html(local_path):
         return f.read()
 
 
-def make_cache_bust_url(url, bust):
+def as_text(value: object) -> str:
+    if isinstance(value, bytes):
+        return value.decode()
+    return str(value or "")
+
+
+def make_cache_bust_url(url: str, bust: str) -> str:
     parsed = urlparse(url)
     query = parse_qs(parsed.query, keep_blank_values=True)
     query["_cb"] = [bust]
@@ -78,7 +84,7 @@ def make_cache_bust_url(url, bust):
     for key, values in query.items():
         for value in values:
             flat_query.append((key, value))
-    return urlunparse(parsed._replace(query=urlencode(flat_query)))
+    return str(urlunparse(parsed._replace(query=urlencode(flat_query))))
 
 
 def reload_browsers_in_background(keyword, bust):
@@ -114,7 +120,8 @@ def reload_browsers_in_background(keyword, bust):
             )
             if listed.returncode != 0:
                 continue
-            for tab_url in listed.stdout.splitlines():
+            stdout_text = as_text(listed.stdout)
+            for tab_url in stdout_text.splitlines():
                 tab_url = tab_url.strip()
                 if not tab_url or keyword not in tab_url:
                     continue
@@ -145,7 +152,7 @@ def reload_browsers_in_background(keyword, bust):
 def upload_batch(changed_files):
     version = make_cache_bust_version()
     bust = str(int(time.time() * 1000))
-    upload_order = ("test/style.css", "test/app.js", LOCAL_INDEX)
+    upload_order = ("test/style.css", "test/app.js", "test/ruby.json", LOCAL_INDEX)
 
     try:
         ftps = FTP_TLS()

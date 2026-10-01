@@ -457,12 +457,30 @@ function questionType(q) {
   return "そのほか";
 }
 
-function searchQuestions(questions, terms, sessionFrom, sessionTo, subject, type) {
+function questionHasFigure(q) {
+  var figs = q && q.figures;
+  if (figs && figs.length) {
+    return true;
+  }
+  var choiceFigs = q && q.choiceFigures;
+  if (!choiceFigs || typeof choiceFigs !== "object") {
+    return false;
+  }
+  for (var key in choiceFigs) {
+    if (Object.prototype.hasOwnProperty.call(choiceFigs, key) && choiceFigs[key]) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function searchQuestions(questions, terms, sessionFrom, sessionTo, subject, type, figuresOnly) {
   var range = normalizeRange(sessionFrom, sessionTo);
   var from = range.from;
   var to = range.to;
   var subjectFilter = String(subject || "").trim();
   var typeFilter = String(type || "").trim();
+  var onlyFigures = !!figuresOnly;
   var norms = terms.map(normalizeForSearch).filter(Boolean);
   var hits = [];
   for (var i = 0; i < questions.length; i++) {
@@ -475,6 +493,9 @@ function searchQuestions(questions, terms, sessionFrom, sessionTo, subject, type
       continue;
     }
     if (typeFilter && questionType(q) !== typeFilter) {
+      continue;
+    }
+    if (onlyFigures && !questionHasFigure(q)) {
       continue;
     }
     if (norms.length) {
@@ -495,14 +516,15 @@ function searchQuestions(questions, terms, sessionFrom, sessionTo, subject, type
   return hits;
 }
 
-function countInRange(questions, sessionFrom, sessionTo, subject, type) {
+function countInRange(questions, sessionFrom, sessionTo, subject, type, figuresOnly) {
   return searchQuestions(
     questions,
     [],
     sessionFrom,
     sessionTo,
     subject,
-    type
+    type,
+    figuresOnly
   ).length;
 }
 
@@ -529,6 +551,11 @@ function getSelectedSubject() {
 function getSelectedType() {
   var el = document.getElementById("typeSelect");
   return el ? String(el.value || "").trim() : "";
+}
+
+function getFiguresOnly() {
+  var el = document.getElementById("figuresOnly");
+  return !!(el && el.checked);
 }
 
 function getJumpInputs() {
@@ -653,9 +680,10 @@ function wireAllSessionYearSelects() {
   wireSessionYearSelect(document.getElementById("jumpRound"));
 }
 
-function countSubjectsForFilters(questions, sessionFrom, sessionTo, type, terms) {
+function countSubjectsForFilters(questions, sessionFrom, sessionTo, type, terms, figuresOnly) {
   var range = normalizeRange(sessionFrom, sessionTo);
   var typeFilter = String(type || "").trim();
+  var onlyFigures = !!figuresOnly;
   var norms = (terms || []).map(normalizeForSearch).filter(Boolean);
   var counts = {};
   var total = 0;
@@ -666,6 +694,9 @@ function countSubjectsForFilters(questions, sessionFrom, sessionTo, type, terms)
       continue;
     }
     if (typeFilter && questionType(q) !== typeFilter) {
+      continue;
+    }
+    if (onlyFigures && !questionHasFigure(q)) {
       continue;
     }
     if (norms.length) {
@@ -691,6 +722,45 @@ function countSubjectsForFilters(questions, sessionFrom, sessionTo, type, terms)
   return { counts: counts, total: total };
 }
 
+function countTypesForFilters(questions, sessionFrom, sessionTo, subject, terms, figuresOnly) {
+  var range = normalizeRange(sessionFrom, sessionTo);
+  var subjectFilter = String(subject || "").trim();
+  var onlyFigures = !!figuresOnly;
+  var norms = (terms || []).map(normalizeForSearch).filter(Boolean);
+  var counts = {};
+  var total = 0;
+  for (var i = 0; i < questions.length; i++) {
+    var q = questions[i];
+    var round = Number(q.round);
+    if (round < range.from || round > range.to) {
+      continue;
+    }
+    if (subjectFilter && String(q.subject || "") !== subjectFilter) {
+      continue;
+    }
+    if (onlyFigures && !questionHasFigure(q)) {
+      continue;
+    }
+    if (norms.length) {
+      var hay = questionSearchText(q);
+      var ok = true;
+      for (var t = 0; t < norms.length; t++) {
+        if (hay.indexOf(norms[t]) === -1) {
+          ok = false;
+          break;
+        }
+      }
+      if (!ok) {
+        continue;
+      }
+    }
+    var typ = questionType(q);
+    counts[typ] = (counts[typ] || 0) + 1;
+    total++;
+  }
+  return { counts: counts, total: total };
+}
+
 function getFilterKeywordTerms() {
   var input = document.getElementById("searchInput");
   return parseTerms(input ? input.value : "");
@@ -704,12 +774,14 @@ function updateSubjectOptionCounts() {
   var range = getSelectedRange();
   var type = getSelectedType();
   var terms = getFilterKeywordTerms();
+  var figuresOnly = getFiguresOnly();
   var result = countSubjectsForFilters(
     allQuestions,
     range.from,
     range.to,
     type,
-    terms
+    terms,
+    figuresOnly
   );
   for (var i = 0; i < el.options.length; i++) {
     var opt = el.options[i];
@@ -720,6 +792,61 @@ function updateSubjectOptionCounts() {
     var n = result.counts[opt.value] || 0;
     opt.textContent = opt.value + "（" + n + "）";
   }
+}
+
+function updateTypeOptionCounts() {
+  var el = document.getElementById("typeSelect");
+  if (!el || !questionsReady) {
+    return;
+  }
+  var range = getSelectedRange();
+  var subject = getSelectedSubject();
+  var terms = getFilterKeywordTerms();
+  var figuresOnly = getFiguresOnly();
+  var result = countTypesForFilters(
+    allQuestions,
+    range.from,
+    range.to,
+    subject,
+    terms,
+    figuresOnly
+  );
+  for (var i = 0; i < el.options.length; i++) {
+    var opt = el.options[i];
+    if (!opt.value) {
+      opt.textContent = "すべてのタイプ（" + result.total + "）";
+      continue;
+    }
+    var n = result.counts[opt.value] || 0;
+    opt.textContent = opt.value + "（" + n + "）";
+  }
+}
+
+function updateFiguresOnlyCount() {
+  var label = document.getElementById("figuresOnlyLabel");
+  if (!label || !questionsReady) {
+    return;
+  }
+  var range = getSelectedRange();
+  var subject = getSelectedSubject();
+  var type = getSelectedType();
+  var terms = getFilterKeywordTerms();
+  var n = searchQuestions(
+    allQuestions,
+    terms,
+    range.from,
+    range.to,
+    subject,
+    type,
+    true
+  ).length;
+  label.textContent = "イラスト問題のみ（" + n + "）";
+}
+
+function updateFilterOptionCounts() {
+  updateSubjectOptionCounts();
+  updateTypeOptionCounts();
+  updateFiguresOnlyCount();
 }
 
 function fillSubjectSelect(subjects, selected) {
@@ -735,7 +862,7 @@ function fillSubjectSelect(subjects, selected) {
         el.value = "";
       }
     }
-    updateSubjectOptionCounts();
+    updateFilterOptionCounts();
     return;
   }
   var frag = document.createDocumentFragment();
@@ -755,7 +882,7 @@ function fillSubjectSelect(subjects, selected) {
   } else {
     el.value = "";
   }
-  updateSubjectOptionCounts();
+  updateFilterOptionCounts();
 }
 
 function setStatus(text, mode) {
@@ -978,6 +1105,24 @@ function renderQuestions(questions) {
     }
     card.appendChild(stem);
 
+    var figs = q.figures || [];
+    if (figs.length) {
+      var figWrap = document.createElement("div");
+      figWrap.className = "question-figures";
+      for (var fi = 0; fi < figs.length; fi++) {
+        var fig = document.createElement("figure");
+        fig.className = "question-figure";
+        var img = document.createElement("img");
+        img.className = "question-figure-img";
+        img.src = String(figs[fi] || "");
+        img.alt = "問題" + q.number + "の図";
+        img.loading = "lazy";
+        fig.appendChild(img);
+        figWrap.appendChild(fig);
+      }
+      card.appendChild(figWrap);
+    }
+
     if (q.note) {
       var note = document.createElement("p");
       note.className = "question-note";
@@ -1013,6 +1158,17 @@ function renderQuestions(questions) {
 
       li.appendChild(body);
 
+      var choiceFigs = q.choiceFigures || {};
+      var choiceFigSrc = choiceFigs[String(choice.n)];
+      if (choiceFigSrc) {
+        var cfig = document.createElement("img");
+        cfig.className = "choice-figure-img";
+        cfig.src = String(choiceFigSrc);
+        cfig.alt = "選択肢" + choice.n + "の図";
+        cfig.loading = "lazy";
+        li.appendChild(cfig);
+      }
+
       ul.appendChild(li);
     }
     card.appendChild(ul);
@@ -1026,7 +1182,7 @@ function renderQuestions(questions) {
   }
 }
 
-function describeFilters(range, subject, type, terms) {
+function describeFilters(range, subject, type, terms, figuresOnly) {
   var parts = [];
   if (range.from === range.to) {
     parts.push(roundLabelWithYear(range.from));
@@ -1049,6 +1205,9 @@ function describeFilters(range, subject, type, terms) {
   if (type) {
     parts.push("タイプ「" + type + "」");
   }
+  if (figuresOnly) {
+    parts.push("イラスト問題のみ");
+  }
   if (terms.length) {
     parts.push("「" + terms.join(" ") + "」");
   }
@@ -1065,16 +1224,10 @@ function runFilterSearch(rawQuery) {
   var range = getSelectedRange();
   var subject = getSelectedSubject();
   var type = getSelectedType();
+  var figuresOnly = getFiguresOnly();
   var terms = parseTerms(rawQuery);
   setActiveHighlightTerms(terms);
-  var inRange = countInRange(
-    allQuestions,
-    range.from,
-    range.to,
-    subject,
-    type
-  );
-  var browseAll = !terms.length && !subject && !type;
+  var browseAll = !terms.length && !subject && !type && !figuresOnly;
 
   if (browseAll && range.from !== range.to) {
     setStatus("全問表示は開始回と終了回を同じにしてください。", "filter");
@@ -1091,7 +1244,8 @@ function runFilterSearch(rawQuery) {
       range.from,
       range.to,
       "",
-      ""
+      "",
+      false
     );
     setStatus(
       roundLabelWithYear(range.from) + "の全問 → " + hitsAll.length + " 問",
@@ -1107,10 +1261,14 @@ function runFilterSearch(rawQuery) {
     range.from,
     range.to,
     subject,
-    type
+    type,
+    figuresOnly
   );
   setStatus(
-    describeFilters(range, subject, type, terms) + " → " + hits.length + " 問",
+    describeFilters(range, subject, type, terms, figuresOnly) +
+      " → " +
+      hits.length +
+      " 問",
     "filter"
   );
   renderQuestions(hits);
@@ -1175,6 +1333,7 @@ function readStateFromUrl() {
     to: meta.defaultTo,
     subject: "",
     type: "",
+    fig: false,
     round: "",
     num: ""
   };
@@ -1197,6 +1356,10 @@ function readStateFromUrl() {
     if (params.has("type")) {
       state.type = params.get("type") || "";
     }
+    if (params.has("fig")) {
+      var figRaw = String(params.get("fig") || "").trim().toLowerCase();
+      state.fig = figRaw === "1" || figRaw === "true" || figRaw === "yes";
+    }
     if (params.has("round")) {
       state.round = params.get("round") || "";
     }
@@ -1216,7 +1379,7 @@ function readStateFromUrl() {
   return state;
 }
 
-function writeFilterStateToUrl(rawQuery, sessionFrom, sessionTo, subject, type) {
+function writeFilterStateToUrl(rawQuery, sessionFrom, sessionTo, subject, type, figuresOnly) {
   try {
     var url = new URL(window.location.href);
     var trimmed = String(rawQuery || "").trim();
@@ -1245,6 +1408,11 @@ function writeFilterStateToUrl(rawQuery, sessionFrom, sessionTo, subject, type) 
     } else {
       url.searchParams.delete("type");
     }
+    if (figuresOnly) {
+      url.searchParams.set("fig", "1");
+    } else {
+      url.searchParams.delete("fig");
+    }
     url.searchParams.delete("round");
     url.searchParams.delete("num");
     window.history.replaceState(null, "", url.pathname + url.search + url.hash);
@@ -1266,6 +1434,7 @@ function writeJumpStateToUrl(jump) {
     url.searchParams.delete("q");
     url.searchParams.delete("subject");
     url.searchParams.delete("type");
+    url.searchParams.delete("fig");
     window.history.replaceState(null, "", url.pathname + url.search + url.hash);
   } catch (err) {
     // ignore
@@ -1356,10 +1525,12 @@ function boot() {
   var filterForm = document.getElementById("filterForm");
   var jumpForm = document.getElementById("jumpForm");
   var input = document.getElementById("searchInput");
+  var clearBtn = document.getElementById("searchClear");
   var fromEl = document.getElementById("sessionFrom");
   var toEl = document.getElementById("sessionTo");
   var subjectEl = document.getElementById("subjectSelect");
   var typeEl = document.getElementById("typeSelect");
+  var figuresOnlyEl = document.getElementById("figuresOnly");
   var jumpRoundEl = document.getElementById("jumpRound");
   var jumpNumberEl = document.getElementById("jumpNumber");
 
@@ -1371,20 +1542,51 @@ function boot() {
   setStatus("問題データを読み込み中…");
   showHint("少々お待ちください。");
 
-  function refreshSubjectCounts() {
-    updateSubjectOptionCounts();
+  function syncSearchClearButton() {
+    if (!clearBtn || !input) {
+      return;
+    }
+    clearBtn.hidden = !String(input.value || "").length;
+  }
+
+  function refreshFilterCounts() {
+    updateFilterOptionCounts();
+    syncSearchClearButton();
   }
   if (fromEl) {
-    fromEl.addEventListener("change", refreshSubjectCounts);
+    fromEl.addEventListener("change", refreshFilterCounts);
   }
   if (toEl) {
-    toEl.addEventListener("change", refreshSubjectCounts);
+    toEl.addEventListener("change", refreshFilterCounts);
+  }
+  if (subjectEl) {
+    subjectEl.addEventListener("change", refreshFilterCounts);
   }
   if (typeEl) {
-    typeEl.addEventListener("change", refreshSubjectCounts);
+    typeEl.addEventListener("change", refreshFilterCounts);
+  }
+  if (figuresOnlyEl) {
+    figuresOnlyEl.addEventListener("change", refreshFilterCounts);
   }
   if (input) {
-    input.addEventListener("input", refreshSubjectCounts);
+    input.addEventListener("input", refreshFilterCounts);
+  }
+  if (clearBtn && input) {
+    clearBtn.addEventListener("click", function () {
+      if (!input.value) {
+        syncSearchClearButton();
+        return;
+      }
+      input.value = "";
+      syncSearchClearButton();
+      input.focus();
+      // キーワードだけ消す。回・科目・タイプはそのまま。検索結果表示中なら再検索
+      if (lastView && lastView.mode === "filter") {
+        submitFilter();
+      } else {
+        updateFilterOptionCounts();
+      }
+    });
   }
 
   function submitFilter() {
@@ -1392,14 +1594,15 @@ function boot() {
     var q = input.value;
     var subject = getSelectedSubject();
     var type = getSelectedType();
+    var figuresOnly = getFiguresOnly();
     if (jumpRoundEl) {
       jumpRoundEl.value = "";
     }
     if (jumpNumberEl) {
       jumpNumberEl.value = "";
     }
-    writeFilterStateToUrl(q, range.from, range.to, subject, type);
-    updateSubjectOptionCounts();
+    writeFilterStateToUrl(q, range.from, range.to, subject, type, figuresOnly);
+    updateFilterOptionCounts();
     runFilterSearch(q);
   }
 
@@ -1436,8 +1639,12 @@ function boot() {
     fromEl.value = String(state.from);
     toEl.value = String(state.to);
     input.value = state.q;
+    syncSearchClearButton();
     if (typeEl) {
       typeEl.value = state.type || "";
+    }
+    if (figuresOnlyEl) {
+      figuresOnlyEl.checked = !!state.fig;
     }
     fillSubjectSelect(collectSubjects(allQuestions), state.subject);
     // 試作中は暫定で第38回・問題1を初期選択

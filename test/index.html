@@ -123,6 +123,9 @@
                   <div class="flash-complete-word-spacer" aria-hidden="true"></div>
                   <div class="flash-complete-head">
                     <p id="flashCompleteMessage" class="flash-complete-message">その調子！！</p>
+                    <div id="flashCompleteProgress" class="flash-complete-progress" hidden>
+                      <div id="flashCompleteToday" class="flash-complete-today"></div>
+                    </div>
                     <p id="flashCompleteDetail" class="flash-complete-detail" hidden></p>
                   </div>
                 </div>
@@ -183,6 +186,7 @@
           <span class="search-icon-box" aria-hidden="true">🔍</span>
           <input type="search" id="searchInput" class="search-input-field" placeholder="ことば・よみ・English"
             enterkeyhint="search" autocomplete="off">
+          <button type="button" id="searchClear" class="search-clear-btn" hidden aria-label="検索文字を消す">×</button>
         </div>
       </div>
     </div>
@@ -196,19 +200,23 @@
             <span id="valStreak" class="daily-stat-value" aria-live="polite">0<span class="daily-stat-unit"> 日</span></span>
           </div>
           <div class="daily-stat-card today">
-            <span class="daily-stat-label">きょう</span>
-            <span id="valTodayWords" class="daily-stat-value" aria-live="polite">0<span class="daily-stat-unit"> 語</span></span>
+            <span class="daily-stat-label">きょう 見た</span>
+            <span id="valTodayWords" class="daily-stat-value" aria-live="polite"><span class="daily-stat-num">0</span><span class="daily-stat-unit"> 語</span></span>
           </div>
           <div class="daily-stat-card words">
-            <span class="daily-stat-label">これまで</span>
-            <span id="valTotalWords" class="daily-stat-value" aria-live="polite">0<span class="daily-stat-unit"> 語</span></span>
+            <span class="daily-stat-label">これまで 覚えた</span>
+            <span id="valTotalWords" class="daily-stat-value" aria-live="polite"><span class="daily-stat-num">0</span><span class="daily-stat-unit"> 語</span></span>
           </div>
         </div>
 
-        <div id="examCountdown" class="exam-countdown" aria-live="polite">
-          <span class="exam-countdown-label">試験まで 残り</span>
-          <span id="examCountdownDays" class="exam-countdown-days">—</span>
-          <span class="exam-countdown-unit">日</span>
+        <div class="daily-roadmap-toolbar">
+          <div id="examCountdown" class="exam-countdown" aria-live="polite">
+            <span class="exam-countdown-label">試験まで 残り</span>
+            <span id="examCountdownDays" class="exam-countdown-days">—</span>
+            <span class="exam-countdown-unit">日</span>
+          </div>
+          <button type="button" id="btnRoadmapDisplayMode" class="roadmap-display-toggle"
+            aria-pressed="false" aria-label="覚えた表示に切り替える">⭐️</button>
         </div>
         <div class="roadmap-scroll-wrapper">
           <table class="roadmap-table">

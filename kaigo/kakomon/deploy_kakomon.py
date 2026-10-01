@@ -33,6 +33,7 @@ if str(ROOT) not in sys.path:
 from keyword_kakomon.deploy_by_keyword import parse_choice_line
 from keyword_kakomon.extract_by_keyword import (
     KAKOMON_TXT,
+    RE_SOGO_LABEL_HEADING,
     load_questions,
 )
 
@@ -50,6 +51,7 @@ REMOTE_BASE_DIR = "/public_html/nihongo.site"
 REMOTE_SITE_DIR = f"{REMOTE_BASE_DIR}/kaigo/kakomon"
 
 DEPLOY_FILES = ("index.html", "style.css", "app.js", "questions.json", "ruby.json")
+FIGURES_DIR = SITE_DIR / "figures"
 PUBLIC_URL = "https://nihongo.site/kaigo/kakomon/"
 
 GAS_WORDS_URL = (
@@ -169,17 +171,74 @@ def load_explains_map() -> dict[str, dict[str, str]]:
     return merged
 
 
+def load_figures_maps() -> tuple[dict[str, list[str]], dict[str, dict[str, str]]]:
+    """figures/manifest.json から
+    - figures: id → 問題図の相対パス配列
+    - choice_figures: id → {選択肢番号: 相対パス}
+    を読む。
+    """
+    path = FIGURES_DIR / "manifest.json"
+    if not path.is_file():
+        return {}, {}
+    raw = json.loads(path.read_text(encoding="utf-8"))
+    items = raw.get("items") if isinstance(raw, dict) else None
+    if not isinstance(items, dict):
+        return {}, {}
+    figures: dict[str, list[str]] = {}
+    choice_figures: dict[str, dict[str, str]] = {}
+    for qid, meta in items.items():
+        qid_s = str(qid)
+        if not isinstance(meta, dict):
+            fname = str(meta or "").strip()
+            if fname:
+                local = FIGURES_DIR / Path(fname).name
+                if local.is_file():
+                    figures.setdefault(qid_s, []).append(f"figures/{local.name}")
+                else:
+                    print(f"警告: 図ファイルなし {local}")
+            continue
+        fname = str(meta.get("file") or "").strip()
+        if fname:
+            local = FIGURES_DIR / Path(fname).name
+            if local.is_file():
+                figures.setdefault(qid_s, []).append(f"figures/{local.name}")
+            else:
+                print(f"警告: 図ファイルなし {local}")
+        choices = meta.get("choices")
+        if isinstance(choices, dict):
+            mapped: dict[str, str] = {}
+            for n, cmeta in choices.items():
+                if isinstance(cmeta, dict):
+                    cf = str(cmeta.get("file") or "").strip()
+                else:
+                    cf = str(cmeta or "").strip()
+                if not cf:
+                    continue
+                local = FIGURES_DIR / Path(cf).name
+                if not local.is_file():
+                    print(f"警告: 選択肢図なし {local}")
+                    continue
+                mapped[str(n)] = f"figures/{local.name}"
+            if mapped:
+                choice_figures[qid_s] = mapped
+    return figures, choice_figures
+
+
 def question_to_json(
     q,
     answers_map: dict[str, list[int]] | None = None,
     notes_map: dict[str, str] | None = None,
     explains_map: dict[str, dict[str, str]] | None = None,
+    figures_map: dict[str, list[str]] | None = None,
+    choice_figures_map: dict[str, dict[str, str]] | None = None,
 ) -> dict:
     body: list[str] = []
     if q.context:
         body.extend(ln for ln in q.context.split("\n") if ln.strip())
     if q.stem:
         body.extend(ln for ln in q.stem.split("\n") if ln.strip())
+    # ＜総合問題＞／（総合問題N）／総合問題（12問）は科目表示と重複するので出さない
+    body = [ln for ln in body if not RE_SOGO_LABEL_HEADING.match(ln.strip())]
 
     choices = []
     for raw in q.choices:
@@ -204,10 +263,17 @@ def question_to_json(
         ans = answers_map.get(qid)
         if ans:
             item["answers"] = ans
+    # 出題本文の（注）は当該問に帰属。CSVの注記（問題不成立など）があれば上書き
+    if getattr(q, "footnote", None):
+        item["note"] = q.footnote
     if notes_map and qid in notes_map:
         item["note"] = notes_map[qid]
     if explains_map and qid in explains_map:
         item["explains"] = explains_map[qid]
+    if figures_map and qid in figures_map:
+        item["figures"] = figures_map[qid]
+    if choice_figures_map and qid in choice_figures_map:
+        item["choiceFigures"] = choice_figures_map[qid]
     return item
 
 
@@ -216,6 +282,8 @@ def build_payload(
     answers_map: dict[str, list[int]] | None = None,
     notes_map: dict[str, str] | None = None,
     explains_map: dict[str, dict[str, str]] | None = None,
+    figures_map: dict[str, list[str]] | None = None,
+    choice_figures_map: dict[str, dict[str, str]] | None = None,
 ) -> dict:
     return {
         "title": "介護福祉士国家試験 過去問検索",
@@ -225,7 +293,14 @@ def build_payload(
         "defaultTo": DEFAULT_TO,
         "count": len(questions),
         "questions": [
-            question_to_json(q, answers_map, notes_map, explains_map)
+            question_to_json(
+                q,
+                answers_map,
+                notes_map,
+                explains_map,
+                figures_map,
+                choice_figures_map,
+            )
             for q in questions
         ],
     }
@@ -346,10 +421,23 @@ def build_site() -> Path:
     )
     answers_map, notes_map = load_answers_map()
     explains_map = load_explains_map()
-    payload = build_payload(questions, answers_map, notes_map, explains_map)
+    figures_map, choice_figures_map = load_figures_maps()
+    payload = build_payload(
+        questions,
+        answers_map,
+        notes_map,
+        explains_map,
+        figures_map,
+        choice_figures_map,
+    )
     with_answers = sum(1 for q in payload["questions"] if q.get("answers"))
     with_notes = sum(1 for q in payload["questions"] if q.get("note"))
     with_explains = sum(1 for q in payload["questions"] if q.get("explains"))
+    with_figures = sum(
+        1
+        for q in payload["questions"]
+        if q.get("figures") or q.get("choiceFigures")
+    )
     out = SITE_DIR / "questions.json"
     out.write_text(
         json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + "\n",
@@ -357,7 +445,7 @@ def build_site() -> Path:
     )
     print(
         f"生成: {len(questions)} 問"
-        f"（正解付き {with_answers}、注釈 {with_notes}、解説 {with_explains}） → {out}"
+        f"（正解付き {with_answers}、注釈 {with_notes}、解説 {with_explains}、図 {with_figures}） → {out}"
     )
     write_ruby_json()
     return out
@@ -400,6 +488,17 @@ def upload_site() -> None:
             with local_path.open("rb") as f:
                 ftps.storbinary(f"STOR {name}", f)
         print(f"アップロード完了: {name}")
+
+    if FIGURES_DIR.is_dir():
+        ensure_remote_dir(ftps, f"{REMOTE_SITE_DIR}/figures")
+        for path in sorted(FIGURES_DIR.iterdir()):
+            if not path.is_file():
+                continue
+            if path.suffix.lower() not in {".png", ".jpg", ".jpeg", ".webp", ".gif"}:
+                continue
+            with path.open("rb") as f:
+                ftps.storbinary(f"STOR {path.name}", f)
+            print(f"アップロード完了: figures/{path.name}")
 
     ftps.quit()
     print(f"\n公開URL: {PUBLIC_URL}?_cb={version}")

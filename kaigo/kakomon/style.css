@@ -205,6 +205,31 @@ h1 {
         margin-bottom: 0;
 }
 
+.check-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-height: 28px;
+        margin: 6px 0;
+        padding: 6px 2px;
+        cursor: pointer;
+}
+
+.check-row input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        margin: 0;
+        flex-shrink: 0;
+        accent-color: var(--accent, #1a6b5a);
+        cursor: pointer;
+}
+
+.check-label {
+        font-size: 15px;
+        color: var(--text);
+        line-height: 1.4;
+}
+
 .jump-grid .field-block {
         margin-bottom: 0;
 }
@@ -219,7 +244,9 @@ h1 {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 10px;
-        margin: 0 0 12px;
+        /* 「イラスト問題のみ」→検索ボタンと同じ見た目の間隔
+           (.check-row padding-bottom 6 + margin-bottom 6 + .search-row gap 8) */
+        margin: 0 0 20px;
 }
 
 .search-row {
@@ -230,13 +257,19 @@ h1 {
         align-items: stretch;
 }
 
+.search-input-wrap {
+        position: relative;
+        width: 100%;
+        min-width: 0;
+}
+
 .search-input {
         box-sizing: border-box;
         width: 100%;
         min-width: 0;
         height: var(--control-height);
         min-height: var(--control-height);
-        padding: 0 12px;
+        padding: 0 40px 0 12px;
         border: 1px solid var(--border);
         border-radius: var(--control-radius);
         background: #fff;
@@ -248,12 +281,51 @@ h1 {
         appearance: none;
 }
 
+/* 自前の × と二重にならないようネイティブ消去を隠す */
+.search-input::-webkit-search-cancel-button,
+.search-input::-webkit-search-decoration {
+        -webkit-appearance: none;
+        appearance: none;
+}
+
+.search-clear {
+        position: absolute;
+        top: 50%;
+        right: 6px;
+        box-sizing: border-box;
+        width: 28px;
+        height: 28px;
+        margin: 0;
+        padding: 0;
+        border: none;
+        border-radius: 999px;
+        background: transparent;
+        color: var(--muted);
+        font: inherit;
+        font-size: 20px;
+        font-weight: 500;
+        line-height: 1;
+        transform: translateY(-50%);
+        cursor: pointer;
+}
+
+.search-clear:hover {
+        background: rgba(46, 56, 86, 0.08);
+        color: var(--text);
+}
+
+.search-clear:focus {
+        outline: 2px solid var(--accent);
+        outline-offset: 1px;
+}
+
 .search-button {
         box-sizing: border-box;
         width: 100%;
         min-width: 0;
         height: var(--control-height);
         min-height: var(--control-height);
+        margin: 0 0 8px;
         padding: 0 18px;
         border: none;
         border-radius: var(--control-radius);
@@ -479,6 +551,46 @@ h1 {
 
 .stem p:last-child {
         margin-bottom: 0;
+}
+
+.question-figures {
+        margin: 0 0 14px;
+        display: grid;
+        gap: 10px;
+}
+
+.question-figure {
+        margin: 0;
+        padding: 10px;
+        background: #f8fafc;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        text-align: center;
+}
+
+.question-figure-img {
+        display: block;
+        max-width: min(100%, 560px);
+        width: auto;
+        height: auto;
+        max-height: none;
+        margin: 0 auto;
+        object-fit: contain;
+}
+
+.choice-figure-img {
+        display: block;
+        box-sizing: border-box;
+        max-width: min(100%, 360px);
+        width: auto;
+        height: auto;
+        max-height: none;
+        margin: 0 0 10px 1.4em;
+        padding: 8px;
+        background: #f8fafc;
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        object-fit: contain;
 }
 
 .question-note {

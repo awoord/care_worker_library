@@ -3765,10 +3765,30 @@ body.env-test .flash-progress {
   line-height: 0;
 }
 
-.auth-guest-note {
+.auth-guest-note a {
+  color: var(--color-accent);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.paywall-banner {
   max-width: 520px;
-  margin: 4px auto 0;
-  font-size: 11px;
-  line-height: 1.4;
-  color: var(--color-text-muted);
+  margin: 8px auto 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  color: #9a3412;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.paywall-banner p {
+  margin: 0 0 6px;
+}
+
+.paywall-banner a {
+  color: #c2410c;
+  font-weight: 800;
+  text-decoration: none;
 }

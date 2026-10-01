@@ -1,0 +1,138 @@
+{
+  "items": {
+    "29-102": {
+      "file": "29-102.png",
+      "bytes": 25572,
+      "source": "source_pdfs"
+    },
+    "29-24": {
+      "file": "29-24.png",
+      "bytes": 21006,
+      "source": "source_pdfs"
+    },
+    "29-55": {
+      "file": "29-55.png",
+      "bytes": 13048,
+      "source": "source_pdfs"
+    },
+    "29-61": {
+      "file": "29-61.png",
+      "bytes": 27767,
+      "source": "source_pdfs"
+    },
+    "29-83": {
+      "file": "29-83.png",
+      "bytes": 14324,
+      "source": "source_pdfs"
+    },
+    "30-121": {
+      "file": "30-121.png",
+      "bytes": 34671,
+      "source": "source_pdfs"
+    },
+    "30-88": {
+      "file": "30-88.png",
+      "bytes": 91190,
+      "source": "source_pdfs"
+    },
+    "30-92": {
+      "file": "30-92.png",
+      "bytes": 88758,
+      "source": "source_pdfs"
+    },
+    "31-100": {
+      "file": "31-100.png",
+      "bytes": 5489,
+      "source": "source_pdfs"
+    },
+    "31-115": {
+      "file": "31-115.png",
+      "bytes": 16394,
+      "source": "source_pdfs"
+    },
+    "31-40": {
+      "file": "31-40.png",
+      "bytes": 84858,
+      "source": "source_pdfs"
+    },
+    "31-68": {
+      "file": "31-68.png",
+      "bytes": 14856,
+      "source": "source_pdfs"
+    },
+    "31-80": {
+      "file": "31-80.png",
+      "bytes": 6284,
+      "source": "source_pdfs"
+    },
+    "32-42": {
+      "file": "32-42.png",
+      "bytes": 17338,
+      "source": "source_pdfs"
+    },
+    "32-50": {
+      "file": "32-50.png",
+      "bytes": 14804,
+      "source": "source_pdfs"
+    },
+    "33-40": {
+      "file": "33-40.png",
+      "bytes": 17881,
+      "source": "source_pdfs"
+    },
+    "33-51": {
+      "file": "33-51.png",
+      "bytes": 19344,
+      "source": "source_pdfs"
+    },
+    "34-36": {
+      "file": "34-36.png",
+      "bytes": 56912,
+      "source": "source_pdfs"
+    },
+    "35-114": {
+      "file": "35-114.png",
+      "bytes": 141807,
+      "source": "source_pdfs"
+    },
+    "35-31": {
+      "file": "35-31.png",
+      "bytes": 56578,
+      "source": "source_pdfs"
+    },
+    "35-70": {
+      "file": "35-70.png",
+      "bytes": 15204,
+      "source": "source_pdfs"
+    },
+    "35-91": {
+      "file": "35-91.png",
+      "bytes": 104592,
+      "source": "source_pdfs"
+    },
+    "36-71": {
+      "file": "36-71.png",
+      "bytes": 1029,
+      "source": "kaigojob"
+    },
+    "37-121": {
+      "file": "37-121.png",
+      "bytes": 37640,
+      "source": "source_pdfs"
+    },
+    "36-105": {
+      "file": "36-105.png",
+      "bytes": 69080,
+      "source": "source_pdfs/36.pdf#page=52"
+    }
+  },
+  "sources": [
+    "kaigo/source_pdfs/{29..37}.pdf",
+    "kaigojob (36-71 only)"
+  ],
+  "notes": {
+    "31-69": "防災図記号は31.pdf当該ページで図が欠落（空白）のため未収録。正解は避難場所。",
+    "36-71": "36.pdfに当該図記号の記述が見つからず既存取得画像を維持。",
+    "38": "第38回は画像なし。"
+  }
+}

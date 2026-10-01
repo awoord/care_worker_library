@@ -31,7 +31,7 @@
         --font-size-header: clamp(13px, 3.6vw, 15px);
         --font-size-word: clamp(17px, 4.6vw, 20px);
         --font-size-reading: clamp(14px, 3.8vw, 16px);
-        --font-size-english: clamp(14px, 3.7vw, 16px);
+        --font-size-english: clamp(15px, 3.9vw, 17px);
         --font-size-detail: clamp(13px, 3.5vw, 15px);
         --font-size-btn: clamp(15px, 4vw, 17px);
         --font-size-stat: clamp(20px, 5.5vw, 26px); /* きろく：統計数値 */
@@ -82,6 +82,7 @@
         --flash-circle-btn-size: clamp(75px, 19.2vw, 88px);
         --flash-answer-btn-gap: clamp(24px, 7.5vw, 36px);
         --flash-unknown-circle-bg: #42a5f5;
+        --flash-unknown-circle-border: #3894e0;
         --flash-known-circle-bg: #66bb2e;
         --flash-known-circle-border: #5aa825;
         --flash-known-circle-border-active: #4e9620;
@@ -103,9 +104,9 @@
         --vocab-type-base: clamp(16px, 3.8vmin, 19px);
         --vocab-ratio-example: 0.94;
         --vocab-ratio-reading: 0.84;
-        --vocab-ratio-learn-english: 1.38;
+        --vocab-ratio-learn-english: 1.46;
         --vocab-ratio-learn-title: 2.35;
-        --vocab-ratio-search-english: 1.12;
+        --vocab-ratio-search-english: 1.18;
         --vocab-ratio-search-title: 1.42;
         --vocab-ratio-search-reading: 0.84;
         --learn-font-meaning: var(--vocab-type-base);
@@ -1327,16 +1328,12 @@ body.search-chrome-collapsed:has(#panelSearch.active) .bottom-nav-bar {
 
 body.env-test {
         --color-bg: #faf9f6;
-}
-
-body.env-test::before {
-        content: "";
-        position: fixed;
-        inset: 0;
-        border: 4px solid #dc2626;
-        box-sizing: border-box;
-        pointer-events: none;
-        z-index: 10000;
+        /* テスト判別用: 上余白だけ赤（左右・下は通常色） */
+        background-color: var(--color-bg);
+        background-image: linear-gradient(#dc2626, #dc2626);
+        background-size: 100% var(--app-body-pad-top);
+        background-repeat: no-repeat;
+        background-position: top center;
 }
 
 body.env-test .flash-study {
@@ -1675,49 +1672,121 @@ body.env-test .flash-progress {
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: clamp(8px, 2vw, 12px);
+        gap: clamp(16px, 3.4vw, 22px);
         width: 100%;
         flex: 0 0 auto;
         text-align: center;
+        overflow: visible;
         transform: translateY(calc(var(--learn-font-word) * var(--flash-front-optical-shift) + var(--flash-front-optical-nudge)));
 }
 
 .flash-complete-message {
-        font-size: var(--learn-font-word);
+        font-size: clamp(28px, 6.8vw, 36px);
         font-weight: 800;
         margin: 0;
-        line-height: 1;
+        line-height: 1.2;
         white-space: nowrap;
-        color: var(--color-cat-社会);
+        color: #d97706;
         letter-spacing: 0.04em;
-        text-box-trim: trim-both;
-        text-box-edge: cap alphabetic;
-}
-
-.flash-complete-message[data-color-cat="基本"] {
-        color: var(--color-cat-基本);
-}
-
-.flash-complete-message[data-color-cat="介護"] {
-        color: var(--color-cat-介護);
-}
-
-.flash-complete-message[data-color-cat="医療"] {
-        color: var(--color-cat-医療-dark);
-}
-
-.flash-complete-message[data-color-cat="社会"] {
-        color: var(--color-cat-社会);
 }
 
 .flash-complete-detail {
         margin: 0;
-        font-size: var(--learn-font-reading);
-        font-weight: 500;
-        line-height: 1;
-        color: var(--learn-color-reading);
-        letter-spacing: 0.06em;
-        white-space: nowrap;
+        max-width: 18em;
+        font-size: clamp(20px, 5vw, 24px);
+        font-weight: 800;
+        line-height: 1.2;
+        color: #5c6578;
+        letter-spacing: 0.03em;
+        white-space: normal;
+        overflow-wrap: anywhere;
+}
+
+.flash-complete-detail.is-goal-met {
+        color: #d97706;
+}
+
+.flash-complete-lap-done {
+        font-weight: 700;
+        color: #3f7d1c;
+}
+
+.flash-complete-progress {
+        width: min(100%, 18.5em);
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        position: relative;
+}
+
+.flash-complete-progress[hidden] {
+        display: none !important;
+}
+
+.flash-complete-today {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0;
+        margin: 0;
+        text-align: center;
+}
+
+.flash-complete-today-main {
+        margin: 0;
+        font-size: clamp(20px, 5vw, 24px);
+        font-weight: 800;
+        line-height: 1.2;
+        letter-spacing: 0.03em;
+        color: #d97706;
+}
+
+.flash-complete-today-main.is-goal-met {
+        color: #d97706;
+}
+
+.flash-complete-today-count {
+        display: inline-block;
+        min-width: 1.2em;
+        font-variant-numeric: tabular-nums;
+}
+
+.flash-complete-today-count.is-ticking {
+        animation: flash-today-tick 0.12s ease;
+}
+
+.flash-complete-remaining-count {
+        display: inline-block;
+        min-width: 1.2em;
+        font-variant-numeric: tabular-nums;
+        font-weight: 700;
+}
+
+.flash-complete-remaining-count.is-counting-down {
+        animation: flash-remaining-tick 0.12s ease;
+}
+
+@keyframes flash-today-tick {
+        0% {
+                transform: translateY(0.35em);
+                opacity: 0.35;
+        }
+        100% {
+                transform: translateY(0);
+                opacity: 1;
+        }
+}
+
+@keyframes flash-remaining-tick {
+        0% {
+                transform: translateY(-0.28em);
+                opacity: 0.35;
+        }
+        100% {
+                transform: translateY(0);
+                opacity: 1;
+        }
 }
 
 .flash-complete-skip-note {
@@ -2296,6 +2365,7 @@ body.env-test .flash-progress {
         font-size: var(--daily-font-label);
         font-weight: 700;
         line-height: var(--line-height-tight);
+        white-space: nowrap;
 }
 
 .daily-stat-card.streak .daily-stat-label {
@@ -2308,6 +2378,16 @@ body.env-test .flash-progress {
         line-height: 1.1;
         font-variant-numeric: tabular-nums;
         letter-spacing: -0.02em;
+}
+
+.daily-stat-num {
+        display: inline-block;
+        min-width: 1.2em;
+        font-variant-numeric: tabular-nums;
+}
+
+.daily-stat-num.is-ticking {
+        animation: flash-today-tick 0.12s ease;
 }
 
 .daily-stat-value .daily-stat-unit {
@@ -2341,6 +2421,10 @@ body.env-test .flash-progress {
         color: #a16207;
 }
 
+#panelDaily.is-roadmap-seen .daily-stat-card.words {
+        display: none;
+}
+
 .daily-stat-card.words .daily-stat-value {
         color: #ca8a04;
 }
@@ -2364,6 +2448,56 @@ body.env-test .flash-progress {
         line-height: 1.2;
         color: #5b657a;
         text-align: center;
+}
+
+.daily-roadmap-toolbar {
+        flex-shrink: 0;
+        display: grid;
+        grid-template-columns: 1fr auto;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+}
+
+.daily-roadmap-toolbar .exam-countdown {
+        justify-self: center;
+        grid-column: 1 / -1;
+        grid-row: 1;
+        pointer-events: none;
+}
+
+.roadmap-display-toggle {
+        grid-column: 2;
+        grid-row: 1;
+        justify-self: end;
+        z-index: 1;
+        margin: 0;
+        padding: 6px 10px;
+        border: 1px solid #d7dbe7;
+        border-radius: 999px;
+        background: #fff;
+        color: #5b657a;
+        font: inherit;
+        font-size: var(--daily-font-label);
+        font-weight: 700;
+        line-height: 1;
+        letter-spacing: 0.02em;
+        cursor: pointer;
+        box-shadow: var(--shadow-soft);
+        min-width: 3.2em;
+        text-align: center;
+}
+
+.roadmap-display-toggle.is-count-mode,
+.roadmap-display-toggle.is-known-mode {
+        background: #fff;
+        border-color: #d7dbe7;
+        color: #3f7d1c;
+}
+
+.roadmap-display-toggle:focus-visible {
+        outline: 2px solid var(--accent, #4563e8);
+        outline-offset: 2px;
 }
 
 .exam-countdown-label {
@@ -2456,6 +2590,16 @@ body.env-test .flash-progress {
         padding: var(--daily-roadmap-icon-pad-y) 0;
 }
 
+.roadmap-table td.roadmap-day-count {
+        font-size: var(--daily-font-table);
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+        line-height: 1;
+        letter-spacing: -0.02em;
+        color: #d97706;
+        padding: var(--daily-roadmap-icon-pad-y) 0;
+}
+
 .roadmap-table td.td-week {
         font-size: var(--daily-font-table);
         font-weight: 700;
@@ -2509,6 +2653,7 @@ body.env-test .flash-progress {
 
 .search-input-field {
         flex: 1;
+        min-width: 0;
         min-height: 40px;
         border: none;
         outline: none;
@@ -2516,6 +2661,42 @@ body.env-test .flash-progress {
         font-size: clamp(15px, 4vw, 17px);
         color: var(--color-text);
         background: transparent;
+        -webkit-appearance: none;
+        appearance: none;
+}
+
+.search-input-field::-webkit-search-cancel-button,
+.search-input-field::-webkit-search-decoration {
+        -webkit-appearance: none;
+        appearance: none;
+}
+
+.search-clear-btn {
+        box-sizing: border-box;
+        flex-shrink: 0;
+        width: 28px;
+        height: 28px;
+        margin: 0;
+        padding: 0;
+        border: none;
+        border-radius: 999px;
+        background: transparent;
+        color: var(--color-text-muted);
+        font: inherit;
+        font-size: 20px;
+        font-weight: 500;
+        line-height: 1;
+        cursor: pointer;
+}
+
+.search-clear-btn:hover {
+        background: rgba(46, 56, 86, 0.08);
+        color: var(--color-text);
+}
+
+.search-clear-btn:focus {
+        outline: 2px solid var(--color-accent);
+        outline-offset: 1px;
 }
 
 #panelSearch .search-input-field {
@@ -2985,8 +3166,8 @@ body.env-test .flash-progress {
 @media (max-width: 599px) and (orientation: portrait) {
         :root {
                 --vocab-ratio-learn-title: 2.15;
-                --vocab-ratio-learn-english: 1.42;
-                --vocab-ratio-search-english: 1.14;
+                --vocab-ratio-learn-english: 1.5;
+                --vocab-ratio-search-english: 1.2;
                 --vocab-ratio-search-title: 1.38;
                 --vocab-ratio-example: 1;
                 --learn-font-word: clamp(28px, calc(var(--vocab-type-base) * var(--vocab-ratio-learn-title)), 42px);
@@ -3013,7 +3194,7 @@ body.env-test .flash-progress {
         :root {
                 --font-size-word: clamp(15px, 4.2vw, 18px);
                 --font-size-reading: clamp(12px, 3.4vw, 14px);
-                --font-size-english: clamp(12px, 3.3vw, 14px);
+                --font-size-english: clamp(13px, 3.5vw, 15px);
                 --font-size-detail: clamp(11.5px, 3.1vw, 13px);
                 --chk-size: 20px;
                 --vocab-type-base: clamp(15px, 3.6vmin, 17px);
@@ -3094,7 +3275,7 @@ body.env-test .flash-progress {
                 --font-size-header: clamp(14px, 2.3vw, 16px);
                 --font-size-word: clamp(18px, 2.8vw, 22px);
                 --font-size-reading: clamp(15px, 2.2vw, 17px);
-                --font-size-english: clamp(15px, 2.2vw, 17px);
+                --font-size-english: clamp(16px, 2.4vw, 18px);
                 --font-size-detail: clamp(14px, 2.1vw, 17px);
                 --font-size-btn: clamp(16px, 2.4vw, 18px);
                 --font-size-stat: clamp(22px, 3.5vw, 30px);
@@ -3104,9 +3285,9 @@ body.env-test .flash-progress {
                 --vocab-gap-english-meaning-kanji: var(--vocab-gap-english-meaning);
                 --vocab-gap-meaning-example-kanji: var(--vocab-gap-meaning-example);
                 --vocab-ratio-learn-title: 2.25;
-                --vocab-ratio-learn-english: 1.36;
+                --vocab-ratio-learn-english: 1.44;
                 --vocab-ratio-search-title: 1.34;
-                --vocab-ratio-search-english: 1.1;
+                --vocab-ratio-search-english: 1.16;
                 --learn-font-word: clamp(30px, calc(var(--vocab-type-base) * var(--vocab-ratio-learn-title)), 46px);
                 --flash-answer-btn-gap: clamp(32px, 5vw, 52px);
                 --learn-font-progress: clamp(11px, 1.8vw, 12px);
@@ -3212,10 +3393,6 @@ body.env-test .flash-progress {
                 transform: scale(1.15);
         }
 
-        .flash-complete-head {
-                gap: 12px;
-        }
-
         .flash-complete-skip-note {
                 font-size: clamp(11px, 1.9vw, 13px);
         }
@@ -3271,7 +3448,8 @@ body.env-test .flash-progress {
         }
 
         .roadmap-table td.roadmap-day-star,
-        .roadmap-table td.roadmap-day-book {
+        .roadmap-table td.roadmap-day-book,
+        .roadmap-table td.roadmap-day-count {
                 padding: var(--daily-roadmap-icon-pad-y) 5px;
         }
 
@@ -3314,7 +3492,7 @@ body.env-test .flash-progress {
                 --font-size-header: 16px;
                 --font-size-word: 22px;
                 --font-size-reading: 17px;
-                --font-size-english: 17px;
+                --font-size-english: 18px;
                 --font-size-detail: 17px;
                 --font-size-btn: 18px;
                 --font-size-stat: 30px;
@@ -3324,9 +3502,9 @@ body.env-test .flash-progress {
                 --vocab-gap-english-meaning-kanji: var(--vocab-gap-english-meaning);
                 --vocab-gap-meaning-example-kanji: var(--vocab-gap-meaning-example);
                 --vocab-ratio-learn-title: 2.2;
-                --vocab-ratio-learn-english: 1.34;
+                --vocab-ratio-learn-english: 1.42;
                 --vocab-ratio-search-title: 1.32;
-                --vocab-ratio-search-english: 1.08;
+                --vocab-ratio-search-english: 1.14;
                 --learn-font-word: clamp(32px, calc(var(--vocab-type-base) * var(--vocab-ratio-learn-title)), 44px);
                 --learn-font-progress: 12px;
                 --learn-font-cat: 17px;
@@ -3503,7 +3681,7 @@ body.env-test .flash-progress {
                 --learn-front-pad-y: 4px;
                 --vocab-type-base: clamp(11px, 3.4vh, 14px);
                 --vocab-ratio-learn-title: 1.9;
-                --vocab-ratio-learn-english: 1.32;
+                --vocab-ratio-learn-english: 1.4;
                 --vocab-ratio-search-title: 1.28;
                 --vocab-ratio-example: 0.92;
                 --learn-font-word: clamp(22px, calc(var(--vocab-type-base) * var(--vocab-ratio-learn-title)), 32px);
@@ -3707,5 +3885,21 @@ body.env-test .flash-progress {
                 height: var(--flash-undo-size);
                 flex: 0 0 var(--flash-undo-size);
                 font-size: 14px;
+        }
+
+        .flash-complete-head {
+                gap: 10px;
+        }
+
+        .flash-complete-message {
+                font-size: clamp(22px, 5.6vh, 28px);
+        }
+
+        .flash-complete-today-main {
+                font-size: clamp(16px, 4.2vh, 20px);
+        }
+
+        .flash-complete-detail {
+                font-size: clamp(16px, 4.2vh, 20px);
         }
 }

@@ -2274,8 +2274,27 @@ function bindEvents() {
     switchMainMode("search");
   });
 
-  document.getElementById("searchInput").addEventListener("input", scheduleSearchFilterFromInput);
+  document.getElementById("searchInput").addEventListener("input", function () {
+    syncSearchClearButton();
+    scheduleSearchFilterFromInput();
+  });
   document.getElementById("searchInput").addEventListener("focus", showSearchChrome);
+  var searchClearBtn = document.getElementById("searchClear");
+  if (searchClearBtn) {
+    searchClearBtn.addEventListener("click", function () {
+      var input = document.getElementById("searchInput");
+      if (!input) return;
+      if (!input.value) {
+        syncSearchClearButton();
+        return;
+      }
+      input.value = "";
+      syncSearchClearButton();
+      input.focus();
+      onSearchFilterChanged();
+    });
+  }
+  syncSearchClearButton();
 
   document.getElementById("searchResultList").addEventListener("click", function (e) {
     var chkWrap = e.target.closest(".search-item-chk-wrap");
@@ -2854,6 +2873,13 @@ function scheduleSearchFilterFromInput() {
     searchInputTimer = null;
     onSearchFilterChanged();
   }, 150);
+}
+
+function syncSearchClearButton() {
+  var input = document.getElementById("searchInput");
+  var clearBtn = document.getElementById("searchClear");
+  if (!clearBtn || !input) return;
+  clearBtn.hidden = !String(input.value || "").length;
 }
 
 function collectSearchMatches(query, hasCatFilter, hasStatusFilter) {

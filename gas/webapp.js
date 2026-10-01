@@ -9,10 +9,40 @@ var DB_SHEET_TEST_MISSING_ERROR = "参照するdbがありません";
 var PROD_CATEGORY_ORDER = ["基本", "介護", "医療", "社会"];
 var FLASH_CURSORS_PROP_PROD = "FLASH_CURSORS_prod";
 var FLASH_CURSORS_PROP_TEST = "FLASH_CURSORS_test";
+var FLASH_CURSORS_SHEET = "cursors";
+var FLASH_CURSORS_SHEET_HEADERS = ["環境", "カテゴリ", "位置", "次", "次の語", "カテゴリ語数", "更新"];
+var LEARNED_DATE_NUMBER_FORMAT = "yyyy/mm/dd hh:mm";
 // 未設定時はスクリプト実行者のメールへ送信。別アドレスへ送る場合は
 // スクリプトプロパティ PROD_CHECK_NOTIFY_EMAIL を設定する。
+//
+// 申し込みメールが「send_mail の権限がない」になるとき:
+// エディタで authorizePaidMail を実行 → 権限を許可 → 必要ならウェブアプリを再デプロイ。
+
+function authorizePaidMail() {
+  MailApp.getRemainingDailyQuota();
+  processUnmailedPaidOrders();
+}
+
+function jsonpOrJson_(payload, callback) {
+  var text = JSON.stringify(payload);
+  var name = String(callback || "").replace(/[^\w.$]/g, "");
+  if (name) {
+    return ContentService.createTextOutput(name + "(" + text + ")")
+      .setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
+  return ContentService.createTextOutput(text)
+    .setMimeType(ContentService.MimeType.JSON);
+}
 
 function doGet(e) {
+  var params = (e && e.parameter) || {};
+  if (params.action === "placeOrder") {
+    return jsonpOrJson_(placePaidOrder_(params, false), params.callback);
+  }
+  if (params.action === "activateOrder") {
+    return paidResultHtml_(activatePaidOrder_(params.token));
+  }
+
   if (isKaigoApp(e)) {
     return handleKaigoGet(e);
   }
@@ -24,12 +54,28 @@ function doGet(e) {
 
   var data = loadInitialAppData(sheetInfo.sheet);
   data.cursors = loadFlashCursors(sheetInfo.isTest);
+  // J専用（本番）: きょう見た用の語セットも返す（端末依存を解消）
+  if (!sheetInfo.isTest) {
+    data.dailySeen = loadDailySeenPayload_("J", "");
+  }
   return jsonResponse(data);
 }
 
 function doPost(e) {
   try {
     var params = parsePostParams(e);
+    if (String(params.action || "") === "placeOrder") {
+      return jsonResponse(placePaidOrder_(params, true));
+    }
+    if (String(params.action || "") === "sendOrderMail") {
+      return jsonResponse(sendStoredOrderMail_(params.orderId));
+    }
+    if (String(params.action || "") === "dailyLog") {
+      return jsonResponse(upsertDailyLog_(params));
+    }
+    if (String(params.action || "") === "loadDailySeen") {
+      return jsonResponse(loadDailySeenPayload_(params.user, params.date));
+    }
     if (isKaigoApp(e, params)) {
       return handleKaigoPost(e, params);
     }
@@ -108,8 +154,7 @@ function parsePostParams(e) {
 }
 
 function jsonResponse(payload) {
-  return ContentService.createTextOutput(JSON.stringify(payload))
-    .setMimeType(ContentService.MimeType.JSON);
+  return jsonpOrJson_(payload, "");
 }
 
 function getFlashCursorsPropertyKey(isTest) {
@@ -199,9 +244,129 @@ function saveFlashCursors(incoming, isTest) {
       getFlashCursorsPropertyKey(isTest),
       JSON.stringify(merged)
     );
+    syncFlashCursorsSheetBestEffort_(merged, isTest);
   } finally {
     lock.releaseLock();
   }
+}
+
+function ensureFlashCursorsSheet() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(FLASH_CURSORS_SHEET);
+  if (!sheet) {
+    sheet = ss.insertSheet(FLASH_CURSORS_SHEET);
+  }
+
+  var existing = sheet.getRange(1, 1, 1, FLASH_CURSORS_SHEET_HEADERS.length).getValues()[0];
+  var needHeader = false;
+  for (var i = 0; i < FLASH_CURSORS_SHEET_HEADERS.length; i++) {
+    if (String(existing[i] || "") !== FLASH_CURSORS_SHEET_HEADERS[i]) {
+      needHeader = true;
+      break;
+    }
+  }
+  if (needHeader) {
+    sheet.getRange(1, 1, 1, FLASH_CURSORS_SHEET_HEADERS.length).setValues([FLASH_CURSORS_SHEET_HEADERS]);
+    sheet.setFrozenRows(1);
+    sheet.setColumnWidths(1, FLASH_CURSORS_SHEET_HEADERS.length, 120);
+    sheet.setColumnWidth(5, 220);
+  }
+  return sheet;
+}
+
+function getFlashCursorsDbSheet_(isTest) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  return ss.getSheetByName(isTest ? DB_SHEET_TEST : DB_SHEET_PROD);
+}
+
+function buildCategoryWordListsFromSheet_(sheet) {
+  var lists = {};
+  var i;
+  for (i = 0; i < PROD_CATEGORY_ORDER.length; i++) {
+    lists[PROD_CATEGORY_ORDER[i]] = [];
+  }
+  if (!sheet) {
+    return lists;
+  }
+
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) {
+    return lists;
+  }
+
+  var data = sheet.getRange(2, 2, lastRow - 1, 3).getValues();
+  for (i = 0; i < data.length; i++) {
+    var word = String(data[i][0] || "").trim();
+    var cat = String(data[i][2] || "").trim();
+    if (!word || !lists[cat]) {
+      continue;
+    }
+    lists[cat].push(word);
+  }
+  return lists;
+}
+
+function formatFlashCursorUpdatedAt_(updatedAt) {
+  if (typeof updatedAt !== "number" || !isFinite(updatedAt) || updatedAt <= 0) {
+    return "";
+  }
+  try {
+    return Utilities.formatDate(new Date(updatedAt), "Asia/Tokyo", "yyyy-MM-dd HH:mm:ss");
+  } catch (err) {
+    return "";
+  }
+}
+
+function buildFlashCursorsSheetRows_(cursorsMap, isTest) {
+  var envLabel = isTest ? "test" : "prod";
+  var lists = buildCategoryWordListsFromSheet_(getFlashCursorsDbSheet_(isTest));
+  var rows = [];
+  for (var i = 0; i < PROD_CATEGORY_ORDER.length; i++) {
+    var cat = PROD_CATEGORY_ORDER[i];
+    var words = lists[cat] || [];
+    var entry = cursorsMap[cat] || { i: 0, t: 0 };
+    var index = entry.i || 0;
+    if (index < 0) {
+      index = 0;
+    }
+    var nextWord = "";
+    if (words.length > 0) {
+      nextWord = words[index % words.length] || "";
+    }
+    rows.push([
+      envLabel,
+      cat,
+      index,
+      words.length > 0 ? (index % words.length) + 1 : "",
+      nextWord,
+      words.length,
+      formatFlashCursorUpdatedAt_(entry.t)
+    ]);
+  }
+  return rows;
+}
+
+function writeFlashCursorsSheet_(cursorsMap, isTest) {
+  var sheet = ensureFlashCursorsSheet();
+  var startRow = isTest ? 6 : 2;
+  var rows = buildFlashCursorsSheetRows_(cursorsMap, isTest);
+  sheet.getRange(startRow, 1, rows.length, FLASH_CURSORS_SHEET_HEADERS.length).setValues(rows);
+  SpreadsheetApp.flush();
+  return rows.length;
+}
+
+function syncFlashCursorsSheetBestEffort_(cursorsMap, isTest) {
+  try {
+    writeFlashCursorsSheet_(cursorsMap, isTest);
+  } catch (err) {
+    console.error("cursors sheet sync failed: " + err);
+  }
+}
+
+/** GASエディタから実行: 保存済みカーソルを見る用シートへ書き出す */
+function syncFlashCursorsSheetNow() {
+  writeFlashCursorsSheet_(loadFlashCursors(false), false);
+  writeFlashCursorsSheet_(loadFlashCursors(true), true);
 }
 
 function getInitialAppCacheKey(sheetName) {
@@ -319,6 +484,7 @@ function submitCategoryUpdate(checkedWords, uncheckedWords, sheet) {
 
     if (isModified) {
       flagsRange.setValues(values);
+      formatLearnedDateColumn_(sheet);
       invalidateInitialAppCache(sheet.getName());
 
       if (sheet.getName() === DB_SHEET_PROD && checkedWords.length > 0) {
@@ -330,6 +496,24 @@ function submitCategoryUpdate(checkedWords, uncheckedWords, sheet) {
   } finally {
     lock.releaseLock();
   }
+}
+
+function formatLearnedDateColumn_(sheet) {
+  if (!sheet) {
+    return;
+  }
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) {
+    return;
+  }
+  sheet.getRange(2, 10, lastRow - 1, 1).setNumberFormat(LEARNED_DATE_NUMBER_FORMAT);
+}
+
+/** GASエディタから実行: db / db のコピー のJ列を日時表示にする（アプリの値は変えない） */
+function formatLearnedDateColumnNow() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  formatLearnedDateColumn_(ss.getSheetByName(DB_SHEET_PROD));
+  formatLearnedDateColumn_(ss.getSheetByName(DB_SHEET_TEST));
 }
 
 function toWordSet(words) {
@@ -400,6 +584,332 @@ function sendProdCheckNotifyEmail(dbValues) {
   }
 }
 
+var DAILY_LOG_SHEET = "daily_log";
+var DAILY_LOG_CATS = ["基本", "介護", "医療", "社会"];
+var DAILY_LOG_HEADERS = [
+  "date",
+  "見た_基本",
+  "見た_介護",
+  "見た_医療",
+  "見た_社会",
+  "見た_合計",
+  "知ってる_基本",
+  "知ってる_介護",
+  "知ってる_医療",
+  "知ってる_社会",
+  "知ってる_合計"
+];
+
+function ensureDailyLogSheet_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(DAILY_LOG_SHEET);
+  if (!sheet) {
+    sheet = ss.insertSheet(DAILY_LOG_SHEET);
+  }
+  var width = Math.max(sheet.getLastColumn(), DAILY_LOG_HEADERS.length);
+  var header = sheet.getRange(1, 1, 1, width).getValues()[0];
+  var needHeader = false;
+  for (var i = 0; i < DAILY_LOG_HEADERS.length; i++) {
+    if (String(header[i] || "").trim() !== DAILY_LOG_HEADERS[i]) {
+      needHeader = true;
+      break;
+    }
+  }
+  if (needHeader) {
+    sheet.clear();
+    sheet.getRange(1, 1, 1, DAILY_LOG_HEADERS.length).setValues([DAILY_LOG_HEADERS]);
+    sheet.setFrozenRows(1);
+    sheet.getRange("A:A").setNumberFormat("@");
+  }
+  return sheet;
+}
+
+function normalizeDailyWordList_(raw) {
+  var out = [];
+  var seen = {};
+  var list = [];
+  if (Array.isArray(raw)) {
+    list = raw;
+  } else if (raw && typeof raw === "object") {
+    list = Object.keys(raw);
+  } else {
+    var text = String(raw || "").trim();
+    if (!text) {
+      return out;
+    }
+    try {
+      var parsed = JSON.parse(text);
+      if (Array.isArray(parsed)) {
+        list = parsed;
+      } else if (parsed && typeof parsed === "object") {
+        list = Object.keys(parsed);
+      } else {
+        list = text.split(/[\n,]+/);
+      }
+    } catch (err) {
+      list = text.split(/[\n,]+/);
+    }
+  }
+  for (var i = 0; i < list.length; i++) {
+    var word = String(list[i] || "").trim();
+    if (!word || seen[word]) continue;
+    seen[word] = true;
+    out.push(word);
+  }
+  return out;
+}
+
+function mergeDailyWordLists_(a, b) {
+  return normalizeDailyWordList_([].concat(a || [], b || []));
+}
+
+function dailyLogDateKey_(value) {
+  if (value instanceof Date) {
+    return Utilities.formatDate(value, "Asia/Tokyo", "yyyy-MM-dd");
+  }
+  return String(value || "").trim().slice(0, 10);
+}
+
+function getDailySeenWordsPropKey_(user, dateKey) {
+  return "DAILY_SEEN_WORDS_" + String(user || "J") + "_" + dateKey;
+}
+
+function emptyDailyByCat_() {
+  var byCat = {};
+  for (var i = 0; i < DAILY_LOG_CATS.length; i++) {
+    byCat[DAILY_LOG_CATS[i]] = { knownWords: [], unknownWords: [] };
+  }
+  return byCat;
+}
+
+function normalizeDailyByCat_(raw) {
+  var byCat = emptyDailyByCat_();
+  if (!raw || typeof raw !== "object") {
+    return byCat;
+  }
+  for (var i = 0; i < DAILY_LOG_CATS.length; i++) {
+    var cat = DAILY_LOG_CATS[i];
+    var entry = raw[cat] || {};
+    byCat[cat] = {
+      knownWords: normalizeDailyWordList_(entry.knownWords || entry.known || []),
+      unknownWords: normalizeDailyWordList_(entry.unknownWords || entry.unknown || [])
+    };
+  }
+  return byCat;
+}
+
+function mergeDailyByCat_(base, incoming) {
+  var merged = emptyDailyByCat_();
+  base = normalizeDailyByCat_(base);
+  incoming = normalizeDailyByCat_(incoming);
+  for (var i = 0; i < DAILY_LOG_CATS.length; i++) {
+    var cat = DAILY_LOG_CATS[i];
+    merged[cat] = {
+      knownWords: mergeDailyWordLists_(base[cat].knownWords, incoming[cat].knownWords),
+      unknownWords: mergeDailyWordLists_(base[cat].unknownWords, incoming[cat].unknownWords)
+    };
+  }
+  return merged;
+}
+
+function flattenDailyByCat_(byCat) {
+  byCat = normalizeDailyByCat_(byCat);
+  var knownWords = [];
+  var unknownWords = [];
+  for (var i = 0; i < DAILY_LOG_CATS.length; i++) {
+    var cat = DAILY_LOG_CATS[i];
+    knownWords = knownWords.concat(byCat[cat].knownWords);
+    unknownWords = unknownWords.concat(byCat[cat].unknownWords);
+  }
+  knownWords = normalizeDailyWordList_(knownWords);
+  var knownSet = {};
+  for (var k = 0; k < knownWords.length; k++) {
+    knownSet[knownWords[k]] = true;
+  }
+  var unknownOnly = [];
+  for (var u = 0; u < unknownWords.length; u++) {
+    if (knownSet[unknownWords[u]]) continue;
+    unknownOnly.push(unknownWords[u]);
+  }
+  return { knownWords: knownWords, unknownWords: unknownOnly };
+}
+
+function countsFromDailyByCat_(byCat) {
+  byCat = normalizeDailyByCat_(byCat);
+  var counts = {};
+  var seenTotal = 0;
+  var knownTotal = 0;
+  for (var i = 0; i < DAILY_LOG_CATS.length; i++) {
+    var cat = DAILY_LOG_CATS[i];
+    var knownWords = byCat[cat].knownWords;
+    var knownSet = {};
+    for (var k = 0; k < knownWords.length; k++) {
+      knownSet[knownWords[k]] = true;
+    }
+    var unknownOnly = 0;
+    for (var u = 0; u < byCat[cat].unknownWords.length; u++) {
+      if (knownSet[byCat[cat].unknownWords[u]]) continue;
+      unknownOnly++;
+    }
+    var known = knownWords.length;
+    var seen = known + unknownOnly;
+    counts[cat] = { seen: seen, known: known };
+    seenTotal += seen;
+    knownTotal += known;
+  }
+  counts.total = { seen: seenTotal, known: knownTotal };
+  return counts;
+}
+
+function loadStoredDailyByCat_(user, dateKey) {
+  try {
+    var raw = PropertiesService.getScriptProperties().getProperty(
+      getDailySeenWordsPropKey_(user, dateKey)
+    );
+    if (!raw) {
+      return emptyDailyByCat_();
+    }
+    var parsed = JSON.parse(raw);
+    if (parsed && parsed.byCat) {
+      return normalizeDailyByCat_(parsed.byCat);
+    }
+    // 旧形式: flat lists only
+    return emptyDailyByCat_();
+  } catch (err) {
+    return emptyDailyByCat_();
+  }
+}
+
+function saveStoredDailyByCat_(user, dateKey, byCat, star) {
+  var flat = flattenDailyByCat_(byCat);
+  PropertiesService.getScriptProperties().setProperty(
+    getDailySeenWordsPropKey_(user, dateKey),
+    JSON.stringify({
+      date: dateKey,
+      user: user,
+      byCat: normalizeDailyByCat_(byCat),
+      knownWords: flat.knownWords,
+      unknownWords: flat.unknownWords,
+      star: !!star
+    })
+  );
+}
+
+function findDailyLogRowIndex_(sheet, dateKey) {
+  var last = sheet.getLastRow();
+  if (last < 2) {
+    return null;
+  }
+  var values = sheet.getRange(2, 1, last, 1).getValues();
+  for (var i = 0; i < values.length; i++) {
+    if (dailyLogDateKey_(values[i][0]) === dateKey) {
+      return i + 2;
+    }
+  }
+  return null;
+}
+
+function writeDailyLogSummaryRow_(dateKey, counts) {
+  var sheet = ensureDailyLogSheet_();
+  var rowValues = [
+    dateKey,
+    counts["基本"].seen,
+    counts["介護"].seen,
+    counts["医療"].seen,
+    counts["社会"].seen,
+    counts.total.seen,
+    counts["基本"].known,
+    counts["介護"].known,
+    counts["医療"].known,
+    counts["社会"].known,
+    counts.total.known
+  ];
+  var row = findDailyLogRowIndex_(sheet, dateKey);
+  if (row) {
+    sheet.getRange(row, 1, row, DAILY_LOG_HEADERS.length).setValues([rowValues]);
+  } else {
+    sheet.appendRow(rowValues);
+  }
+}
+
+function buildDailySeenPayloadFromByCat_(dateKey, user, byCat, star) {
+  byCat = normalizeDailyByCat_(byCat);
+  var flat = flattenDailyByCat_(byCat);
+  var counts = countsFromDailyByCat_(byCat);
+  return {
+    success: true,
+    date: dateKey,
+    user: user,
+    knownWords: flat.knownWords,
+    unknownWords: flat.unknownWords,
+    known: counts.total.known,
+    unknown: flat.unknownWords.length,
+    seen: counts.total.seen,
+    star: !!star || counts.total.known > 0 || flat.unknownWords.length >= 20,
+    byCategory: counts
+  };
+}
+
+function loadDailySeenPayload_(user, dateKey) {
+  user = String(user || "J").trim() || "J";
+  dateKey = String(dateKey || "").trim().slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) {
+    dateKey = Utilities.formatDate(new Date(), "Asia/Tokyo", "yyyy-MM-dd");
+  }
+  var stored = null;
+  try {
+    var raw = PropertiesService.getScriptProperties().getProperty(
+      getDailySeenWordsPropKey_(user, dateKey)
+    );
+    if (raw) {
+      stored = JSON.parse(raw);
+    }
+  } catch (err) {
+    stored = null;
+  }
+  var byCat = stored && stored.byCat ? stored.byCat : emptyDailyByCat_();
+  var star = stored && stored.star === true;
+  return buildDailySeenPayloadFromByCat_(dateKey, user, byCat, star);
+}
+
+/** 見る用ログはカテゴリ別の見た/知ってるのみ。語セットは Properties に保持（dbは変更しない）。 */
+function upsertDailyLog_(params) {
+  params = params || {};
+  var dateKey = String(params.date || "").trim().slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) {
+    dateKey = Utilities.formatDate(new Date(), "Asia/Tokyo", "yyyy-MM-dd");
+  }
+  var user = String(params.user || "J").trim() || "J";
+  var incomingByCat = normalizeDailyByCat_(params.byCategory || params.byCat || {});
+
+  // 旧クライアント互換: flat lists だけ来た場合は「合計」扱いにせず空のまま（カテゴリ不明）
+  // ただし knownWords/unknownWords がある場合は byCategory が空なら合計用に医療などに振り分けない
+
+  var existingByCat = loadStoredDailyByCat_(user, dateKey);
+  var mergedByCat = mergeDailyByCat_(existingByCat, incomingByCat);
+
+  var star =
+    params.star === true ||
+    String(params.star || "").toUpperCase() === "TRUE" ||
+    String(params.star || "") === "1";
+  try {
+    var prevRaw = PropertiesService.getScriptProperties().getProperty(
+      getDailySeenWordsPropKey_(user, dateKey)
+    );
+    if (prevRaw) {
+      var prev = JSON.parse(prevRaw);
+      if (prev && prev.star === true) {
+        star = true;
+      }
+    }
+  } catch (err) {}
+
+  var payload = buildDailySeenPayloadFromByCat_(dateKey, user, mergedByCat, star);
+  saveStoredDailyByCat_(user, dateKey, mergedByCat, payload.star);
+  writeDailyLogSummaryRow_(dateKey, payload.byCategory);
+  return payload;
+}
+
 function countStreakEndingAt(learnedDates, endDate) {
   var streak = 0;
   var checkDate = new Date(endDate);
@@ -443,6 +953,8 @@ function buildRoadmapPayload(learnedDates, allWords) {
 // 公開版（/kaigo/words/）: マスタは db 参照、進捗は progress シート
 // J 本番（ルート）の db 学習列は変更しない
 // スクリプトプロパティ GOOGLE_CLIENT_ID に OAuth クライアント ID を設定
+// 課金（既定はオフ。公開後に課金するときだけ PAID_PAYWALL=on）:
+//   PAID_PAYWALL=on / BANK_TRANSFER_INFO / PAID_OWNER_EMAILS / PROD_CHECK_NOTIFY_EMAIL
 // ==========================================================
 
 var KAIGO_PROGRESS_SHEET = "progress";
@@ -483,7 +995,7 @@ function handleKaigoGet(e) {
         allWords: base.allWords,
         roadmap: buildRoadmapPayload([], base.allWords),
         cursors: {},
-        auth: { requiredForSave: true, loggedIn: false }
+        auth: { requiredForSave: true, loggedIn: false, paid: false }
       });
     }
     applyKaigoProgressToWords(base.allWords, authInfo.userId);
@@ -493,6 +1005,7 @@ function handleKaigoGet(e) {
     base.auth = {
       requiredForSave: true,
       loggedIn: true,
+      paid: isPaidEmail_(authInfo.email),
       userId: authInfo.userId,
       email: authInfo.email || ""
     };
@@ -503,7 +1016,7 @@ function handleKaigoGet(e) {
   clearLearnedFlags(base.allWords);
   base.roadmap = buildRoadmapPayload([], base.allWords);
   base.cursors = {};
-  base.auth = { requiredForSave: true, loggedIn: false };
+  base.auth = { requiredForSave: true, loggedIn: false, paid: false };
   return jsonResponse(base);
 }
 
@@ -522,6 +1035,20 @@ function handleKaigoPost(e, params) {
 
   if (action === "load") {
     return jsonResponse(buildKaigoUserPayload_(authInfo));
+  }
+
+  if (!isPaidEmail_(authInfo.email)) {
+    return jsonResponse({
+      error: "保存にはお支払いが必要です",
+      needPaid: true,
+      auth: {
+        requiredForSave: true,
+        loggedIn: true,
+        paid: false,
+        userId: authInfo.userId,
+        email: authInfo.email || ""
+      }
+    });
   }
 
   var checkedWords = normalizeWordList_(params.checkedWords);
@@ -577,6 +1104,7 @@ function buildKaigoUserPayload_(authInfo) {
       auth: {
         requiredForSave: true,
         loggedIn: true,
+        paid: isPaidEmail_(authInfo.email),
         userId: authInfo.userId,
         email: authInfo.email || ""
       }
@@ -593,6 +1121,7 @@ function buildKaigoUserPayload_(authInfo) {
   base.auth = {
     requiredForSave: true,
     loggedIn: true,
+    paid: isPaidEmail_(authInfo.email),
     userId: authInfo.userId,
     email: authInfo.email || ""
   };
@@ -994,3 +1523,372 @@ function saveKaigoFlashCursors(userId, incoming) {
     lock.releaseLock();
   }
 }
+
+var PAID_SHEET = "paid";
+var ORDER_SHEET = "orders";
+var PAID_PLAN_YEN = 3980;
+var PAID_PLAN_MONTHS = 12;
+
+function normalizeEmail_(email) {
+  return String(email || "").trim().toLowerCase();
+}
+
+function isPaywallOn_() {
+  var flag = PropertiesService.getScriptProperties().getProperty("PAID_PAYWALL");
+  return String(flag || "").toLowerCase() === "on";
+}
+
+function isOwnerEmail_(email) {
+  email = normalizeEmail_(email);
+  if (!email) return false;
+  var owner = normalizeEmail_(getProdCheckNotifyEmail());
+  if (owner && email === owner) return true;
+  var extra = String(PropertiesService.getScriptProperties().getProperty("PAID_OWNER_EMAILS") || "");
+  var parts = extra.split(",");
+  for (var i = 0; i < parts.length; i++) {
+    if (normalizeEmail_(parts[i]) === email) return true;
+  }
+  return false;
+}
+
+function isPaidEmail_(email) {
+  email = normalizeEmail_(email);
+  if (!email) return false;
+  if (isOwnerEmail_(email)) return true;
+  if (!isPaywallOn_()) return true;
+
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(PAID_SHEET);
+  if (!sheet || sheet.getLastRow() < 2) return false;
+
+  var todayKey = Utilities.formatDate(new Date(), "Asia/Tokyo", "yyyy-MM-dd");
+  var values = sheet.getRange(2, 1, sheet.getLastRow() - 1, 2).getValues();
+  for (var i = 0; i < values.length; i++) {
+    if (normalizeEmail_(values[i][0]) !== email) continue;
+    var until = values[i][1];
+    if (!until) return true;
+    var untilKey = "";
+    if (until instanceof Date) {
+      untilKey = Utilities.formatDate(until, "Asia/Tokyo", "yyyy-MM-dd");
+    } else {
+      untilKey = String(until).slice(0, 10);
+    }
+    if (untilKey >= todayKey) return true;
+  }
+  return false;
+}
+
+function ensurePaidSheet_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(PAID_SHEET);
+  if (!sheet) {
+    sheet = ss.insertSheet(PAID_SHEET);
+    sheet.getRange(1, 1, 1, 4).setValues([["email", "until", "orderId", "activatedAt"]]);
+  }
+  return sheet;
+}
+
+function ensureOrderSheet_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(ORDER_SHEET);
+  if (!sheet) {
+    sheet = ss.insertSheet(ORDER_SHEET);
+    sheet.getRange(1, 1, 1, 8).setValues([["id", "email", "seats", "yen", "created", "paid", "token", "note"]]);
+  }
+  return sheet;
+}
+
+function addPaidEmail_(email, untilDate, orderId) {
+  email = normalizeEmail_(email);
+  if (!email || email.indexOf("@") === -1) return;
+  var sheet = ensurePaidSheet_();
+  sheet.appendRow([email, untilDate, String(orderId || ""), new Date()]);
+}
+
+function parseEmailList_(raw) {
+  var text = "";
+  if (Array.isArray(raw)) {
+    text = raw.join("\n");
+  } else {
+    text = String(raw || "");
+  }
+  var parts = text.split(/[\s,;]+/);
+  var out = [];
+  var seen = {};
+  for (var i = 0; i < parts.length; i++) {
+    var item = normalizeEmail_(parts[i]);
+    if (!item || item.indexOf("@") === -1 || seen[item]) continue;
+    seen[item] = true;
+    out.push(item);
+  }
+  return out;
+}
+
+function parseLicenseEmailsFromNote_(note, fallbackEmail) {
+  var emails = [];
+  var raw = String(note || "").trim();
+  if (raw) {
+    try {
+      var parsed = JSON.parse(raw);
+      if (parsed && parsed.emails) {
+        emails = parseEmailList_(parsed.emails);
+      }
+    } catch (err) {
+      emails = parseEmailList_(raw);
+    }
+  }
+  if (!emails.length && fallbackEmail) {
+    emails = [normalizeEmail_(fallbackEmail)];
+  }
+  return emails;
+}
+
+function escapeHtml_(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function paidResultHtml_(result) {
+  var ok = result && result.success;
+  var title = ok ? "有効化しました" : "有効化できませんでした";
+  var emailLines = (result && result.emails && result.emails.length)
+    ? result.emails
+    : [result && result.email];
+  var emailHtml = "";
+  for (var n = 0; n < emailLines.length; n++) {
+    if (n) emailHtml += "<br>";
+    emailHtml += escapeHtml_(emailLines[n]);
+  }
+  var body = ok
+    ? (result.alreadyPaid
+      ? "この申し込みは、すでに有効です。<br>" + emailHtml
+      : "入金を反映しました。<br>" + emailHtml)
+    : escapeHtml_((result && result.error) || "エラー");
+  return HtmlService.createHtmlOutput(
+    "<html><body style='font-family:sans-serif;padding:32px;line-height:1.6'>" +
+      "<h1>" + title + "</h1><p>" + body + "</p></body></html>"
+  );
+}
+
+function placePaidOrder_(params, sendNow) {
+  var email = normalizeEmail_(params.email);
+  if (!email || email.indexOf("@") === -1) {
+    return { error: "メールアドレスを入力してください" };
+  }
+
+  var licenseEmails = parseEmailList_(params.emails);
+  if (!licenseEmails.length) {
+    licenseEmails = [email];
+  }
+  var seats = Math.max(
+    licenseEmails.length,
+    Math.max(1, Math.min(50, parseInt(params.seats, 10) || 1))
+  );
+  if (seats > 50) {
+    return { error: "人数は50人までです" };
+  }
+
+  var yen = PAID_PLAN_YEN * seats;
+  var orderId = Utilities.getUuid();
+  var token = Utilities.getUuid();
+  var note = JSON.stringify({ emails: licenseEmails, mailed: false });
+  var sheet = ensureOrderSheet_();
+  sheet.appendRow([orderId, email, seats, yen, new Date(), false, token, note]);
+
+  var result = { success: true, orderId: orderId, yen: yen, seats: seats };
+  if (!sendNow) {
+    return result;
+  }
+  return mergeOrderMailResult_(result, sendStoredOrderMail_(orderId));
+}
+
+function mergeOrderMailResult_(result, mailResult) {
+  mailResult = mailResult || {};
+  if (mailResult.success && !mailResult.mailError) {
+    return result;
+  }
+  result.mailError = String(mailResult.mailError || mailResult.error || "メール送信に失敗しました");
+  result.warning = mailResult.warning || "申し込みは記録しましたが、メールを送れませんでした。";
+  return result;
+}
+
+function sendStoredOrderMail_(orderId) {
+  orderId = String(orderId || "").trim();
+  if (!orderId) {
+    return { error: "orderId がありません" };
+  }
+
+  var sheet = ensureOrderSheet_();
+  var last = sheet.getLastRow();
+  if (last < 2) {
+    return { error: "注文がありません" };
+  }
+
+  var values = sheet.getRange(2, 1, last - 1, 8).getValues();
+  for (var i = 0; i < values.length; i++) {
+    if (String(values[i][0] || "") !== orderId) continue;
+
+    var note = {};
+    try {
+      note = JSON.parse(String(values[i][7] || "{}"));
+    } catch (err) {
+      note = {};
+    }
+    if (note.mailed === true) {
+      return { success: true, alreadyMailed: true };
+    }
+
+    var email = normalizeEmail_(values[i][1]);
+    var seats = values[i][2];
+    var yen = values[i][3];
+    var token = values[i][6];
+    var licenseEmails = parseLicenseEmailsFromNote_(values[i][7], email);
+    var mail = sendOrderNoticeMails_(email, licenseEmails, seats, yen, token);
+    note.emails = licenseEmails;
+    note.mailed = mail.ok === true;
+    note.mailError = mail.mailError || "";
+    sheet.getRange(i + 2, 8).setValue(JSON.stringify(note));
+
+    if (!mail.ok) {
+      return {
+        success: true,
+        mailError: mail.mailError,
+        warning: "申し込みは記録しましたが、メールを送れませんでした。"
+      };
+    }
+    return { success: true };
+  }
+
+  return { error: "注文が見つかりません" };
+}
+
+function sendOrderNoticeMails_(email, licenseEmails, seats, yen, token) {
+  var toOwner = getProdCheckNotifyEmail();
+  var bank = String(PropertiesService.getScriptProperties().getProperty("BANK_TRANSFER_INFO") || "").trim();
+  var activateUrl = ScriptApp.getService().getUrl() + "?action=activateOrder&token=" + encodeURIComponent(token);
+
+  var buyerBody =
+    "お申し込みを受け付けました。\n\n" +
+    "人数：" + seats + "人\n" +
+    "金額：" + yen + "円（1人あたり" + PAID_PLAN_YEN + "円 / 12か月）\n" +
+    "使うGmail：\n" + licenseEmails.join("\n") + "\n\n";
+  if (bank) {
+    buyerBody += "【振込先】\n" + bank + "\n\n入金後、利用できるようになります。\n";
+  } else {
+    buyerBody += "振込先は、確認でき次第メールします。\n";
+  }
+  buyerBody += "\n入金後、上のGmailで Google ログインしてください。\nhttps://nihongo.site/kaigo/words/";
+
+  var mailErrors = [];
+  var buyerMail = sendPlainMail_(email, "【ことば】お申し込みを受け付けました", buyerBody);
+  if (!buyerMail.ok) {
+    mailErrors.push("申込者: " + (buyerMail.error || "失敗"));
+  }
+
+  if (toOwner) {
+    var ownerBody =
+      "新規申し込み\n\n" +
+      "連絡：" + email + "\n" +
+      "人数：" + seats + "\n" +
+      "金額：" + yen + "円\n" +
+      "Gmail：\n" + licenseEmails.join("\n") + "\n\n" +
+      "入金を確認したら、次のリンクを開いて有効化してください。\n" +
+      activateUrl;
+    var ownerMail = sendPlainMail_(toOwner, "【ことば】新規申し込み " + email, ownerBody);
+    if (!ownerMail.ok) {
+      mailErrors.push("管理者: " + (ownerMail.error || "失敗"));
+    }
+  } else {
+    mailErrors.push("管理者: 通知先メールが未設定です");
+  }
+
+  if (mailErrors.length) {
+    return { ok: false, mailError: mailErrors.join(" / ") };
+  }
+  return { ok: true };
+}
+
+function sendPlainMail_(to, subject, body) {
+  to = normalizeEmail_(to);
+  if (!to) {
+    return { ok: false, error: "宛先がありません" };
+  }
+  try {
+    MailApp.sendEmail({
+      to: to,
+      subject: subject,
+      body: body,
+      name: "ことば"
+    });
+    return { ok: true };
+  } catch (err) {
+    console.error("メール失敗: " + err);
+    return { ok: false, error: String(err) };
+  }
+}
+
+function processUnmailedPaidOrders() {
+  var sheet = ensureOrderSheet_();
+  var last = sheet.getLastRow();
+  if (last < 2) return;
+  var values = sheet.getRange(2, 1, last - 1, 8).getValues();
+  for (var i = 0; i < values.length; i++) {
+    var orderId = String(values[i][0] || "").trim();
+    if (!orderId) continue;
+    var note = {};
+    try {
+      note = JSON.parse(String(values[i][7] || "{}"));
+    } catch (err) {
+      note = {};
+    }
+    if (note.mailed === true) continue;
+    sendStoredOrderMail_(orderId);
+  }
+}
+
+function activatePaidOrder_(token) {
+  token = String(token || "").trim();
+  if (!token) {
+    return { error: "token がありません" };
+  }
+
+  var sheet = ensureOrderSheet_();
+  var last = sheet.getLastRow();
+  if (last < 2) {
+    return { error: "注文がありません" };
+  }
+
+  var values = sheet.getRange(2, 1, last - 1, 8).getValues();
+  for (var i = 0; i < values.length; i++) {
+    if (String(values[i][6] || "") !== token) continue;
+    var contact = values[i][1];
+    var licenseEmails = parseLicenseEmailsFromNote_(values[i][7], contact);
+    if (values[i][5] === true || String(values[i][5]).toUpperCase() === "TRUE") {
+      return { success: true, alreadyPaid: true, email: contact, emails: licenseEmails };
+    }
+    var seats = Math.max(1, Number(values[i][2]) || 1);
+    var until = new Date();
+    until.setMonth(until.getMonth() + PAID_PLAN_MONTHS);
+    var orderId = values[i][0];
+    for (var j = 0; j < licenseEmails.length; j++) {
+      addPaidEmail_(licenseEmails[j], until, orderId);
+    }
+    sheet.getRange(i + 2, 6).setValue(true);
+    var untilText = Utilities.formatDate(until, "Asia/Tokyo", "yyyy-MM-dd");
+    var startBody =
+      "入金を確認しました。次のGmailでログインしてください。\n\n" +
+      licenseEmails.join("\n") +
+      "\n\nhttps://nihongo.site/kaigo/words/\n\n期限：" + untilText;
+    try {
+      MailApp.sendEmail(contact, "【ことば】ご利用を開始できます", startBody);
+    } catch (err) {
+      console.error("有効化メール失敗: " + err);
+    }
+    return { success: true, email: contact, emails: licenseEmails, seats: seats };
+  }
+
+  return { error: "注文が見つかりません" };
+}
+

@@ -64,7 +64,7 @@ SESSION_MIN = 33
 SESSION_MAX = 38
 
 # 選択肢は「1 本文」「1．本文」のように番号のあとに区切りが必要（「1週間」は除外）
-RE_CHOICE_LINE = re.compile(r"^([1-5])(?:[。．.\s]+)(.*)$")
+RE_CHOICE_LINE = re.compile(r"^([1-5１-５])(?:[。．.\s]+)(.*)$")
 
 # よく使うキーワードの読みやすいパス名
 KNOWN_SLUGS = {
@@ -111,7 +111,8 @@ def parse_choice_line(line: str) -> dict | None:
     m = RE_CHOICE_LINE.match(line.strip())
     if not m:
         return None
-    return {"n": int(m.group(1)), "text": m.group(2).strip()}
+    n = int(m.group(1).translate(str.maketrans("１２３４５", "12345")))
+    return {"n": n, "text": m.group(2).strip()}
 
 
 def question_to_json(q) -> dict:

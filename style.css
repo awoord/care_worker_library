@@ -1329,16 +1329,6 @@ body.env-test {
         --color-bg: #faf9f6;
 }
 
-body.env-test::before {
-        content: "";
-        position: fixed;
-        inset: 0;
-        border: 4px solid #dc2626;
-        box-sizing: border-box;
-        pointer-events: none;
-        z-index: 10000;
-}
-
 body.env-test .flash-study {
         padding: 0;
 }
@@ -2509,6 +2499,7 @@ body.env-test .flash-progress {
 
 .search-input-field {
         flex: 1;
+        min-width: 0;
         min-height: 40px;
         border: none;
         outline: none;
@@ -2516,6 +2507,42 @@ body.env-test .flash-progress {
         font-size: clamp(15px, 4vw, 17px);
         color: var(--color-text);
         background: transparent;
+        -webkit-appearance: none;
+        appearance: none;
+}
+
+.search-input-field::-webkit-search-cancel-button,
+.search-input-field::-webkit-search-decoration {
+        -webkit-appearance: none;
+        appearance: none;
+}
+
+.search-clear-btn {
+        box-sizing: border-box;
+        flex-shrink: 0;
+        width: 28px;
+        height: 28px;
+        margin: 0;
+        padding: 0;
+        border: none;
+        border-radius: 999px;
+        background: transparent;
+        color: var(--color-text-muted);
+        font: inherit;
+        font-size: 20px;
+        font-weight: 500;
+        line-height: 1;
+        cursor: pointer;
+}
+
+.search-clear-btn:hover {
+        background: rgba(46, 56, 86, 0.08);
+        color: var(--color-text);
+}
+
+.search-clear-btn:focus {
+        outline: 2px solid var(--color-accent);
+        outline-offset: 1px;
 }
 
 #panelSearch .search-input-field {

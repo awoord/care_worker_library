@@ -39,7 +39,7 @@ SESSION_MIN = 33
 SESSION_MAX = 38
 
 RE_INDEX = re.compile(r"^【(\d+)-(\d+)｜(.+)】\s*$")
-RE_CHOICE = re.compile(r"^[1-5](?:[。．.\s]|$)")
+RE_CHOICE = re.compile(r"^[1-5１-５](?:[。．.\s]|$)")
 # 「1 週間の…選びなさい」など、数字始まりの問題文を選択肢と誤認しない
 RE_STEM_MARKER = re.compile(r"選びなさい|選びなさい。|答えなさい|答えなさい。")
 
@@ -66,6 +66,10 @@ RE_SESSION_HEADING = re.compile(
     r"^第\d+回[（(].*?[）)].*介護福祉士国家試験"
 )
 RE_DOMAIN_HEADING = re.compile(r"^＜領域：.+＞\s*$")
+# 総合問題の冗長見出し（科目バッジや「次の事例を読んで…」と重複）
+RE_SOGO_LABEL_HEADING = re.compile(
+    r"^(?:＜\s*総合問題\s*＞|（\s*総合問題\s*\d+\s*）|総合問題（\s*\d+\s*問\s*）)\s*$"
+)
 # 回の切り替わり付近のナビゲーション行
 RE_NAV_HEADING = re.compile(r"ページに戻る\s*$")
 # ファイル名に使えない文字（macOS/Windows 共通で危ないもの）
@@ -87,6 +91,7 @@ class Question:
     choices: list[str]
     context: str
     raw: str
+    footnote: str = ""  # 選択肢直後の（注）など。当該問に帰属
 
     def format(self, include_context: bool = True) -> str:
         lines = [self.index]
@@ -95,6 +100,8 @@ class Question:
         if self.stem:
             lines.append(self.stem)
         lines.extend(self.choices)
+        if self.footnote:
+            lines.append(self.footnote)
         url = question_url(self.session, self.number)
         if url:
             lines.append(f"解説: {url}")
@@ -125,6 +132,8 @@ def is_section_heading(line: str, subject: str | None = None) -> bool:
         return True
     if RE_DOMAIN_HEADING.match(stripped):
         return True
+    if RE_SOGO_LABEL_HEADING.match(stripped):
+        return True
     if RE_NAV_HEADING.search(stripped):
         return True
     if subject is not None and stripped == subject.strip():
@@ -144,11 +153,49 @@ def filter_section_headings(
     return kept
 
 
+def is_note_line(stripped: str) -> bool:
+    """選択肢直後などに付く（注）行か。"""
+    return stripped.startswith("（注）") or stripped.startswith("(注)")
+
+
+def partition_trailing_notes(
+    trailing: list[str],
+) -> tuple[list[str], list[str]]:
+    """trailing 先頭の（注）群を当該問用に分離し、残り（事例導入など）を次問へ。"""
+    notes: list[str] = []
+    i = 0
+    while i < len(trailing):
+        stripped = trailing[i].strip()
+        if not stripped:
+            j = i + 1
+            while j < len(trailing) and not trailing[j].strip():
+                j += 1
+            if j < len(trailing) and is_note_line(trailing[j].strip()):
+                notes.append(trailing[i])
+                i += 1
+                continue
+            break
+        if is_note_line(stripped):
+            notes.append(trailing[i])
+            i += 1
+            continue
+        break
+    rest = trailing[i:]
+    while rest and not rest[0].strip():
+        rest.pop(0)
+    while notes and not notes[0].strip():
+        notes.pop(0)
+    while notes and not notes[-1].strip():
+        notes.pop()
+    return notes, rest
+
+
 def split_blocks(text: str) -> list[tuple[str, list[str], list[str]]]:
     """Return list of (index_line, body_lines, leading_context_lines).
 
     leading_context は直前の問題の選択肢のあとに続く事例文など。
     次の問題の検索・表示用に付ける（大見出しは除く）。
+    （注）は当該問の body に残し、次問へは渡さない。
     """
     blocks: list[tuple[str, list[str], list[str]]] = []
     current_index: str | None = None
@@ -161,9 +208,12 @@ def split_blocks(text: str) -> list[tuple[str, list[str], list[str]]]:
             next_subject = m.group(3)
             if current_index is not None:
                 body, trailing = split_body_and_trailing(current_body)
+                notes, rest = partition_trailing_notes(trailing)
+                if notes:
+                    body = body + [""] + notes
                 blocks.append((current_index, body, pending_context))
                 pending_context = filter_section_headings(
-                    trailing, subject=next_subject
+                    rest, subject=next_subject
                 )
             else:
                 pending_context = []
@@ -175,6 +225,9 @@ def split_blocks(text: str) -> list[tuple[str, list[str], list[str]]]:
 
     if current_index is not None:
         body, trailing = split_body_and_trailing(current_body)
+        notes, rest = partition_trailing_notes(trailing)
+        if notes:
+            body = body + [""] + notes
         blocks.append((current_index, body, pending_context))
 
     return blocks
@@ -221,6 +274,7 @@ def parse_question(
 
     stem_parts: list[str] = []
     choices: list[str] = []
+    footnote_parts: list[str] = []
     in_choices = False
 
     for line in body_lines:
@@ -238,21 +292,29 @@ def parse_question(
             continue
 
         if in_choices:
+            if is_note_line(stripped):
+                footnote_parts.append(stripped)
             continue
 
         stem_parts.append(stripped)
 
     while stem_parts and stem_parts[-1] == "":
         stem_parts.pop()
+    stem_parts = [
+        ln for ln in stem_parts if not RE_SOGO_LABEL_HEADING.match(ln.strip())
+    ]
 
     context_lines = filter_section_headings(
         [ln for ln in (leading_context or []) if ln.strip()],
         subject=m.group(3),
     )
+    footnote = "\n".join(footnote_parts)
     raw_parts = [index_line]
     raw_parts.extend(context_lines)
     raw_parts.extend(stem_parts)
     raw_parts.extend(choices)
+    if footnote:
+        raw_parts.append(footnote)
 
     return Question(
         index=index_line,
@@ -263,6 +325,7 @@ def parse_question(
         choices=choices,
         context="\n".join(context_lines),
         raw="\n".join(raw_parts),
+        footnote=footnote,
     )
 
 
@@ -390,10 +453,12 @@ def enrich_named_case_contexts(questions: list[Question]) -> None:
 
 
 def searchable_text(q: Question) -> str:
-    """インデックス・（共有事例）・問題文・選択肢。"""
+    """インデックス・（共有事例）・問題文・選択肢・注。"""
     parts = [q.index]
     if q.context:
         parts.append(q.context)
+    if q.footnote:
+        parts.append(q.footnote)
     if q.stem:
         parts.append(q.stem)
     parts.extend(q.choices)

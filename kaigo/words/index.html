@@ -5,15 +5,15 @@
   <meta charset="UTF-8">
   <meta name="viewport"
     content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <meta name="description" content="ことば学習アプリ。基本・介護・医療・社会の日本語単語を学習・管理できます。">
+  <meta name="description" content="外国人の介護福祉士受験者向け。国試のことばを、毎日少しずつ見る教材。">
   <meta name="robots" content="noindex, nofollow">
-  <meta name="application-name" content="ことば学習">
+  <meta name="application-name" content="ことば">
   <meta name="theme-color" content="#F7F6F3">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>介護福祉士 ことば学習</title>
+  <title>ことば</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preload" as="style"
@@ -46,14 +46,18 @@
 </head>
 
 <body>
-  <div class="auth-bar" id="authBar">
+  <div id="authBar" class="auth-bar">
     <div class="auth-bar-main">
-      <span id="authStatusText" class="auth-status">ゲスト</span>
-      <button type="button" id="googleLoginBtn" class="auth-login-btn" hidden>Googleでログイン</button>
+      <div id="authStatusText" class="auth-status">ゲスト</div>
       <div id="googleLoginMount" class="auth-google-mount" hidden></div>
+      <button type="button" id="googleLoginBtn" class="auth-login-btn" hidden>ログイン</button>
       <button type="button" id="googleLogoutBtn" class="auth-logout-btn" hidden>ログアウト</button>
     </div>
-    <p id="authGuestNote" class="auth-guest-note">ゲストでも使えます。チェックは保存されません。保存するにはログインしてください。</p>
+    <p id="authGuestNote" class="auth-guest-note">ゲストの記録は、この端末だけです。<a href="/kaigo/offer/">記録を残す</a></p>
+    <div id="paywallBanner" class="paywall-banner" hidden>
+      <p>このアカウントでは、まだサーバーに保存できません。</p>
+      <a href="/kaigo/offer/">申し込む</a>
+    </div>
   </div>
 
   <div class="container">
@@ -193,6 +197,7 @@
           <span class="search-icon-box" aria-hidden="true">🔍</span>
           <input type="search" id="searchInput" class="search-input-field" placeholder="ことば・よみ・English"
             enterkeyhint="search" autocomplete="off">
+          <button type="button" id="searchClear" class="search-clear-btn" hidden aria-label="検索文字を消す">×</button>
         </div>
       </div>
     </div>

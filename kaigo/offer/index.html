@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="外国人の介護福祉士受験者向け。国試のことばを、毎日少しずつ見る教材。1人3,980円/12か月。">
+  <meta name="robots" content="index, follow">
+  <title>ことば — 介護福祉士の日本語</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #faf9f6;
+      --text: #2e3856;
+      --muted: #6b7280;
+      --accent: #4563e8;
+      --orange: #d97706;
+      --border: #e0e4ef;
+      --surface: #fff;
+      --font: "M PLUS Rounded 1c", "Hiragino Sans", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      line-height: 1.65;
+    }
+
+    main {
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 32px 20px 64px;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 28px;
+      font-weight: 800;
+    }
+
+    .lead {
+      margin: 0 0 28px;
+      color: var(--muted);
+      font-size: 16px;
+    }
+
+    h2 {
+      margin: 28px 0 8px;
+      font-size: 18px;
+      font-weight: 800;
+    }
+
+    p, li { font-size: 15px; }
+
+    ul { padding-left: 1.2em; }
+
+    .price {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 18px 20px;
+      margin: 20px 0;
+    }
+
+    .price strong {
+      display: block;
+      font-size: 26px;
+      color: var(--orange);
+    }
+
+    .price span {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .try {
+      display: inline-block;
+      margin: 8px 0 0;
+      color: var(--accent);
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    form {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      display: grid;
+      gap: 14px;
+    }
+
+    label {
+      display: grid;
+      gap: 6px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    input, textarea {
+      font-family: var(--font);
+      font-size: 16px;
+      font-weight: 500;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+    }
+
+    textarea { min-height: 96px; resize: vertical; }
+
+    button {
+      font-family: var(--font);
+      font-size: 16px;
+      font-weight: 800;
+      border: 0;
+      border-radius: 999px;
+      padding: 12px 16px;
+      background: var(--accent);
+      color: #fff;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      opacity: 0.55;
+      cursor: default;
+    }
+
+    .hint {
+      margin: 0;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--muted);
+    }
+
+    .msg {
+      display: none;
+      margin: 0;
+      padding: 12px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 700;
+      line-height: 1.5;
+    }
+
+    .msg.ok, .msg.err { display: block; }
+    .msg.ok { color: #047857; background: #ecfdf5; }
+    .msg.err { color: #b91c1c; background: #fef2f2; }
+
+    footer {
+      margin-top: 36px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+  </style>
+</head>
+
+<body>
+  <main>
+    <h1>ことば</h1>
+    <p class="lead">外国人の介護福祉士受験者向け。<br>国試に出ることばを、毎日少しずつ見ます。</p>
+
+    <h2>できること</h2>
+    <ul>
+      <li>1日 20語まで、カードで見る</li>
+      <li>「知らない」だけが、あとでまた出る</li>
+      <li>基本・介護・医療・社会</li>
+      <li>ルビと英語つき</li>
+    </ul>
+
+    <div class="price">
+      <strong>3,980円 / 人</strong>
+      <span>12か月。施設が人数分まとめて申し込めます。</span>
+    </div>
+
+    <a class="try" href="/kaigo/words/">まず無料で試す（記録は残りません）</a>
+
+    <h2>申し込み</h2>
+    <p>下のフォームを送ると、振込先のメールが届きます。入金後に使えるようになります。電話や訪問はありません。</p>
+
+    <form id="orderForm">
+      <label>
+        連絡用メール
+        <input id="email" type="email" required autocomplete="email" placeholder="you@example.com">
+      </label>
+      <label>
+        人数
+        <input id="seats" type="number" min="1" max="50" value="1" required>
+      </label>
+      <label>
+        使う人の Gmail（1行に1つ）
+        <textarea id="emails" placeholder="学習する人のGmail。空なら連絡用メール1つだけ有効になります。"></textarea>
+        <p class="hint">施設の場合は、学習者のGmailを並べて書いてください。人数は、多いほうに合わせます。</p>
+      </label>
+      <button type="submit" id="submitBtn">申し込む</button>
+      <p id="msg" class="msg" role="status"></p>
+    </form>
+
+    <footer>
+      入金確認後、書いたGmailでログインしてください。<br>
+      Jさん専用の秘密URLは、この申し込みの対象外です。
+    </footer>
+  </main>
+
+  <script>
+    var GAS_URL = "https://script.google.com/macros/s/AKfycby1hG96pflujpC2yLpK-RhslOoZXgkr_LGBj-IdEG6hnIrcZjp3HUjN4LIp53WJ0S5ceA/exec";
+    var form = document.getElementById("orderForm");
+    var msg = document.getElementById("msg");
+    var submitBtn = document.getElementById("submitBtn");
+
+    function setMsg(text, ok) {
+      msg.textContent = text;
+      msg.className = "msg " + (ok ? "ok" : "err");
+    }
+
+    function showResult(body) {
+      submitBtn.disabled = false;
+      if (!body || body.error) {
+        setMsg((body && body.error) || "申し込みに失敗しました。", false);
+        return;
+      }
+      if (body.success) {
+        if (body.mailError || body.warning) {
+          setMsg((body.warning || "申し込みは記録しました。") + "（" + body.yen + "円 / " + body.seats + "人） " + (body.mailError || ""), false);
+          return;
+        }
+        setMsg("受け付けました。振込先をメールしました。（" + body.yen + "円 / " + body.seats + "人）迷惑メールも見てください。", true);
+        form.reset();
+        document.getElementById("seats").value = "1";
+        return;
+      }
+      setMsg("申し込みに失敗しました。", false);
+    }
+
+    function placeOrderJsonp(payload) {
+      return new Promise(function (resolve, reject) {
+        var cb = "offerCb" + String(Date.now());
+        var script = document.createElement("script");
+        var timer = setTimeout(function () {
+          cleanup();
+          reject(new Error("timeout"));
+        }, 20000);
+
+        function cleanup() {
+          clearTimeout(timer);
+          try { delete window[cb]; } catch (err) { window[cb] = undefined; }
+          if (script.parentNode) script.parentNode.removeChild(script);
+        }
+
+        window[cb] = function (data) {
+          cleanup();
+          resolve(data);
+        };
+        script.onerror = function () {
+          cleanup();
+          reject(new Error("script"));
+        };
+        script.src = GAS_URL +
+          "?action=placeOrder" +
+          "&callback=" + encodeURIComponent(cb) +
+          "&email=" + encodeURIComponent(payload.email) +
+          "&seats=" + encodeURIComponent(payload.seats) +
+          "&emails=" + encodeURIComponent(payload.emails) +
+          "&_t=" + Date.now();
+        document.head.appendChild(script);
+      });
+    }
+
+    function postJson(payload) {
+      return new Promise(function (resolve, reject) {
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", GAS_URL + "?_t=" + Date.now(), true);
+        xhr.setRequestHeader("Content-Type", "text/plain;charset=utf-8");
+        xhr.timeout = 20000;
+        xhr.onload = function () {
+          try {
+            resolve(JSON.parse(xhr.responseText));
+          } catch (err) {
+            reject(err);
+          }
+        };
+        xhr.onerror = function () { reject(new Error("network")); };
+        xhr.ontimeout = function () { reject(new Error("timeout")); };
+        xhr.send(JSON.stringify(payload));
+      });
+    }
+
+    form.addEventListener("submit", function (ev) {
+      ev.preventDefault();
+      var payload = {
+        email: document.getElementById("email").value.trim(),
+        seats: document.getElementById("seats").value,
+        emails: document.getElementById("emails").value.trim()
+      };
+      if (!payload.email) {
+        setMsg("連絡用メールを入力してください。", false);
+        return;
+      }
+      submitBtn.disabled = true;
+      setMsg("送信しています…", true);
+
+      placeOrderJsonp(payload).then(function (saved) {
+        if (!saved || saved.error || !saved.orderId) {
+          showResult(saved);
+          return;
+        }
+        return postJson({ action: "sendOrderMail", orderId: saved.orderId }).then(function (mailBody) {
+          var mailFail = mailBody && (mailBody.mailError || mailBody.error);
+          showResult({
+            success: true,
+            yen: saved.yen,
+            seats: saved.seats,
+            mailError: mailFail || "",
+            warning: mailFail ? (mailBody.warning || "申し込みは記録しましたが、メールを送れませんでした。") : ""
+          });
+        }).catch(function () {
+          showResult({
+            success: true,
+            yen: saved.yen,
+            seats: saved.seats,
+            warning: "申し込みは記録しましたが、確認メールの送信に失敗しました。",
+            mailError: "sendOrderMail"
+          });
+        });
+      }).catch(function () {
+        submitBtn.disabled = false;
+        setMsg("通信できませんでした。時間をおいてもう一度送ってください。", false);
+      });
+    });
+  </script>
+</body>
+
+</html>

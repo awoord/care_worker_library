@@ -92,8 +92,15 @@
         <div class="field-block field-block-search">
           <label class="range-caption" for="searchInput">キーワード</label>
           <div class="search-row">
-            <input id="searchInput" class="search-input" type="search" name="q" placeholder="例: 心臓　ICF"
-              autocomplete="off" enterkeyhint="search">
+            <div class="search-input-wrap">
+              <input id="searchInput" class="search-input" type="search" name="q" placeholder="例: 介護保険　ICF"
+                autocomplete="off" enterkeyhint="search">
+              <button type="button" id="searchClear" class="search-clear" hidden aria-label="キーワードを消す">×</button>
+            </div>
+            <label class="check-row" for="figuresOnly">
+              <input id="figuresOnly" type="checkbox" name="fig" value="1">
+              <span class="check-label" id="figuresOnlyLabel">イラスト問題のみ</span>
+            </label>
             <button type="submit" class="search-button">検索</button>
           </div>
         </div>

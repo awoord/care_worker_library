@@ -3,6 +3,8 @@
 text_woreds.csv の単語が kaigo_kakomon_all.txt に何回出現するかを数え、
 出現回数が多い順で text_woreds.csv を上書きする。
 
+書き込み前に db_words.csv にある語を text_woreds.csv から除外する。
+
 使い方:
   python3 count_text_words_in_kakomon.py
 """
@@ -16,13 +18,14 @@ from pathlib import Path
 DIR = Path(__file__).resolve().parent
 ROOT = DIR.parent
 WORDS_CSV = DIR / "text_woreds.csv"
+DB_WORDS_CSV = DIR / "db_words.csv"
 KAKOMON_TXT = ROOT / "kakomon" / "kaigo_kakomon_all.txt"
 
 
 def load_words(path: Path) -> list[str]:
     words: list[str] = []
     seen: set[str] = set()
-    with path.open(encoding="utf-8", newline="") as f:
+    with path.open(encoding="utf-8-sig", newline="") as f:
         for row in csv.reader(f):
             if not row:
                 continue
@@ -32,6 +35,12 @@ def load_words(path: Path) -> list[str]:
             words.append(word)
             seen.add(word)
     return words
+
+
+def exclude_db_words(words: list[str], db_words: set[str]) -> tuple[list[str], int]:
+    """db にある語を除いたリストと、除外件数を返す。"""
+    kept = [w for w in words if w not in db_words]
+    return kept, len(words) - len(kept)
 
 
 def count_occurrences(text: str, words: list[str]) -> list[tuple[str, int]]:
@@ -51,6 +60,9 @@ def main() -> int:
     if not WORDS_CSV.is_file():
         print(f"単語CSVが見つかりません: {WORDS_CSV}", file=sys.stderr)
         return 1
+    if not DB_WORDS_CSV.is_file():
+        print(f"db単語CSVが見つかりません: {DB_WORDS_CSV}", file=sys.stderr)
+        return 1
     if not KAKOMON_TXT.is_file():
         print(f"過去問テキストが見つかりません: {KAKOMON_TXT}", file=sys.stderr)
         return 1
@@ -59,6 +71,16 @@ def main() -> int:
     if not words:
         print("単語が1件もありません。", file=sys.stderr)
         return 1
+
+    db_words = set(load_words(DB_WORDS_CSV))
+    words, removed = exclude_db_words(words, db_words)
+    print(f"db除外: {removed} 語（db {len(db_words)} 語中）→ 残り {len(words)} 語")
+
+    if not words:
+        write_csv(WORDS_CSV, [])
+        print("db除外後に単語が残りませんでした。空のCSVを書きました。")
+        print(f"出力: {WORDS_CSV}")
+        return 0
 
     text = KAKOMON_TXT.read_text(encoding="utf-8")
     rows = count_occurrences(text, words)

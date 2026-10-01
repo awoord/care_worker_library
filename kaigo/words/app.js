@@ -2,6 +2,7 @@ var GAS_BASE_URL = "https://script.google.com/macros/s/AKfycby1hG96pflujpC2yLpK-
 // Google Cloud の OAuth クライアント ID（Web）。未設定時はゲスト利用のみ。
 var GOOGLE_CLIENT_ID = "478572053530-mpic120ilu0tbulcu9nvia3ejp9irski.apps.googleusercontent.com";
 var FLASH_SESSION_SIZE = 5;
+var FLASH_TODAY_SEEN_GOAL = 20;
 var FLASH_EXIT_KNOWN_MS = 780;
 var FLASH_EXIT_SKIP_MS = 780;
 var FLASH_EXIT_GAP_MS = 50;
@@ -21,8 +22,13 @@ var authState = {
   userId: "",
   email: "",
   idToken: "",
-  credentialClient: null
+  credentialClient: null,
+  paid: true
 };
+
+function isPaidAccount() {
+  return authState.paid !== false;
+}
 
 function isTestDeploy() {
   return false;
@@ -120,6 +126,31 @@ function clearGuestPersistedProgress() {
   guestFlashCursorsMemory = {};
 }
 
+function updatePaywallBanner() {
+  var banner = document.getElementById("paywallBanner");
+  if (!banner) return;
+  banner.hidden = !(isLoggedIn() && authState.paid === false);
+}
+
+function applyAuthFromPayload(auth) {
+  if (!auth) return;
+  if (auth.loggedIn) {
+    authState.userId = auth.userId || authState.userId;
+    authState.email = auth.email || authState.email;
+    authState.loggedIn = true;
+    if (typeof auth.paid === "boolean") {
+      authState.paid = auth.paid;
+    }
+    persistAuthCredential(authState.idToken, {
+      userId: authState.userId,
+      email: authState.email
+    });
+  } else if (!isLoggedIn()) {
+    authState.paid = true;
+  }
+  updateAuthBarUI();
+}
+
 function updateAuthBarUI() {
   var statusEl = document.getElementById("authStatusText");
   var loginBtn = document.getElementById("googleLoginBtn");
@@ -138,11 +169,13 @@ function updateAuthBarUI() {
     if (guestNote) guestNote.hidden = true;
   } else {
     statusEl.textContent = "ゲスト";
+    authState.paid = true;
     if (loginBtn) loginBtn.hidden = true;
     if (loginMount) loginMount.hidden = !GOOGLE_CLIENT_ID;
     if (logoutBtn) logoutBtn.hidden = true;
     if (guestNote) guestNote.hidden = false;
   }
+  updatePaywallBanner();
 }
 
 function setAuthFromToken(idToken, profile) {
@@ -157,6 +190,9 @@ function setAuthFromToken(idToken, profile) {
     authState.email = profile.email;
   } else if (!idToken) {
     authState.email = "";
+  }
+  if (!idToken) {
+    authState.paid = true;
   }
   persistAuthCredential(idToken || "", {
     userId: authState.userId,
@@ -309,16 +345,7 @@ function fetchAppData() {
         return res.json();
       });
     }
-    if (payload && payload.auth && payload.auth.loggedIn) {
-      authState.userId = payload.auth.userId || authState.userId;
-      authState.email = payload.auth.email || authState.email;
-      authState.loggedIn = true;
-      persistAuthCredential(authState.idToken, {
-        userId: authState.userId,
-        email: authState.email
-      });
-      updateAuthBarUI();
-    }
+    applyAuthFromPayload(payload && payload.auth);
     return payload;
   });
 }
@@ -328,6 +355,73 @@ function startBootPrefetch() {
     bootPrefetchPromise = fetchAppData();
   }
   return bootPrefetchPromise;
+}
+
+function buildExtraRubyMap(raw) {
+  var byWord = {};
+  if (!Array.isArray(raw)) {
+    return byWord;
+  }
+  for (var i = 0; i < raw.length; i++) {
+    var item = raw[i];
+    if (!item) {
+      continue;
+    }
+    var word = String(item.word || item.w || "").trim();
+    var ruby = String(item.ruby || item.r || "").trim();
+    if (!word || !ruby || word.length < MIN_VOCAB_RUBY_LENGTH) {
+      continue;
+    }
+    if (isKanaOnlyWord(word)) {
+      continue;
+    }
+    if (!byWord[word]) {
+      byWord[word] = ruby;
+    }
+  }
+  return byWord;
+}
+
+function refreshDisplayedVocabularyRuby() {
+  if (!learnDataReady) {
+    return;
+  }
+  if (uiState.mode === "learn" && flashSession.revealed) {
+    var flashItem = getCurrentFlashWordItem();
+    if (flashItem) {
+      fillFlashcardAnswer(flashItem);
+    }
+    return;
+  }
+  if (uiState.mode === "search") {
+    onSearchFilterChanged();
+  }
+}
+
+function applyExtraRubyEntries(raw) {
+  extraRubyByWord = buildExtraRubyMap(raw);
+  invalidateVocabularyRubyEntries();
+  refreshDisplayedVocabularyRuby();
+}
+
+function startRubyExtraPrefetch() {
+  if (!rubyExtraPrefetchPromise) {
+    rubyExtraPrefetchPromise = fetch("ruby.json?_t=" + Date.now())
+      .then(function (res) {
+        if (!res.ok) {
+          return [];
+        }
+        return res.json();
+      })
+      .catch(function () {
+        return [];
+      })
+      .then(function (raw) {
+        applyExtraRubyEntries(raw);
+        return extraRubyByWord;
+      });
+  }
+  return rubyExtraPrefetchPromise;
 }
 
 function unwrapWordsCache(parsed) {
@@ -437,6 +531,9 @@ var flashInteractionReady = false;
 
 var allWordsList = [];
 var vocabularyRubyEntries = null;
+/* kakomon 側の追加ルビ辞書 B（DB語 A 以外）。A と衝突したら A を優先する */
+var extraRubyByWord = null;
+var rubyExtraPrefetchPromise = null;
 var MIN_VOCAB_RUBY_LENGTH = 2;
 var roadmapData = {};
 var initialLearnedDatesMap = {};
@@ -734,6 +831,10 @@ function markWordSkippedToday(wordName) {
   if (!wordName) return;
   todaySkippedWords[wordName] = true;
   persistTodaySkippedWords();
+  if (hasTodayStreakAchievement()) {
+    markTodayAchieved();
+    refreshLearnedCountDisplays(true);
+  }
 }
 
 function isWordSkippedToday(wordName) {
@@ -759,7 +860,11 @@ function hasPendingTodayCheckChanges() {
 }
 
 function hasTodayStreakAchievement() {
+  // 知ってる1語、または知らない20語で⭐️
   if (getTodayLearnedCount() > 0) {
+    return true;
+  }
+  if (getTodaySkippedCount() >= FLASH_TODAY_SEEN_GOAL) {
     return true;
   }
   // さがすで未送信の変更がある間は、サーバー側の今日達成を信用しない
@@ -843,6 +948,19 @@ function getTodayLearnedCount() {
   return count;
 }
 
+function getTodaySkippedCount() {
+  refreshDailyBoundariesIfNeeded();
+  var learned = collectTodayLearnedWords();
+  var count = 0;
+  for (var wordName in todaySkippedWords) {
+    if (!todaySkippedWords.hasOwnProperty(wordName) || learned[wordName]) {
+      continue;
+    }
+    count++;
+  }
+  return count;
+}
+
 function hasTodayAchievement() {
   return hasTodayStreakAchievement();
 }
@@ -894,6 +1012,13 @@ function buildLearnedDatesMap() {
   for (var dKey in serverLearnedDatesMap) {
     if (serverLearnedDatesMap.hasOwnProperty(dKey) && dKey !== todayKey) {
       map[dKey] = true;
+    }
+  }
+
+  // 知らない20語だけの達成など、サーバーに無い日も残す
+  for (var localKey in localAchievedDates) {
+    if (localAchievedDates.hasOwnProperty(localKey) && localKey !== todayKey) {
+      map[localKey] = true;
     }
   }
 
@@ -977,8 +1102,15 @@ function syncAchievementCachesFromServer() {
 
   var todayKey = getTodayJSTStr();
   var keepTodayAchieved = hasTodayStreakAchievement();
+  var preserved = {};
 
-  localAchievedDates = {};
+  for (var dKey in localAchievedDates) {
+    if (localAchievedDates.hasOwnProperty(dKey) && dKey !== todayKey) {
+      preserved[dKey] = true;
+    }
+  }
+
+  localAchievedDates = preserved;
 
   if (keepTodayAchieved && !serverLearnedDatesMap[todayKey]) {
     localAchievedDates[todayKey] = true;
@@ -1249,7 +1381,7 @@ function flushFlashCursorsNow() {
 }
 
 function sendFlashCursorsToServer() {
-  if (!isLoggedIn()) {
+  if (!isLoggedIn() || !isPaidAccount()) {
     return Promise.resolve();
   }
 
@@ -1270,6 +1402,11 @@ function sendFlashCursorsToServer() {
       return postKaigoJson(postPayload).then(function (body) {
         if (body && body.needAuth) {
           throw new Error(body.error || "needAuth");
+        }
+        if (body && body.needPaid) {
+          authState.paid = false;
+          updateAuthBarUI();
+          return;
         }
         if (body && body.error) {
           throw new Error(body.error);
@@ -2403,8 +2540,8 @@ function flushPendingChecksOnce() {
   persistLocalLearnedOverrides();
   refreshLearnedCountDisplays(false);
 
-  // ゲスト: 画面上の操作のみ。サーバーへは送らない（リロードで消える）
-  if (!isLoggedIn()) {
+  // ゲスト / 未払い: 画面上の操作のみ。サーバーへは送らない
+  if (!isLoggedIn() || !isPaidAccount()) {
     applyLocalLearnedSnapshot(snapshot);
     finalizeCommittedChecks(wordsToCommit);
     refreshLearnedCountDisplays(uiState.mode === "daily");
@@ -2431,6 +2568,11 @@ function flushPendingChecksOnce() {
     if (body && body.needAuth) {
       throw new Error(body.error || "needAuth");
     }
+    if (body && body.needPaid) {
+      authState.paid = false;
+      updateAuthBarUI();
+      throw new Error(body.error || "保存にはお支払いが必要です");
+    }
     if (body && body.error) {
       throw new Error(body.error);
     }
@@ -2442,13 +2584,7 @@ function flushPendingChecksOnce() {
       throw new Error("進捗の一部が保存されませんでした（saved=" + body.savedChecks + ")");
     }
     if (body.auth && body.auth.loggedIn) {
-      authState.userId = body.auth.userId || authState.userId;
-      authState.email = body.auth.email || authState.email;
-      persistAuthCredential(authState.idToken, {
-        userId: authState.userId,
-        email: authState.email
-      });
-      updateAuthBarUI();
+      applyAuthFromPayload(body.auth);
     }
     if (!body.allWords) {
       throw new Error("進捗保存の応答が不正です");
@@ -2534,8 +2670,10 @@ function applyAppData(res, options) {
   allWordsList = rawWords;
   invalidateVocabularyRubyEntries();
 
-  // サーバー応答を正とする（ブラウザだけの偽進捗を消す）
-  if (isLoggedIn() && !options.fromCache) {
+  applyAuthFromPayload(res.auth);
+
+  // 有料アカウントだけサーバー応答を正とする
+  if (isLoggedIn() && isPaidAccount() && !options.fromCache) {
     localLearnedOverrides = {};
     persistLocalLearnedOverrides();
     syncTodayCommittedFromWords_();
@@ -2753,6 +2891,7 @@ window.addEventListener("pageshow", function (event) {
 });
 
 startBootPrefetch();
+startRubyExtraPrefetch();
 
 function updateLearnModeClass() {
   var panelLearn = document.getElementById("panelLearn");
@@ -2886,6 +3025,15 @@ function getVocabularyRubyEntries() {
   }
 
   var byWord = {};
+  /* B（追加辞書）を先に載せ、あとから A（DB語）で上書きする */
+  if (extraRubyByWord) {
+    for (var extraWord in extraRubyByWord) {
+      if (Object.prototype.hasOwnProperty.call(extraRubyByWord, extraWord)) {
+        byWord[extraWord] = extraRubyByWord[extraWord];
+      }
+    }
+  }
+
   for (var i = 0; i < allWordsList.length; i++) {
     var item = allWordsList[i];
     var word = getWordKey(item);
@@ -2896,9 +3044,7 @@ function getVocabularyRubyEntries() {
     if (isKanaOnlyWord(word)) {
       continue;
     }
-    if (!byWord[word]) {
-      byWord[word] = ruby;
-    }
+    byWord[word] = ruby;
   }
 
   vocabularyRubyEntries = Object.keys(byWord).map(function (word) {

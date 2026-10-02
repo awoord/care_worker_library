@@ -1,3 +1,4 @@
+/* themes: kakomon 表示ロジック流用 + テーマ一覧/詳細 boot */
 var MIN_VOCAB_RUBY_LENGTH = 2;
 var vocabularyRubyEntries = null;
 var allQuestions = [];
@@ -1246,311 +1247,44 @@ function renderQuestions(questions) {
   }
 }
 
-function describeFilters(range, subject, type, terms, figuresOnly) {
-  var parts = [];
-  if (range.from === range.to) {
-    parts.push(roundLabelWithYear(range.from));
-  } else {
-    parts.push(
-      "第" +
-        range.from +
-        "〜" +
-        range.to +
-        "回（" +
-        sessionYear(range.from) +
-        "〜" +
-        sessionYear(range.to) +
-        "）"
-    );
-  }
-  if (subject) {
-    parts.push("科目「" + subject + "」");
-  }
-  if (type) {
-    parts.push("タイプ「" + type + "」");
-  }
-  if (figuresOnly) {
-    parts.push("イラスト問題のみ");
-  }
-  if (terms.length) {
-    parts.push("「" + terms.join(" ") + "」");
-  }
-  return parts.join(" ");
-}
-
-function runFilterSearch(rawQuery) {
-  if (!questionsReady) {
-    lastView = { mode: "filter", query: rawQuery || "" };
-    setStatus("問題データを読み込み中…", "filter");
-    return;
-  }
-  lastView = { mode: "filter", query: rawQuery || "" };
-  var range = getSelectedRange();
-  var subject = getSelectedSubject();
-  var type = getSelectedType();
-  var figuresOnly = getFiguresOnly();
-  var terms = parseTerms(rawQuery);
-  setActiveHighlightTerms(terms);
-  var browseAll = !terms.length && !subject && !type && !figuresOnly;
-
-  if (browseAll && range.from !== range.to) {
-    setStatus("全問表示は開始回と終了回を同じにしてください。", "filter");
-    showHint(
-      "科目・すべてのタイプ・キーワードなしで全問を見る場合は、開始回と終了回を同じにして「検索」を押してください。"
-    );
-    return;
-  }
-
-  if (browseAll) {
-    var hitsAll = searchQuestions(
-      allQuestions,
-      [],
-      range.from,
-      range.to,
-      "",
-      "",
-      false
-    );
-    setStatus(
-      roundLabelWithYear(range.from) + "の全問 → " + hitsAll.length + " 問",
-      "filter"
-    );
-    renderQuestions(hitsAll);
-    return;
-  }
-
-  var hits = searchQuestions(
-    allQuestions,
-    terms,
-    range.from,
-    range.to,
-    subject,
-    type,
-    figuresOnly
-  );
-  setStatus(
-    describeFilters(range, subject, type, terms, figuresOnly) +
-      " → " +
-      hits.length +
-      " 問",
-    "filter"
-  );
-  renderQuestions(hits);
-}
-
-function runJumpSearch() {
-  var jump = getJumpInputs();
-  if (jump.round === null || jump.number === null) {
-    setStatus("回と問題番号の両方を入力してください。", "jump");
-    showHint("例: 第37回の問10 → 回に「37」、番号に「10」を入れて「この問題を表示」。");
-    return;
-  }
-
-  if (!questionsReady) {
-    pendingJump = true;
-    lastView = { mode: "jump", query: "" };
-    setStatus("問題データを読み込み中…", "jump");
-    showHint("少々お待ちください。読み込みが終わると表示します。");
-    return;
-  }
-
-  pendingJump = false;
-  lastView = { mode: "jump", query: "" };
-  setActiveHighlightTerms([]);
-  var hit = findByRoundAndNumber(allQuestions, jump.round, jump.number);
-  if (hit) {
-    setStatus(
-      roundLabelWithYear(jump.round) + " 問題" + jump.number + " を表示中",
-      "jump"
-    );
-    renderQuestions([hit]);
-  } else {
-    setStatus(
-      roundLabelWithYear(jump.round) +
-        " 問題" +
-        jump.number +
-        " はデータにありません",
-      "jump"
-    );
-    showHint("指定した回・問題番号の問題が見つかりませんでした。");
-  }
-}
-
-function refreshCurrentView() {
-  if (lastView.mode === "jump") {
-    runJumpSearch();
-  } else if (lastView.mode === "filter") {
-    runFilterSearch(lastView.query);
-  }
-}
-
 function applyVocabularyWords(words) {
   vocabularyRubyEntries = null;
   getVocabularyRubyEntries(words || []);
-  refreshCurrentView();
 }
 
-function readStateFromUrl() {
-  var state = {
-    q: "",
-    from: meta.defaultFrom,
-    to: meta.defaultTo,
-    subject: "",
-    type: "",
-    fig: false,
-    round: "",
-    num: ""
-  };
-  try {
-    var params = new URLSearchParams(window.location.search);
-    if (params.has("q")) {
-      state.q = params.get("q") || "";
-    }
-    if (params.has("from")) {
-      var from = Number(params.get("from"));
-      if (!isNaN(from)) state.from = from;
-    }
-    if (params.has("to")) {
-      var to = Number(params.get("to"));
-      if (!isNaN(to)) state.to = to;
-    }
-    if (params.has("subject")) {
-      state.subject = params.get("subject") || "";
-    }
-    if (params.has("type")) {
-      state.type = params.get("type") || "";
-    }
-    if (params.has("fig")) {
-      var figRaw = String(params.get("fig") || "").trim().toLowerCase();
-      state.fig = figRaw === "1" || figRaw === "true" || figRaw === "yes";
-    }
-    if (params.has("round")) {
-      state.round = params.get("round") || "";
-    }
-    if (params.has("num")) {
-      state.num = params.get("num") || "";
-    }
-  } catch (err) {
-    // ignore
-  }
-  state.from = Math.min(Math.max(state.from, meta.sessionMin), meta.sessionMax);
-  state.to = Math.min(Math.max(state.to, meta.sessionMin), meta.sessionMax);
-  if (state.from > state.to) {
-    var swap = state.from;
-    state.from = state.to;
-    state.to = swap;
-  }
-  return state;
+function setStatus(text) {
+  var el = document.getElementById("searchStatus");
+  if (!el) return;
+  el.textContent = "";
+  if (!text) return;
+  fillWithRuby(el, text);
 }
 
-function writeFilterStateToUrl(rawQuery, sessionFrom, sessionTo, subject, type, figuresOnly) {
-  try {
-    var url = new URL(window.location.href);
-    var trimmed = String(rawQuery || "").trim();
-    if (trimmed) {
-      url.searchParams.set("q", trimmed);
-    } else {
-      url.searchParams.delete("q");
-    }
-    if (
-      Number(sessionFrom) === Number(meta.defaultFrom) &&
-      Number(sessionTo) === Number(meta.defaultTo)
-    ) {
-      url.searchParams.delete("from");
-      url.searchParams.delete("to");
-    } else {
-      url.searchParams.set("from", String(sessionFrom));
-      url.searchParams.set("to", String(sessionTo));
-    }
-    if (subject) {
-      url.searchParams.set("subject", subject);
-    } else {
-      url.searchParams.delete("subject");
-    }
-    if (type) {
-      url.searchParams.set("type", type);
-    } else {
-      url.searchParams.delete("type");
-    }
-    if (figuresOnly) {
-      url.searchParams.set("fig", "1");
-    } else {
-      url.searchParams.delete("fig");
-    }
-    url.searchParams.delete("round");
-    url.searchParams.delete("num");
-    window.history.replaceState(null, "", url.pathname + url.search + url.hash);
-  } catch (err) {
-    // ignore
-  }
+function showHint(message) {
+  var root = document.getElementById("questionList") || document.getElementById("themeList");
+  if (!root) return;
+  root.textContent = "";
+  var p = document.createElement("p");
+  p.className = "hint";
+  fillWithRuby(p, message);
+  root.appendChild(p);
 }
 
-function writeJumpStateToUrl(jump) {
-  try {
-    var url = new URL(window.location.href);
-    if (jump && jump.round !== null && jump.number !== null) {
-      url.searchParams.set("round", String(jump.round));
-      url.searchParams.set("num", String(jump.number));
-    } else {
-      url.searchParams.delete("round");
-      url.searchParams.delete("num");
-    }
-    url.searchParams.delete("q");
-    url.searchParams.delete("subject");
-    url.searchParams.delete("type");
-    url.searchParams.delete("fig");
-    window.history.replaceState(null, "", url.pathname + url.search + url.hash);
-  } catch (err) {
-    // ignore
-  }
-}
-
-function fillJumpNumberSelect() {
-  var numEl = document.getElementById("jumpNumber");
-  if (!numEl) {
-    return;
-  }
-  // すでに 1〜125 が入っていれば触らない（再描画によるちらつき防止）
-  if (numEl.options.length > 1) {
-    return;
-  }
-  var frag = document.createDocumentFragment();
-  for (var n = 1; n <= 125; n++) {
-    var opt = document.createElement("option");
-    opt.value = String(n);
-    opt.textContent = String(n);
-    if (n === 1) {
-      opt.selected = true;
-    }
-    frag.appendChild(opt);
-  }
-  numEl.replaceChildren(frag);
-}
-
-function showIdleState() {
-  var from = meta.defaultFrom != null ? meta.defaultFrom : 38;
-  setStatus("条件を選んで「検索」を押してください。");
-  showHint(
-    "初期表示は" + roundLabelWithYear(from) + "です。「検索」で問題を表示します。"
-  );
-}
-
-function applyTitleRuby() {
-  var h1 = document.querySelector(".page-header h1");
-  if (!h1) {
-    return;
-  }
-  fillWithRuby(h1, "介護福祉士国家試験 過去問検索");
+function showError(message) {
+  var root = document.getElementById("questionList") || document.getElementById("themeList");
+  if (!root) return;
+  root.textContent = "";
+  var p = document.createElement("p");
+  p.className = "error";
+  fillWithRuby(p, message);
+  root.appendChild(p);
 }
 
 function wireBackToTop() {
   var btn = document.getElementById("backToTop");
-  if (!btn) {
-    return;
-  }
+  if (!btn) return;
   var threshold = 320;
   var ticking = false;
-
   function update() {
     ticking = false;
     var y = window.pageYOffset || document.documentElement.scrollTop || 0;
@@ -1560,204 +1294,318 @@ function wireBackToTop() {
     } else {
       btn.classList.remove("is-visible");
       window.setTimeout(function () {
-        if (!btn.classList.contains("is-visible")) {
-          btn.hidden = true;
-        }
+        if (!btn.classList.contains("is-visible")) btn.hidden = true;
       }, 200);
     }
   }
-
-  window.addEventListener(
-    "scroll",
-    function () {
-      if (!ticking) {
-        ticking = true;
-        window.requestAnimationFrame(update);
-      }
-    },
-    { passive: true }
-  );
-
+  window.addEventListener("scroll", function () {
+    if (!ticking) {
+      ticking = true;
+      window.requestAnimationFrame(update);
+    }
+  }, { passive: true });
   btn.addEventListener("click", function () {
     window.scrollTo({ top: 0, behavior: "smooth" });
   });
-
   update();
 }
 
-function boot() {
-  var filterForm = document.getElementById("filterForm");
-  var jumpForm = document.getElementById("jumpForm");
-  var input = document.getElementById("searchInput");
-  var clearBtn = document.getElementById("searchClear");
-  var fromEl = document.getElementById("sessionFrom");
-  var toEl = document.getElementById("sessionTo");
-  var subjectEl = document.getElementById("subjectSelect");
-  var typeEl = document.getElementById("typeSelect");
-  var figuresOnlyEl = document.getElementById("figuresOnly");
-  var jumpRoundEl = document.getElementById("jumpRound");
-  var jumpNumberEl = document.getElementById("jumpNumber");
-
-  // 問番号は HTML に 1〜125 を埋め済み。不足時のみ補完
-  fillJumpNumberSelect();
-  wireAllSessionYearSelects();
-  applyTitleRuby();
-  wireBackToTop();
-  setStatus("問題データを読み込み中…");
-  showHint("少々お待ちください。");
-
-  function syncSearchClearButton() {
-    if (!clearBtn || !input) {
-      return;
-    }
-    clearBtn.hidden = !String(input.value || "").length;
-  }
-
-  function refreshFilterCounts() {
-    updateFilterOptionCounts();
-    syncSearchClearButton();
-  }
-  if (fromEl) {
-    fromEl.addEventListener("change", refreshFilterCounts);
-  }
-  if (toEl) {
-    toEl.addEventListener("change", refreshFilterCounts);
-  }
-  if (subjectEl) {
-    subjectEl.addEventListener("change", refreshFilterCounts);
-  }
-  if (typeEl) {
-    typeEl.addEventListener("change", refreshFilterCounts);
-  }
-  if (figuresOnlyEl) {
-    figuresOnlyEl.addEventListener("change", refreshFilterCounts);
-  }
-  if (input) {
-    input.addEventListener("input", refreshFilterCounts);
-  }
-  if (clearBtn && input) {
-    clearBtn.addEventListener("click", function () {
-      if (!input.value) {
-        syncSearchClearButton();
-        return;
-      }
-      input.value = "";
-      syncSearchClearButton();
-      input.focus();
-      // キーワードだけ消す。回・科目・タイプはそのまま。検索結果表示中なら再検索
-      if (lastView && lastView.mode === "filter") {
-        submitFilter();
-      } else {
-        updateFilterOptionCounts();
-      }
-    });
-  }
-
-  function submitFilter() {
-    var range = getSelectedRange();
-    var q = input.value;
-    var subject = getSelectedSubject();
-    var type = getSelectedType();
-    var figuresOnly = getFiguresOnly();
-    if (jumpRoundEl) {
-      jumpRoundEl.value = "";
-    }
-    if (jumpNumberEl) {
-      jumpNumberEl.value = "";
-    }
-    writeFilterStateToUrl(q, range.from, range.to, subject, type, figuresOnly);
-    updateFilterOptionCounts();
-    runFilterSearch(q);
-  }
-
-  function submitJump() {
-    var jump = getJumpInputs();
-    writeJumpStateToUrl(jump);
-    runJumpSearch();
-  }
-
-  filterForm.addEventListener("submit", function (ev) {
-    ev.preventDefault();
-    submitFilter();
-  });
-  jumpForm.addEventListener("submit", function (ev) {
-    ev.preventDefault();
-    submitJump();
-  });
-
-  function onQuestionsLoaded(data) {
-    allQuestions = (data && data.questions) || [];
-    meta.sessionMin = Number(data.sessionMin);
-    meta.sessionMax = Number(data.sessionMax);
-    meta.defaultFrom = Number(
-      data.defaultFrom != null ? data.defaultFrom : data.sessionMin
-    );
-    meta.defaultTo = Number(
-      data.defaultTo != null ? data.defaultTo : data.sessionMax
-    );
-    meta.count = data.count || allQuestions.length;
-    questionsReady = true;
-
-    fillSessionSelects();
-    var state = readStateFromUrl();
-    fromEl.value = String(state.from);
-    toEl.value = String(state.to);
-    input.value = state.q;
-    syncSearchClearButton();
-    if (typeEl) {
-      typeEl.value = state.type || "";
-    }
-    if (figuresOnlyEl) {
-      figuresOnlyEl.checked = !!state.fig;
-    }
-    fillSubjectSelect(collectSubjects(allQuestions), state.subject);
-    // 試作中は暫定で第38回・問題1を初期選択
-    if (jumpRoundEl) {
-      jumpRoundEl.value = state.round || "38";
-    }
-    if (jumpNumberEl) {
-      jumpNumberEl.value = state.num || "1";
-    }
-
-    if (pendingJump || (state.round && state.num)) {
-      runJumpSearch();
-    } else {
-      showIdleState();
-    }
-  }
-
-  // 問題JSONとルビ辞書を同時に読む（同一サーバ・即時表示）
+function loadRubyThen(next) {
   var bust = "_t=" + Date.now();
-  Promise.all([
-    fetch("questions.json?" + bust).then(function (res) {
-      if (!res.ok) {
-        throw new Error("questions.json の読み込みに失敗しました");
-      }
-      return res.json();
-    }),
-    fetch("ruby.json?" + bust)
-      .then(function (res) {
-        if (!res.ok) {
-          return [];
-        }
-        return res.json();
-      })
-      .catch(function () {
-        return [];
-      })
-  ])
-    .then(function (results) {
-      var data = results[0];
-      var rubyWords = results[1] || [];
+  fetch("ruby.json?" + bust)
+    .then(function (res) { return res.ok ? res.json() : []; })
+    .catch(function () { return []; })
+    .then(function (rubyWords) {
       if (Array.isArray(rubyWords) && rubyWords.length) {
         applyVocabularyWords(rubyWords.map(normalizeWordItem));
       }
-      applyTitleRuby();
-      onQuestionsLoaded(data);
-    })
-    .catch(function (err) {
-      showError(err && err.message ? err.message : "読み込みに失敗しました");
+      next();
     });
+}
+
+function renderThemeIndex(payload) {
+  var root = document.getElementById("themeList");
+  root.textContent = "";
+  var themes = (payload && payload.themes) || [];
+  if (!themes.length) {
+    showHint("テーマがまだありません。important_theme_extract に .txt ファイルを置いてデプロイしてください。");
+    setStatus("0 テーマ");
+    return;
+  }
+  setStatus(themes.length + " テーマ");
+  for (var i = 0; i < themes.length; i++) {
+    var t = themes[i];
+    var a = document.createElement("a");
+    a.className = "theme-card";
+    a.href = t.href || ("view.html?t=" + encodeURIComponent(t.slug));
+    var title = document.createElement("h2");
+    title.className = "theme-card-title";
+    fillWithRuby(title, t.title || "");
+    a.appendChild(title);
+    var meta = document.createElement("p");
+    meta.className = "theme-card-meta";
+    meta.textContent =
+      (t.displayCount != null ? t.displayCount : t.count || 0) + " 問";
+    a.appendChild(meta);
+    root.appendChild(a);
+  }
+}
+
+var THEME_RECENT_SESSION_MIN = 34;
+var THEME_RECENT_SESSION_MAX = 38;
+
+function partitionThemeQuestions(questions, recentMin, recentMax) {
+  var min = recentMin != null ? Number(recentMin) : THEME_RECENT_SESSION_MIN;
+  var max = recentMax != null ? Number(recentMax) : THEME_RECENT_SESSION_MAX;
+  var recent = [];
+  var older = [];
+  var list = questions || [];
+  for (var i = 0; i < list.length; i++) {
+    var q = list[i];
+    var round = Number(q && q.round);
+    if (!isNaN(round) && round >= min && round <= max) {
+      recent.push(q);
+    } else {
+      older.push(q);
+    }
+  }
+  if (!recent.length) {
+    return { initial: list.slice(), older: [] };
+  }
+  return { initial: recent, older: older };
+}
+
+function appendQuestions(questions) {
+  var root = document.getElementById("questionList");
+  if (!root || !questions || !questions.length) {
+    return;
+  }
+  for (var i = 0; i < questions.length; i++) {
+    var q = questions[i];
+    var card = document.createElement("article");
+    card.className = "question-card";
+    card.id = "q-" + q.id;
+
+    var metaRow = document.createElement("div");
+    metaRow.className = "meta-row";
+
+    var idBadge = document.createElement("span");
+    idBadge.className = "badge badge-id";
+    idBadge.textContent = q.round + "-" + q.number;
+    metaRow.appendChild(idBadge);
+
+    if (q.subject) {
+      var subBadge = document.createElement("span");
+      subBadge.className = "badge badge-subject";
+      subBadge.textContent = q.subject;
+      metaRow.appendChild(subBadge);
+    }
+    card.appendChild(metaRow);
+
+    var stem = document.createElement("div");
+    stem.className = "stem";
+    var bodyLines = q.body || [];
+    for (var b = 0; b < bodyLines.length; b++) {
+      var line = bodyLines[b];
+      if (!line || !String(line).trim()) {
+        continue;
+      }
+      var p = document.createElement("p");
+      fillStemWithRuby(p, line);
+      stem.appendChild(p);
+    }
+    card.appendChild(stem);
+
+    var figs = q.figures || [];
+    if (figs.length) {
+      var figWrap = document.createElement("div");
+      figWrap.className = "question-figures";
+      for (var fi = 0; fi < figs.length; fi++) {
+        var fig = document.createElement("figure");
+        fig.className = "question-figure";
+        var img = document.createElement("img");
+        img.className = "question-figure-img";
+        img.src = String(figs[fi] || "");
+        img.alt = "問題" + q.number + "の図";
+        img.loading = "lazy";
+        fig.appendChild(img);
+        figWrap.appendChild(fig);
+      }
+      card.appendChild(figWrap);
+    }
+
+    if (q.note) {
+      var note = document.createElement("p");
+      note.className = "question-note";
+      fillWithRuby(note, q.note);
+      card.appendChild(note);
+    }
+
+    var ul = document.createElement("ol");
+    ul.className = "choices";
+    ul.start = 1;
+    var choices = q.choices || [];
+    for (var c = 0; c < choices.length; c++) {
+      var choice = choices[c];
+      var li = document.createElement("li");
+      li.className = "choice";
+      li.setAttribute("data-choice-n", String(choice.n));
+
+      var body = document.createElement("div");
+      body.className = "choice-body";
+
+      var nWrap = document.createElement("span");
+      nWrap.className = "choice-n-wrap";
+      var n = document.createElement("span");
+      n.className = "choice-n";
+      n.textContent = String(choice.n);
+      nWrap.appendChild(n);
+      body.appendChild(nWrap);
+
+      var text = document.createElement("span");
+      text.className = "choice-text";
+      fillWithRuby(text, choice.text || "");
+      body.appendChild(text);
+
+      li.appendChild(body);
+
+      var choiceFigs = q.choiceFigures || {};
+      var choiceFigSrc = choiceFigs[String(choice.n)];
+      if (choiceFigSrc) {
+        var cfig = document.createElement("img");
+        cfig.className = "choice-figure-img";
+        cfig.src = String(choiceFigSrc);
+        cfig.alt = "選択肢" + choice.n + "の図";
+        cfig.loading = "lazy";
+        li.appendChild(cfig);
+      }
+
+      ul.appendChild(li);
+    }
+    card.appendChild(ul);
+
+    var trial = getAnswerCheck(q);
+    if (trial) {
+      wireAnswerCheck(card, q, trial);
+    }
+
+    root.appendChild(card);
+  }
+}
+
+function renderThemeMoreButton(olderQuestions, displayCount) {
+  var existing = document.getElementById("themeMoreWrap");
+  if (existing) {
+    existing.remove();
+  }
+  if (!olderQuestions || !olderQuestions.length) {
+    return;
+  }
+
+  var main = document.getElementById("questionList");
+  if (!main || !main.parentNode) {
+    return;
+  }
+
+  var wrap = document.createElement("div");
+  wrap.id = "themeMoreWrap";
+  wrap.className = "theme-more-wrap";
+
+  var btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "theme-more-btn";
+  btn.textContent = "もっと見る（あと" + olderQuestions.length + "問）";
+  btn.addEventListener("click", function () {
+    appendQuestions(olderQuestions);
+    wrap.remove();
+    setStatus(displayCount + " 問");
+  });
+  wrap.appendChild(btn);
+  main.parentNode.insertBefore(wrap, main.nextSibling);
+}
+
+function bootIndex() {
+  wireBackToTop();
+  setStatus("読み込み中…");
+  loadRubyThen(function () {
+    var h1 = document.querySelector(".page-header h1");
+    if (h1) fillWithRuby(h1, "介護福祉士国家試験 重要テーマ");
+    fetch("index.json?_t=" + Date.now())
+      .then(function (res) {
+        if (!res.ok) throw new Error("index.json の読み込みに失敗しました");
+        return res.json();
+      })
+      .then(renderThemeIndex)
+      .catch(function (err) {
+        showError(err && err.message ? err.message : "読み込みに失敗しました");
+      });
+  });
+}
+
+function getThemeSlugFromUrl() {
+  try {
+    var params = new URLSearchParams(window.location.search);
+    return String(params.get("t") || "").trim();
+  } catch (e) {
+    return "";
+  }
+}
+
+function bootView() {
+  wireBackToTop();
+  setStatus("読み込み中…");
+  var slug = getThemeSlugFromUrl();
+  if (!slug) {
+    showError("テーマが指定されていません。一覧から選んでください。");
+    return;
+  }
+  loadRubyThen(function () {
+    fetch("data/" + encodeURIComponent(slug) + ".json?_t=" + Date.now())
+      .then(function (res) {
+        if (!res.ok) throw new Error("テーマデータの読み込みに失敗しました");
+        return res.json();
+      })
+      .then(function (payload) {
+        var title = payload.title || "介護福祉士国家試験 重要テーマ";
+        document.title = title;
+        var h1 = document.getElementById("themeTitle");
+        if (h1) {
+          h1.textContent = "";
+          fillWithRuby(h1, title);
+        }
+        var questions = payload.questions || [];
+        var parts = partitionThemeQuestions(
+          questions,
+          payload.recentSessionMin,
+          payload.recentSessionMax
+        );
+        var displayCount =
+          payload.displayCount != null
+            ? payload.displayCount
+            : parts.initial.length;
+        setStatus(displayCount + " 問");
+        setActiveHighlightTerms([]);
+        renderQuestions(parts.initial);
+        renderThemeMoreButton(parts.older, displayCount);
+        if (payload.missing && payload.missing.length) {
+          console.warn("欠番", payload.missing);
+        }
+      })
+      .catch(function (err) {
+        showError(err && err.message ? err.message : "読み込みに失敗しました");
+      });
+  });
+}
+
+function boot() {
+  if (document.body.classList.contains("themes-index")) {
+    bootIndex();
+    return;
+  }
+  if (document.body.classList.contains("themes-view")) {
+    bootView();
+    return;
+  }
 }
 
 boot();

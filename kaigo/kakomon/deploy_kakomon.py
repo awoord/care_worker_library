@@ -33,7 +33,7 @@ if str(ROOT) not in sys.path:
 from keyword_kakomon.deploy_by_keyword import parse_choice_line
 from keyword_kakomon.extract_by_keyword import (
     KAKOMON_TXT,
-    RE_SOGO_LABEL_HEADING,
+    is_redundant_exam_label_heading,
     load_questions,
 )
 
@@ -237,8 +237,8 @@ def question_to_json(
         body.extend(ln for ln in q.context.split("\n") if ln.strip())
     if q.stem:
         body.extend(ln for ln in q.stem.split("\n") if ln.strip())
-    # ＜総合問題＞／（総合問題N）／総合問題（12問）は科目表示と重複するので出さない
-    body = [ln for ln in body if not RE_SOGO_LABEL_HEADING.match(ln.strip())]
+    # ＜総合問題＞／科目名（N問）などは科目バッジと重複するので出さない
+    body = [ln for ln in body if not is_redundant_exam_label_heading(ln)]
 
     choices = []
     for raw in q.choices:

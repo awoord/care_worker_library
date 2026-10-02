@@ -1,0 +1,76 @@
+{
+  "title": "介護福祉士国家試験 重要テーマ",
+  "count": 7,
+  "themes": [
+    {
+      "title": "ICF（国際生活機能分類）",
+      "slug": "efd0cd941521",
+      "count": 14,
+      "recentCount": 5,
+      "olderCount": 9,
+      "displayCount": 5,
+      "missingCount": 0,
+      "href": "view.html?t=efd0cd941521"
+    },
+    {
+      "title": "人体",
+      "slug": "58582d9c515d",
+      "count": 83,
+      "recentCount": 45,
+      "olderCount": 38,
+      "displayCount": 45,
+      "missingCount": 0,
+      "href": "view.html?t=58582d9c515d"
+    },
+    {
+      "title": "介護保険サービス",
+      "slug": "3a498873d92e",
+      "count": 15,
+      "recentCount": 4,
+      "olderCount": 11,
+      "displayCount": 4,
+      "missingCount": 0,
+      "href": "view.html?t=3a498873d92e"
+    },
+    {
+      "title": "利用者本位・自立支援",
+      "slug": "c8ed34da5faa",
+      "count": 44,
+      "recentCount": 22,
+      "olderCount": 22,
+      "displayCount": 22,
+      "missingCount": 0,
+      "href": "view.html?t=c8ed34da5faa"
+    },
+    {
+      "title": "喀痰吸引・経管栄養",
+      "slug": "305f9811085b",
+      "count": 37,
+      "recentCount": 15,
+      "olderCount": 22,
+      "displayCount": 15,
+      "missingCount": 0,
+      "href": "view.html?t=305f9811085b"
+    },
+    {
+      "title": "認知症の病態・部位・症状",
+      "slug": "0f847e455b04",
+      "count": 35,
+      "recentCount": 15,
+      "olderCount": 20,
+      "displayCount": 15,
+      "missingCount": 0,
+      "href": "view.html?t=0f847e455b04"
+    },
+    {
+      "title": "障害者自立支援法サービス",
+      "slug": "0d116c6e7abc",
+      "count": 28,
+      "recentCount": 16,
+      "olderCount": 12,
+      "displayCount": 16,
+      "missingCount": 0,
+      "href": "view.html?t=0d116c6e7abc"
+    }
+  ]
+}

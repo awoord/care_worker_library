@@ -70,6 +70,18 @@ RE_DOMAIN_HEADING = re.compile(r"^＜領域：.+＞\s*$")
 RE_SOGO_LABEL_HEADING = re.compile(
     r"^(?:＜\s*総合問題\s*＞|（\s*総合問題\s*\d+\s*）|総合問題（\s*\d+\s*問\s*）)\s*$"
 )
+# 科目ブロック見出し（例: 認知症の理解（10問））— 科目バッジと重複
+RE_SUBJECT_COUNT_HEADING = re.compile(r"^.+（\s*\d+\s*問\s*）\s*$")
+
+
+def is_redundant_exam_label_heading(line: str) -> bool:
+    stripped = (line or "").strip()
+    if not stripped:
+        return False
+    return bool(
+        RE_SOGO_LABEL_HEADING.match(stripped)
+        or RE_SUBJECT_COUNT_HEADING.match(stripped)
+    )
 # 回の切り替わり付近のナビゲーション行
 RE_NAV_HEADING = re.compile(r"ページに戻る\s*$")
 # ファイル名に使えない文字（macOS/Windows 共通で危ないもの）
@@ -132,7 +144,7 @@ def is_section_heading(line: str, subject: str | None = None) -> bool:
         return True
     if RE_DOMAIN_HEADING.match(stripped):
         return True
-    if RE_SOGO_LABEL_HEADING.match(stripped):
+    if is_redundant_exam_label_heading(stripped):
         return True
     if RE_NAV_HEADING.search(stripped):
         return True
@@ -301,7 +313,7 @@ def parse_question(
     while stem_parts and stem_parts[-1] == "":
         stem_parts.pop()
     stem_parts = [
-        ln for ln in stem_parts if not RE_SOGO_LABEL_HEADING.match(ln.strip())
+        ln for ln in stem_parts if not is_redundant_exam_label_heading(ln)
     ]
 
     context_lines = filter_section_headings(

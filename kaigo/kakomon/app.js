@@ -521,30 +521,13 @@ function questionType(q) {
   return "そのほか";
 }
 
-function questionHasFigure(q) {
-  var figs = q && q.figures;
-  if (figs && figs.length) {
-    return true;
-  }
-  var choiceFigs = q && q.choiceFigures;
-  if (!choiceFigs || typeof choiceFigs !== "object") {
-    return false;
-  }
-  for (var key in choiceFigs) {
-    if (Object.prototype.hasOwnProperty.call(choiceFigs, key) && choiceFigs[key]) {
-      return true;
-    }
-  }
-  return false;
-}
 
-function searchQuestions(questions, terms, sessionFrom, sessionTo, subject, type, figuresOnly) {
+function searchQuestions(questions, terms, sessionFrom, sessionTo, subject, type) {
   var range = normalizeRange(sessionFrom, sessionTo);
   var from = range.from;
   var to = range.to;
   var subjectFilter = String(subject || "").trim();
   var typeFilter = String(type || "").trim();
-  var onlyFigures = !!figuresOnly;
   var norms = terms.map(normalizeForSearch).filter(Boolean);
   var hits = [];
   for (var i = 0; i < questions.length; i++) {
@@ -557,9 +540,6 @@ function searchQuestions(questions, terms, sessionFrom, sessionTo, subject, type
       continue;
     }
     if (typeFilter && questionType(q) !== typeFilter) {
-      continue;
-    }
-    if (onlyFigures && !questionHasFigure(q)) {
       continue;
     }
     if (norms.length) {
@@ -580,15 +560,14 @@ function searchQuestions(questions, terms, sessionFrom, sessionTo, subject, type
   return hits;
 }
 
-function countInRange(questions, sessionFrom, sessionTo, subject, type, figuresOnly) {
+function countInRange(questions, sessionFrom, sessionTo, subject, type) {
   return searchQuestions(
     questions,
     [],
     sessionFrom,
     sessionTo,
     subject,
-    type,
-    figuresOnly
+    type
   ).length;
 }
 
@@ -617,10 +596,6 @@ function getSelectedType() {
   return el ? String(el.value || "").trim() : "";
 }
 
-function getFiguresOnly() {
-  var el = document.getElementById("figuresOnly");
-  return !!(el && el.checked);
-}
 
 function getJumpInputs() {
   var roundEl = document.getElementById("jumpRound");
@@ -744,10 +719,9 @@ function wireAllSessionYearSelects() {
   wireSessionYearSelect(document.getElementById("jumpRound"));
 }
 
-function countSubjectsForFilters(questions, sessionFrom, sessionTo, type, terms, figuresOnly) {
+function countSubjectsForFilters(questions, sessionFrom, sessionTo, type, terms) {
   var range = normalizeRange(sessionFrom, sessionTo);
   var typeFilter = String(type || "").trim();
-  var onlyFigures = !!figuresOnly;
   var norms = (terms || []).map(normalizeForSearch).filter(Boolean);
   var counts = {};
   var total = 0;
@@ -758,9 +732,6 @@ function countSubjectsForFilters(questions, sessionFrom, sessionTo, type, terms,
       continue;
     }
     if (typeFilter && questionType(q) !== typeFilter) {
-      continue;
-    }
-    if (onlyFigures && !questionHasFigure(q)) {
       continue;
     }
     if (norms.length) {
@@ -786,10 +757,9 @@ function countSubjectsForFilters(questions, sessionFrom, sessionTo, type, terms,
   return { counts: counts, total: total };
 }
 
-function countTypesForFilters(questions, sessionFrom, sessionTo, subject, terms, figuresOnly) {
+function countTypesForFilters(questions, sessionFrom, sessionTo, subject, terms) {
   var range = normalizeRange(sessionFrom, sessionTo);
   var subjectFilter = String(subject || "").trim();
-  var onlyFigures = !!figuresOnly;
   var norms = (terms || []).map(normalizeForSearch).filter(Boolean);
   var counts = {};
   var total = 0;
@@ -800,9 +770,6 @@ function countTypesForFilters(questions, sessionFrom, sessionTo, subject, terms,
       continue;
     }
     if (subjectFilter && String(q.subject || "") !== subjectFilter) {
-      continue;
-    }
-    if (onlyFigures && !questionHasFigure(q)) {
       continue;
     }
     if (norms.length) {
@@ -838,14 +805,12 @@ function updateSubjectOptionCounts() {
   var range = getSelectedRange();
   var type = getSelectedType();
   var terms = getFilterKeywordTerms();
-  var figuresOnly = getFiguresOnly();
   var result = countSubjectsForFilters(
     allQuestions,
     range.from,
     range.to,
     type,
-    terms,
-    figuresOnly
+    terms
   );
   for (var i = 0; i < el.options.length; i++) {
     var opt = el.options[i];
@@ -866,14 +831,12 @@ function updateTypeOptionCounts() {
   var range = getSelectedRange();
   var subject = getSelectedSubject();
   var terms = getFilterKeywordTerms();
-  var figuresOnly = getFiguresOnly();
   var result = countTypesForFilters(
     allQuestions,
     range.from,
     range.to,
     subject,
-    terms,
-    figuresOnly
+    terms
   );
   for (var i = 0; i < el.options.length; i++) {
     var opt = el.options[i];
@@ -886,31 +849,10 @@ function updateTypeOptionCounts() {
   }
 }
 
-function updateFiguresOnlyCount() {
-  var label = document.getElementById("figuresOnlyLabel");
-  if (!label || !questionsReady) {
-    return;
-  }
-  var range = getSelectedRange();
-  var subject = getSelectedSubject();
-  var type = getSelectedType();
-  var terms = getFilterKeywordTerms();
-  var n = searchQuestions(
-    allQuestions,
-    terms,
-    range.from,
-    range.to,
-    subject,
-    type,
-    true
-  ).length;
-  label.textContent = "イラスト問題のみ（" + n + "）";
-}
 
 function updateFilterOptionCounts() {
   updateSubjectOptionCounts();
   updateTypeOptionCounts();
-  updateFiguresOnlyCount();
 }
 
 function fillSubjectSelect(subjects, selected) {
@@ -1246,7 +1188,7 @@ function renderQuestions(questions) {
   }
 }
 
-function describeFilters(range, subject, type, terms, figuresOnly) {
+function describeFilters(range, subject, type, terms) {
   var parts = [];
   if (range.from === range.to) {
     parts.push(roundLabelWithYear(range.from));
@@ -1269,9 +1211,6 @@ function describeFilters(range, subject, type, terms, figuresOnly) {
   if (type) {
     parts.push("タイプ「" + type + "」");
   }
-  if (figuresOnly) {
-    parts.push("イラスト問題のみ");
-  }
   if (terms.length) {
     parts.push("「" + terms.join(" ") + "」");
   }
@@ -1288,10 +1227,9 @@ function runFilterSearch(rawQuery) {
   var range = getSelectedRange();
   var subject = getSelectedSubject();
   var type = getSelectedType();
-  var figuresOnly = getFiguresOnly();
   var terms = parseTerms(rawQuery);
   setActiveHighlightTerms(terms);
-  var browseAll = !terms.length && !subject && !type && !figuresOnly;
+  var browseAll = !terms.length && !subject && !type;
 
   if (browseAll && range.from !== range.to) {
     setStatus("全問表示は開始回と終了回を同じにしてください。", "filter");
@@ -1308,8 +1246,7 @@ function runFilterSearch(rawQuery) {
       range.from,
       range.to,
       "",
-      "",
-      false
+      ""
     );
     setStatus(
       roundLabelWithYear(range.from) + "の全問 → " + hitsAll.length + " 問",
@@ -1325,11 +1262,10 @@ function runFilterSearch(rawQuery) {
     range.from,
     range.to,
     subject,
-    type,
-    figuresOnly
+    type
   );
   setStatus(
-    describeFilters(range, subject, type, terms, figuresOnly) +
+    describeFilters(range, subject, type, terms) +
       " → " +
       hits.length +
       " 問",
@@ -1397,7 +1333,6 @@ function readStateFromUrl() {
     to: meta.defaultTo,
     subject: "",
     type: "",
-    fig: false,
     round: "",
     num: ""
   };
@@ -1420,10 +1355,6 @@ function readStateFromUrl() {
     if (params.has("type")) {
       state.type = params.get("type") || "";
     }
-    if (params.has("fig")) {
-      var figRaw = String(params.get("fig") || "").trim().toLowerCase();
-      state.fig = figRaw === "1" || figRaw === "true" || figRaw === "yes";
-    }
     if (params.has("round")) {
       state.round = params.get("round") || "";
     }
@@ -1443,7 +1374,7 @@ function readStateFromUrl() {
   return state;
 }
 
-function writeFilterStateToUrl(rawQuery, sessionFrom, sessionTo, subject, type, figuresOnly) {
+function writeFilterStateToUrl(rawQuery, sessionFrom, sessionTo, subject, type) {
   try {
     var url = new URL(window.location.href);
     var trimmed = String(rawQuery || "").trim();
@@ -1472,11 +1403,7 @@ function writeFilterStateToUrl(rawQuery, sessionFrom, sessionTo, subject, type, 
     } else {
       url.searchParams.delete("type");
     }
-    if (figuresOnly) {
-      url.searchParams.set("fig", "1");
-    } else {
-      url.searchParams.delete("fig");
-    }
+    url.searchParams.delete("fig");
     url.searchParams.delete("round");
     url.searchParams.delete("num");
     window.history.replaceState(null, "", url.pathname + url.search + url.hash);
@@ -1594,7 +1521,6 @@ function boot() {
   var toEl = document.getElementById("sessionTo");
   var subjectEl = document.getElementById("subjectSelect");
   var typeEl = document.getElementById("typeSelect");
-  var figuresOnlyEl = document.getElementById("figuresOnly");
   var jumpRoundEl = document.getElementById("jumpRound");
   var jumpNumberEl = document.getElementById("jumpNumber");
 
@@ -1629,9 +1555,6 @@ function boot() {
   if (typeEl) {
     typeEl.addEventListener("change", refreshFilterCounts);
   }
-  if (figuresOnlyEl) {
-    figuresOnlyEl.addEventListener("change", refreshFilterCounts);
-  }
   if (input) {
     input.addEventListener("input", refreshFilterCounts);
   }
@@ -1658,14 +1581,13 @@ function boot() {
     var q = input.value;
     var subject = getSelectedSubject();
     var type = getSelectedType();
-    var figuresOnly = getFiguresOnly();
     if (jumpRoundEl) {
       jumpRoundEl.value = "";
     }
     if (jumpNumberEl) {
       jumpNumberEl.value = "";
     }
-    writeFilterStateToUrl(q, range.from, range.to, subject, type, figuresOnly);
+    writeFilterStateToUrl(q, range.from, range.to, subject, type);
     updateFilterOptionCounts();
     runFilterSearch(q);
   }
@@ -1706,9 +1628,6 @@ function boot() {
     syncSearchClearButton();
     if (typeEl) {
       typeEl.value = state.type || "";
-    }
-    if (figuresOnlyEl) {
-      figuresOnlyEl.checked = !!state.fig;
     }
     fillSubjectSelect(collectSubjects(allQuestions), state.subject);
     // 試作中は暫定で第38回・問題1を初期選択

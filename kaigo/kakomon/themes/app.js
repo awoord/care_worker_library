@@ -522,30 +522,13 @@ function questionType(q) {
   return "そのほか";
 }
 
-function questionHasFigure(q) {
-  var figs = q && q.figures;
-  if (figs && figs.length) {
-    return true;
-  }
-  var choiceFigs = q && q.choiceFigures;
-  if (!choiceFigs || typeof choiceFigs !== "object") {
-    return false;
-  }
-  for (var key in choiceFigs) {
-    if (Object.prototype.hasOwnProperty.call(choiceFigs, key) && choiceFigs[key]) {
-      return true;
-    }
-  }
-  return false;
-}
 
-function searchQuestions(questions, terms, sessionFrom, sessionTo, subject, type, figuresOnly) {
+function searchQuestions(questions, terms, sessionFrom, sessionTo, subject, type) {
   var range = normalizeRange(sessionFrom, sessionTo);
   var from = range.from;
   var to = range.to;
   var subjectFilter = String(subject || "").trim();
   var typeFilter = String(type || "").trim();
-  var onlyFigures = !!figuresOnly;
   var norms = terms.map(normalizeForSearch).filter(Boolean);
   var hits = [];
   for (var i = 0; i < questions.length; i++) {
@@ -558,9 +541,6 @@ function searchQuestions(questions, terms, sessionFrom, sessionTo, subject, type
       continue;
     }
     if (typeFilter && questionType(q) !== typeFilter) {
-      continue;
-    }
-    if (onlyFigures && !questionHasFigure(q)) {
       continue;
     }
     if (norms.length) {
@@ -581,15 +561,14 @@ function searchQuestions(questions, terms, sessionFrom, sessionTo, subject, type
   return hits;
 }
 
-function countInRange(questions, sessionFrom, sessionTo, subject, type, figuresOnly) {
+function countInRange(questions, sessionFrom, sessionTo, subject, type) {
   return searchQuestions(
     questions,
     [],
     sessionFrom,
     sessionTo,
     subject,
-    type,
-    figuresOnly
+    type
   ).length;
 }
 
@@ -618,10 +597,6 @@ function getSelectedType() {
   return el ? String(el.value || "").trim() : "";
 }
 
-function getFiguresOnly() {
-  var el = document.getElementById("figuresOnly");
-  return !!(el && el.checked);
-}
 
 function getJumpInputs() {
   var roundEl = document.getElementById("jumpRound");
@@ -745,10 +720,9 @@ function wireAllSessionYearSelects() {
   wireSessionYearSelect(document.getElementById("jumpRound"));
 }
 
-function countSubjectsForFilters(questions, sessionFrom, sessionTo, type, terms, figuresOnly) {
+function countSubjectsForFilters(questions, sessionFrom, sessionTo, type, terms) {
   var range = normalizeRange(sessionFrom, sessionTo);
   var typeFilter = String(type || "").trim();
-  var onlyFigures = !!figuresOnly;
   var norms = (terms || []).map(normalizeForSearch).filter(Boolean);
   var counts = {};
   var total = 0;
@@ -759,9 +733,6 @@ function countSubjectsForFilters(questions, sessionFrom, sessionTo, type, terms,
       continue;
     }
     if (typeFilter && questionType(q) !== typeFilter) {
-      continue;
-    }
-    if (onlyFigures && !questionHasFigure(q)) {
       continue;
     }
     if (norms.length) {
@@ -787,10 +758,9 @@ function countSubjectsForFilters(questions, sessionFrom, sessionTo, type, terms,
   return { counts: counts, total: total };
 }
 
-function countTypesForFilters(questions, sessionFrom, sessionTo, subject, terms, figuresOnly) {
+function countTypesForFilters(questions, sessionFrom, sessionTo, subject, terms) {
   var range = normalizeRange(sessionFrom, sessionTo);
   var subjectFilter = String(subject || "").trim();
-  var onlyFigures = !!figuresOnly;
   var norms = (terms || []).map(normalizeForSearch).filter(Boolean);
   var counts = {};
   var total = 0;
@@ -801,9 +771,6 @@ function countTypesForFilters(questions, sessionFrom, sessionTo, subject, terms,
       continue;
     }
     if (subjectFilter && String(q.subject || "") !== subjectFilter) {
-      continue;
-    }
-    if (onlyFigures && !questionHasFigure(q)) {
       continue;
     }
     if (norms.length) {
@@ -839,14 +806,12 @@ function updateSubjectOptionCounts() {
   var range = getSelectedRange();
   var type = getSelectedType();
   var terms = getFilterKeywordTerms();
-  var figuresOnly = getFiguresOnly();
   var result = countSubjectsForFilters(
     allQuestions,
     range.from,
     range.to,
     type,
-    terms,
-    figuresOnly
+    terms
   );
   for (var i = 0; i < el.options.length; i++) {
     var opt = el.options[i];
@@ -867,14 +832,12 @@ function updateTypeOptionCounts() {
   var range = getSelectedRange();
   var subject = getSelectedSubject();
   var terms = getFilterKeywordTerms();
-  var figuresOnly = getFiguresOnly();
   var result = countTypesForFilters(
     allQuestions,
     range.from,
     range.to,
     subject,
-    terms,
-    figuresOnly
+    terms
   );
   for (var i = 0; i < el.options.length; i++) {
     var opt = el.options[i];
@@ -887,31 +850,10 @@ function updateTypeOptionCounts() {
   }
 }
 
-function updateFiguresOnlyCount() {
-  var label = document.getElementById("figuresOnlyLabel");
-  if (!label || !questionsReady) {
-    return;
-  }
-  var range = getSelectedRange();
-  var subject = getSelectedSubject();
-  var type = getSelectedType();
-  var terms = getFilterKeywordTerms();
-  var n = searchQuestions(
-    allQuestions,
-    terms,
-    range.from,
-    range.to,
-    subject,
-    type,
-    true
-  ).length;
-  label.textContent = "イラスト問題のみ（" + n + "）";
-}
 
 function updateFilterOptionCounts() {
   updateSubjectOptionCounts();
   updateTypeOptionCounts();
-  updateFiguresOnlyCount();
 }
 
 function fillSubjectSelect(subjects, selected) {
@@ -1354,12 +1296,16 @@ function renderThemeIndex(payload) {
 var THEME_RECENT_SESSION_MIN = 34;
 var THEME_RECENT_SESSION_MAX = 38;
 
-function partitionThemeQuestions(questions, recentMin, recentMax) {
+function partitionThemeQuestions(questions, recentMin, recentMax, showAllInOrder) {
+  var list = questions || [];
+  /* 同じ問題など: txt の並びのまま全件表示 */
+  if (showAllInOrder) {
+    return { initial: list.slice(), older: [] };
+  }
   var min = recentMin != null ? Number(recentMin) : THEME_RECENT_SESSION_MIN;
   var max = recentMax != null ? Number(recentMax) : THEME_RECENT_SESSION_MAX;
   var recent = [];
   var older = [];
-  var list = questions || [];
   for (var i = 0; i < list.length; i++) {
     var q = list[i];
     var round = Number(q && q.round);
@@ -1577,7 +1523,8 @@ function bootView() {
         var parts = partitionThemeQuestions(
           questions,
           payload.recentSessionMin,
-          payload.recentSessionMax
+          payload.recentSessionMax,
+          !!payload.showAllInOrder
         );
         var displayCount =
           payload.displayCount != null

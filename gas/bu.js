@@ -312,10 +312,6 @@ function submitCategoryUpdate(checkedWords, uncheckedWords, sheet) {
     if (isModified) {
       flagsRange.setValues(values);
       invalidateInitialAppCache(sheet.getName());
-
-      if (sheet.getName() === DB_SHEET_PROD && checkedWords.length > 0) {
-        sendProdCheckNotifyEmail(values);
-      }
     }
 
     return { success: true };
@@ -374,22 +370,8 @@ function formatCategoryCountLines(counts) {
 }
 
 function sendProdCheckNotifyEmail(dbValues) {
-  var to = getProdCheckNotifyEmail();
-  if (!to) return;
-
-  var counts = buildCategoryLearnedCounts(dbValues);
-  var nowStr = Utilities.formatDate(new Date(), "Asia/Tokyo", "yyyy/MM/dd HH:mm");
-  var body =
-    "本番dbで単語がチェックされました。\n\n" +
-    formatCategoryCountLines(counts) +
-    "\n\n" +
-    nowStr;
-
-  try {
-    MailApp.sendEmail(to, "【本番】単語がチェックされました", body);
-  } catch (mailErr) {
-    console.error("本番チェック通知メールの送信に失敗: " + mailErr);
-  }
+  /* 廃止: 学習チェック時の Gmail 通知は送らない */
+  return;
 }
 
 function countStreakEndingAt(learnedDates, endDate) {

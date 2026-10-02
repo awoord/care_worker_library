@@ -272,15 +272,13 @@ h1 {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 10px;
-        /* 「イラスト問題のみ」→検索ボタンと同じ見た目の間隔
-           (.check-row padding-bottom 6 + margin-bottom 6 + .search-row gap 8) */
         margin: 0 0 20px;
 }
 
 .search-row {
         display: flex;
         flex-direction: column;
-        gap: 8px;
+        gap: 20px;
         width: 100%;
         align-items: stretch;
 }

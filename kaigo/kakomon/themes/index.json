@@ -1,6 +1,6 @@
 {
   "title": "介護福祉士国家試験 重要テーマ",
-  "count": 7,
+  "count": 11,
   "themes": [
     {
       "title": "ICF（国際生活機能分類）",
@@ -11,6 +11,16 @@
       "displayCount": 5,
       "missingCount": 0,
       "href": "view.html?t=efd0cd941521"
+    },
+    {
+      "title": "イラスト問題",
+      "slug": "03477c45d913",
+      "count": 25,
+      "recentCount": 8,
+      "olderCount": 17,
+      "displayCount": 8,
+      "missingCount": 0,
+      "href": "view.html?t=03477c45d913"
     },
     {
       "title": "人体",
@@ -43,24 +53,54 @@
       "href": "view.html?t=c8ed34da5faa"
     },
     {
-      "title": "喀痰吸引・経管栄養",
-      "slug": "305f9811085b",
-      "count": 37,
-      "recentCount": 15,
-      "olderCount": 22,
-      "displayCount": 15,
+      "title": "同じ問題",
+      "slug": "3c3ef3155adf",
+      "count": 10,
+      "recentCount": 10,
+      "olderCount": 0,
+      "displayCount": 10,
       "missingCount": 0,
-      "href": "view.html?t=305f9811085b"
+      "href": "view.html?t=3c3ef3155adf"
     },
     {
-      "title": "認知症の病態・部位・症状",
-      "slug": "0f847e455b04",
+      "title": "喀痰吸引",
+      "slug": "d3514f09eb50",
+      "count": 20,
+      "recentCount": 7,
+      "olderCount": 13,
+      "displayCount": 7,
+      "missingCount": 0,
+      "href": "view.html?t=d3514f09eb50"
+    },
+    {
+      "title": "理論と実践の違い",
+      "slug": "c7398e44f4db",
+      "count": 5,
+      "recentCount": 3,
+      "olderCount": 2,
+      "displayCount": 3,
+      "missingCount": 0,
+      "href": "view.html?t=c7398e44f4db"
+    },
+    {
+      "title": "経管栄養",
+      "slug": "1b47fa56594b",
+      "count": 17,
+      "recentCount": 8,
+      "olderCount": 9,
+      "displayCount": 8,
+      "missingCount": 0,
+      "href": "view.html?t=1b47fa56594b"
+    },
+    {
+      "title": "認知症の病態・症状",
+      "slug": "06414d1eeaf8",
       "count": 35,
       "recentCount": 15,
       "olderCount": 20,
       "displayCount": 15,
       "missingCount": 0,
-      "href": "view.html?t=0f847e455b04"
+      "href": "view.html?t=06414d1eeaf8"
     },
     {
       "title": "障害者自立支援法サービス",

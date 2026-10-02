@@ -14,6 +14,7 @@ var FLASH_CURSORS_SHEET_HEADERS = ["環境", "カテゴリ", "位置", "次", "�
 var LEARNED_DATE_NUMBER_FORMAT = "yyyy/mm/dd hh:mm";
 // 未設定時はスクリプト実行者のメールへ送信。別アドレスへ送る場合は
 // スクリプトプロパティ PROD_CHECK_NOTIFY_EMAIL を設定する。
+// ※ 単語チェック通知メールは廃止（学習時は送らない）。有料申し込みメールのみ送信。
 //
 // 申し込みメールが「send_mail の権限がない」になるとき:
 // エディタで authorizePaidMail を実行 → 権限を許可 → 必要ならウェブアプリを再デプロイ。
@@ -486,10 +487,6 @@ function submitCategoryUpdate(checkedWords, uncheckedWords, sheet) {
       flagsRange.setValues(values);
       formatLearnedDateColumn_(sheet);
       invalidateInitialAppCache(sheet.getName());
-
-      if (sheet.getName() === DB_SHEET_PROD && checkedWords.length > 0) {
-        sendProdCheckNotifyEmail(values);
-      }
     }
 
     return { success: true };
@@ -566,22 +563,8 @@ function formatCategoryCountLines(counts) {
 }
 
 function sendProdCheckNotifyEmail(dbValues) {
-  var to = getProdCheckNotifyEmail();
-  if (!to) return;
-
-  var counts = buildCategoryLearnedCounts(dbValues);
-  var nowStr = Utilities.formatDate(new Date(), "Asia/Tokyo", "yyyy/MM/dd HH:mm");
-  var body =
-    "本番dbで単語がチェックされました。\n\n" +
-    formatCategoryCountLines(counts) +
-    "\n\n" +
-    nowStr;
-
-  try {
-    MailApp.sendEmail(to, "【本番】単語がチェックされました", body);
-  } catch (mailErr) {
-    console.error("本番チェック通知メールの送信に失敗: " + mailErr);
-  }
+  /* 廃止: 学習チェック時の Gmail 通知は送らない */
+  return;
 }
 
 var DAILY_LOG_SHEET = "daily_log";

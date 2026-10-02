@@ -5,7 +5,6 @@
 - ファイル名（拡張子除く）→ ページ見出し
 - 本文の 【回-番号｜…】 → questions.json から問題を抽出
 - 表示は kakomon と同じカード形式（style / ルビ / 正誤UI）
-- 旧 URL /kaigo/themes/ には 301 リダイレクトを残す
 
 使い方:
   python3 kaigo/kakomon/themes/deploy_themes.py           # 生成＋FTP
@@ -38,12 +37,15 @@ FTP_USER = "ao@nihongo.site"
 FTP_PASS = "highway#61"
 REMOTE_BASE_DIR = "/public_html/nihongo.site"
 REMOTE_SITE_DIR = f"{REMOTE_BASE_DIR}/kaigo/kakomon/themes"
-REMOTE_LEGACY_DIR = f"{REMOTE_BASE_DIR}/kaigo/themes"
 PUBLIC_URL = "https://nihongo.site/kaigo/kakomon/themes/"
 
 # 初期表示する直近回（見出しの問題数もこの範囲）
 RECENT_SESSION_MIN = 34
 RECENT_SESSION_MAX = 38
+# 図あり問題を questions.json から自動生成するテーマ名
+ILLUST_THEME_TITLE = "イラスト問題"
+# 全件・ファイル順で出すテーマ（もっと見るなし）
+SHOW_ALL_IN_ORDER_TITLES = frozenset({"同じ問題"})
 
 RE_QID = re.compile(r"【\s*(\d+)\s*-\s*(\d+)")
 
@@ -57,29 +59,6 @@ HTACCESS_CONTENT = """
     Header always unset ETag
 </IfModule>
 FileETag None
-"""
-
-# 旧 /kaigo/themes/ → /kaigo/kakomon/themes/
-LEGACY_HTACCESS_CONTENT = """
-<IfModule mod_rewrite.c>
-    RewriteEngine On
-    RewriteRule ^(.*)$ /kaigo/kakomon/themes/$1 [R=301,L,QSA]
-</IfModule>
-"""
-
-LEGACY_INDEX_HTML = """<!DOCTYPE html>
-<html lang="ja">
-<head>
-  <meta charset="UTF-8">
-  <meta http-equiv="refresh" content="0; url=/kaigo/kakomon/themes/">
-  <link rel="canonical" href="https://nihongo.site/kaigo/kakomon/themes/">
-  <title>移動しました</title>
-  <script>location.replace("/kaigo/kakomon/themes/" + location.search + location.hash);</script>
-</head>
-<body>
-  <p><a href="/kaigo/kakomon/themes/">重要テーマはこちらへ移動しました</a></p>
-</body>
-</html>
 """
 
 DEPLOY_STATIC = ("index.html", "view.html", "app.js", "style.css", "ruby.json", "themes.css")
@@ -153,6 +132,40 @@ def count_recent_questions(questions: list[dict]) -> int:
     return sum(1 for q in questions if is_recent_session_question(q))
 
 
+def question_has_figure(question: dict) -> bool:
+    figs = question.get("figures") or []
+    if figs:
+        return True
+    choice_figs = question.get("choiceFigures") or {}
+    if not isinstance(choice_figs, dict):
+        return False
+    return any(choice_figs.values())
+
+
+def regenerate_illustration_theme_txt(by_id: dict[str, dict]) -> None:
+    """questions.json から図あり問題を抽出し、イラスト問題.txt を自動生成する。"""
+    items: list[dict] = []
+    for q in by_id.values():
+        if question_has_figure(q):
+            items.append(q)
+    items.sort(
+        key=lambda q: (
+            -int(q.get("round") or 0),
+            int(q.get("number") or 0),
+        )
+    )
+    lines: list[str] = []
+    for q in items:
+        qid = str(q.get("id") or "").strip()
+        if not qid:
+            qid = f"{int(q.get('round') or 0)}-{int(q.get('number') or 0)}"
+        subject = str(q.get("subject") or "").strip()
+        lines.append(f"【{qid}｜{subject}】")
+    out = THEME_SRC_DIR / f"{ILLUST_THEME_TITLE}.txt"
+    out.write_text(("\n".join(lines) + ("\n" if lines else "")), encoding="utf-8")
+    print(f"自動生成: {out.name} → {len(lines)} 問")
+
+
 def rewrite_asset_path(path: str) -> str:
     raw = str(path or "").strip()
     if not raw:
@@ -215,6 +228,7 @@ def build_site() -> list[dict]:
         old.unlink()
 
     by_id = load_questions_by_id()
+    regenerate_illustration_theme_txt(by_id)
     sources = list_theme_source_files()
     if not sources:
         print(f"警告: .txt のテーマファイルがありません → {THEME_SRC_DIR}")
@@ -233,10 +247,16 @@ def build_site() -> list[dict]:
                 continue
             questions.append(rewrite_question_assets(src))
 
-        recent_count = count_recent_questions(questions)
-        older_count = len(questions) - recent_count
-        # 見出し用: 直近があればその件数、なければ全件
-        display_count = recent_count if recent_count > 0 else len(questions)
+        show_all = title in SHOW_ALL_IN_ORDER_TITLES
+        if show_all:
+            recent_count = len(questions)
+            older_count = 0
+            display_count = len(questions)
+        else:
+            recent_count = count_recent_questions(questions)
+            older_count = len(questions) - recent_count
+            # 見出し用: 直近があればその件数、なければ全件
+            display_count = recent_count if recent_count > 0 else len(questions)
 
         payload = {
             "title": title,
@@ -247,6 +267,8 @@ def build_site() -> list[dict]:
             "displayCount": display_count,
             "recentSessionMin": RECENT_SESSION_MIN,
             "recentSessionMax": RECENT_SESSION_MAX,
+            # 同じ問題など: もっと見るなし・txt の並びのまま
+            "showAllInOrder": show_all,
             "ids": [q.get("id") or f"{q.get('round')}-{q.get('number')}" for q in questions],
             "missing": missing,
             "questions": questions,
@@ -268,10 +290,13 @@ def build_site() -> list[dict]:
                 "href": f"view.html?t={slug}",
             }
         )
-        msg = (
-            f"テーマ: {title} → 表示 {display_count} 問"
-            f"（全 {len(questions)} / 直近 {recent_count} / 以前 {older_count}）"
-        )
+        if show_all:
+            msg = f"テーマ: {title} → 全 {len(questions)} 問（ファイル順・もっと見るなし）"
+        else:
+            msg = (
+                f"テーマ: {title} → 表示 {display_count} 問"
+                f"（全 {len(questions)} / 直近 {recent_count} / 以前 {older_count}）"
+            )
         if missing:
             msg += f"（欠番 {len(missing)}: {', '.join(missing[:8])}{'…' if len(missing) > 8 else ''}）"
         print(msg)
@@ -336,25 +361,8 @@ def upload_site() -> None:
             ftps.storbinary(f"STOR {path.name}", f)
         print(f"アップロード完了: data/{path.name}")
 
-    upload_legacy_redirect(ftps)
-
     ftps.quit()
     print(f"\n公開URL: {PUBLIC_URL}?_cb={version}")
-
-
-def upload_legacy_redirect(ftps: FTP_TLS) -> None:
-    """旧 /kaigo/themes/ から新 URL へ 301。"""
-    ensure_remote_dir(ftps, REMOTE_LEGACY_DIR)
-    ftps.storbinary(
-        "STOR .htaccess",
-        io.BytesIO(LEGACY_HTACCESS_CONTENT.strip().encode("utf-8")),
-    )
-    print("アップロード完了: (旧) /kaigo/themes/.htaccess → 301")
-    ftps.storbinary(
-        "STOR index.html",
-        io.BytesIO(LEGACY_INDEX_HTML.encode("utf-8")),
-    )
-    print("アップロード完了: (旧) /kaigo/themes/index.html → リダイレクト")
 
 
 def main() -> int:

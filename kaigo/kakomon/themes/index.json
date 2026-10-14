@@ -1,6 +1,6 @@
 {
   "title": "介護福祉士国家試験 重要テーマ",
-  "count": 17,
+  "count": 18,
   "groups": [],
   "ungrouped": [
     {
@@ -26,24 +26,13 @@
       "href": "view.html?t=75aeba0b7893"
     },
     {
-      "title": "人物",
-      "label": "人物",
-      "slug": "b755b68373c8",
-      "count": 27,
-      "recentCount": 13,
-      "olderCount": 14,
-      "displayCount": 13,
-      "missingCount": 0,
-      "href": "view.html?t=b755b68373c8"
-    },
-    {
       "title": "介護保険法（サービス内容）",
       "label": "介護保険法（サービス内容）",
       "slug": "ddcecc843844",
-      "count": 17,
-      "recentCount": 7,
+      "count": 18,
+      "recentCount": 8,
       "olderCount": 10,
-      "displayCount": 7,
+      "displayCount": 8,
       "missingCount": 0,
       "href": "view.html?t=ddcecc843844"
     },
@@ -103,6 +92,17 @@
       "href": "view.html?t=b36896f5f1b8"
     },
     {
+      "title": "有料老人ホーム・老人福祉施設・サービス付き高齢者住宅",
+      "label": "有料老人ホーム・老人福祉施設・サービス付き高齢者住宅",
+      "slug": "b39aeb55675b",
+      "count": 6,
+      "recentCount": 5,
+      "olderCount": 1,
+      "displayCount": 5,
+      "missingCount": 0,
+      "href": "view.html?t=b39aeb55675b"
+    },
+    {
       "title": "生活支援技術",
       "label": "生活支援技術",
       "slug": "b62111402b81",
@@ -117,12 +117,23 @@
       "title": "社会保険（医療・年金・雇用・労災・介護）",
       "label": "社会保険（医療・年金・雇用・労災・介護）",
       "slug": "fc56ace6c8b5",
-      "count": 7,
+      "count": 8,
       "recentCount": 2,
-      "olderCount": 5,
+      "olderCount": 6,
       "displayCount": 2,
       "missingCount": 0,
       "href": "view.html?t=fc56ace6c8b5"
+    },
+    {
+      "title": "福祉に関連する人物",
+      "label": "福祉に関連する人物",
+      "slug": "ef8197ddc729",
+      "count": 27,
+      "recentCount": 13,
+      "olderCount": 14,
+      "displayCount": 13,
+      "missingCount": 0,
+      "href": "view.html?t=ef8197ddc729"
     },
     {
       "title": "経管栄養",
@@ -215,24 +226,13 @@
       "href": "view.html?t=75aeba0b7893"
     },
     {
-      "title": "人物",
-      "label": "人物",
-      "slug": "b755b68373c8",
-      "count": 27,
-      "recentCount": 13,
-      "olderCount": 14,
-      "displayCount": 13,
-      "missingCount": 0,
-      "href": "view.html?t=b755b68373c8"
-    },
-    {
       "title": "介護保険法（サービス内容）",
       "label": "介護保険法（サービス内容）",
       "slug": "ddcecc843844",
-      "count": 17,
-      "recentCount": 7,
+      "count": 18,
+      "recentCount": 8,
       "olderCount": 10,
-      "displayCount": 7,
+      "displayCount": 8,
       "missingCount": 0,
       "href": "view.html?t=ddcecc843844"
     },
@@ -292,6 +292,17 @@
       "href": "view.html?t=b36896f5f1b8"
     },
     {
+      "title": "有料老人ホーム・老人福祉施設・サービス付き高齢者住宅",
+      "label": "有料老人ホーム・老人福祉施設・サービス付き高齢者住宅",
+      "slug": "b39aeb55675b",
+      "count": 6,
+      "recentCount": 5,
+      "olderCount": 1,
+      "displayCount": 5,
+      "missingCount": 0,
+      "href": "view.html?t=b39aeb55675b"
+    },
+    {
       "title": "生活支援技術",
       "label": "生活支援技術",
       "slug": "b62111402b81",
@@ -306,12 +317,23 @@
       "title": "社会保険（医療・年金・雇用・労災・介護）",
       "label": "社会保険（医療・年金・雇用・労災・介護）",
       "slug": "fc56ace6c8b5",
-      "count": 7,
+      "count": 8,
       "recentCount": 2,
-      "olderCount": 5,
+      "olderCount": 6,
       "displayCount": 2,
       "missingCount": 0,
       "href": "view.html?t=fc56ace6c8b5"
+    },
+    {
+      "title": "福祉に関連する人物",
+      "label": "福祉に関連する人物",
+      "slug": "ef8197ddc729",
+      "count": 27,
+      "recentCount": 13,
+      "olderCount": 14,
+      "displayCount": 13,
+      "missingCount": 0,
+      "href": "view.html?t=ef8197ddc729"
     },
     {
       "title": "経管栄養",

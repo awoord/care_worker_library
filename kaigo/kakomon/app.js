@@ -1470,6 +1470,54 @@ function applyTitleRuby() {
   fillWithRuby(h1, "介護福祉士国家試験 過去問検索");
 }
 
+var RUBY_HIDDEN_KEY = "kakomon.rubyHidden";
+
+function isRubyHidden() {
+  try {
+    return localStorage.getItem(RUBY_HIDDEN_KEY) === "1";
+  } catch (err) {
+    return false;
+  }
+}
+
+function setRubyHidden(hidden) {
+  try {
+    localStorage.setItem(RUBY_HIDDEN_KEY, hidden ? "1" : "0");
+  } catch (err) {
+    /* ignore */
+  }
+  if (document.body) {
+    document.body.classList.toggle("ruby-off", !!hidden);
+  }
+  var btn = document.getElementById("rubyToggle");
+  if (!btn) {
+    return;
+  }
+  btn.setAttribute("aria-pressed", hidden ? "true" : "false");
+  btn.textContent = hidden ? "ルビ表示" : "ルビ非表示";
+  btn.setAttribute(
+    "aria-label",
+    hidden ? "ルビを表示する" : "ルビを非表示にする"
+  );
+}
+
+function wireRubyToggle() {
+  setRubyHidden(isRubyHidden());
+  var nav = document.querySelector(".site-nav");
+  if (!nav || document.getElementById("rubyToggle")) {
+    return;
+  }
+  var btn = document.createElement("button");
+  btn.type = "button";
+  btn.id = "rubyToggle";
+  btn.className = "ruby-toggle";
+  nav.appendChild(btn);
+  setRubyHidden(isRubyHidden());
+  btn.addEventListener("click", function () {
+    setRubyHidden(!isRubyHidden());
+  });
+}
+
 function wireBackToTop() {
   var btn = document.getElementById("backToTop");
   if (!btn) {
@@ -1528,6 +1576,7 @@ function boot() {
   fillJumpNumberSelect();
   wireAllSessionYearSelects();
   applyTitleRuby();
+  wireRubyToggle();
   wireBackToTop();
   setStatus("問題データを読み込み中…");
   showHint("少々お待ちください。");

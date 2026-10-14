@@ -94,6 +94,37 @@ body {
         pointer-events: none;
 }
 
+.ruby-toggle {
+        margin-left: auto;
+        padding: 4px 10px;
+        border: 1px solid var(--border, #d0cdc6);
+        border-radius: 999px;
+        background: #fff;
+        color: var(--muted);
+        font-family: var(--font);
+        font-size: 13px;
+        font-weight: 500;
+        line-height: 1.2;
+        cursor: pointer;
+}
+
+.ruby-toggle:hover {
+        color: var(--accent);
+        border-color: var(--accent);
+}
+
+.ruby-toggle[aria-pressed="true"] {
+        color: var(--text);
+        background: #efece6;
+        border-color: #c8c3b8;
+        font-weight: 700;
+}
+
+.ruby-toggle:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+}
+
 .eyebrow {
         margin: 0 0 6px;
         font-size: 13px;
@@ -896,7 +927,19 @@ h1 {
         text-align: center;
         white-space: nowrap;
         pointer-events: none;
+        user-select: none;
+        -webkit-user-select: none;
         -webkit-text-size-adjust: 100%;
+}
+
+/* ルビ非表示（コピペ用）。.ruby-text を消すので選択コピーに読みが混ざりにくい */
+body.ruby-off .ruby-pair > rt,
+body.ruby-off .ruby-text {
+        display: none;
+}
+
+body.ruby-off .ruby-pair {
+        line-height: inherit;
 }
 
 .vocab-ruby-run {

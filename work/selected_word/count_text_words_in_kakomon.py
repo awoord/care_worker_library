@@ -6,7 +6,7 @@ text_woreds.csv の単語が kaigo_kakomon_all.txt に何回出現するかを�
 書き込み前に db_words.csv にある語を text_woreds.csv から除外する。
 
 使い方:
-  python3 count_text_words_in_kakomon.py
+  python3 work/selected_word/count_text_words_in_kakomon.py
 """
 
 from __future__ import annotations
@@ -16,10 +16,10 @@ import sys
 from pathlib import Path
 
 DIR = Path(__file__).resolve().parent
-ROOT = DIR.parent
+ROOT = DIR.parent.parent
 WORDS_CSV = DIR / "text_woreds.csv"
 DB_WORDS_CSV = DIR / "db_words.csv"
-KAKOMON_TXT = ROOT / "kakomon" / "kaigo_kakomon_all.txt"
+KAKOMON_TXT = ROOT / "data" / "kakomon" / "kaigo_kakomon_all.txt"
 
 
 def load_words(path: Path) -> list[str]:

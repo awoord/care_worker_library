@@ -96,17 +96,23 @@
                 <button type="button" id="flashUndoBtn" class="flash-undo-btn flash-undo-btn-study is-unavailable"
                   aria-label="1つ戻す">←</button>
                 <div class="flash-action-panel">
-                  <button type="button" id="flashRevealBtn" class="flash-reveal-btn">見てみる</button>
+                  <button type="button" id="flashRevealBtn" class="flash-reveal-btn">見る</button>
                   <div id="flashAnswerBtns" class="flash-answer-btns" aria-live="polite" hidden>
-                    <button type="button" id="flashUnknownBtn" class="flash-unknown-btn flash-circle-btn">
+                    <button type="button" id="flashUnknownBtn" class="flash-unknown-btn flash-circle-btn" aria-label="知らない・忘れた">
                       <span class="flash-circle-btn-icon flash-circle-btn-icon-text" aria-hidden="true">?</span>
-                      <span class="flash-circle-btn-label">知らない</span>
+                      <span class="flash-circle-btn-label">
+                        <span class="flash-circle-btn-line">知らない</span>
+                        <span class="flash-circle-btn-line">忘れた</span>
+                      </span>
                     </button>
-                    <button type="button" id="flashKnownBtn" class="flash-known-btn flash-circle-btn">
+                    <button type="button" id="flashKnownBtn" class="flash-known-btn flash-circle-btn" aria-label="知ってる・覚えた">
                       <svg class="flash-circle-btn-icon flash-circle-btn-icon-check" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                         <path fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" d="M6 12.5 10.2 16.7 18 8.5" />
                       </svg>
-                      <span class="flash-circle-btn-label">知ってる</span>
+                      <span class="flash-circle-btn-label">
+                        <span class="flash-circle-btn-line">知ってる</span>
+                        <span class="flash-circle-btn-line">覚えた</span>
+                      </span>
                     </button>
                   </div>
                 </div>
@@ -152,7 +158,7 @@
                   </div>
                 </div>
               </div>
-              <p id="flashCompleteSkipNote" class="flash-complete-skip-note">「知らない」ことばは、あとでまたでてきます.</p>
+              <p id="flashCompleteSkipNote" class="flash-complete-skip-note">「知らない・忘れた」ことばは、またでてきます.</p>
             </div>
           </div>
         </div>
@@ -170,8 +176,8 @@
         </div>
 
         <div class="filter-chip-row">
-          <div id="chipUnlearned" class="filter-chip chip-unlearned" role="button" tabindex="0">知らない</div>
-          <div id="chipLearned" class="filter-chip chip-learned" role="button" tabindex="0">知ってる</div>
+          <div id="chipUnlearned" class="filter-chip chip-unlearned" role="button" tabindex="0">知らない / 忘れた</div>
+          <div id="chipLearned" class="filter-chip chip-learned" role="button" tabindex="0">知ってる / 覚えた</div>
         </div>
       </div>
 
@@ -199,13 +205,67 @@
             <span class="daily-stat-label">れんぞく</span>
             <span id="valStreak" class="daily-stat-value" aria-live="polite">0<span class="daily-stat-unit"> 日</span></span>
           </div>
-          <div class="daily-stat-card today">
-            <span class="daily-stat-label">きょう 見た</span>
+          <div id="cardTodayWords" class="daily-stat-card today">
+            <span class="daily-stat-label">
+              <span class="daily-stat-label-text">きょう 見た</span>
+            </span>
             <span id="valTodayWords" class="daily-stat-value" aria-live="polite"><span class="daily-stat-num">0</span><span class="daily-stat-unit"> 語</span></span>
           </div>
-          <div class="daily-stat-card words">
-            <span class="daily-stat-label">これまで 覚えた</span>
+          <button type="button" id="btnTotalKnownBreakdown" class="daily-stat-card words"
+            aria-expanded="false" aria-controls="totalKnownBreakdown"
+            aria-label="これまで覚えたのカテゴリ内訳を表示">
+            <span class="daily-stat-label">
+              <span class="daily-stat-label-text">これまで 覚えた</span>
+              <span class="daily-stat-label-caret" aria-hidden="true">▾</span>
+            </span>
             <span id="valTotalWords" class="daily-stat-value" aria-live="polite"><span class="daily-stat-num">0</span><span class="daily-stat-unit"> 語</span></span>
+          </button>
+        </div>
+
+        <div id="dailyStatBreakdownSlot" class="daily-stat-breakdown-slot">
+          <div id="totalKnownBreakdown" class="daily-stat-breakdown-panel is-known" hidden>
+            <div class="daily-stat-breakdown-grid">
+              <div class="daily-stat-breakdown-cell">
+                <span class="daily-stat-breakdown-cat">基本</span>
+                <span class="total-known-breakdown-stats">
+                  <span class="total-known-breakdown-frac">
+                    <span class="total-known-breakdown-learned" data-cat="基本">0</span>
+                    <span class="total-known-breakdown-slash"> / </span>
+                    <span class="total-known-breakdown-total" data-cat="基本">0</span>
+                  </span>
+                </span>
+              </div>
+              <div class="daily-stat-breakdown-cell">
+                <span class="daily-stat-breakdown-cat">介護</span>
+                <span class="total-known-breakdown-stats">
+                  <span class="total-known-breakdown-frac">
+                    <span class="total-known-breakdown-learned" data-cat="介護">0</span>
+                    <span class="total-known-breakdown-slash"> / </span>
+                    <span class="total-known-breakdown-total" data-cat="介護">0</span>
+                  </span>
+                </span>
+              </div>
+              <div class="daily-stat-breakdown-cell">
+                <span class="daily-stat-breakdown-cat">医療</span>
+                <span class="total-known-breakdown-stats">
+                  <span class="total-known-breakdown-frac">
+                    <span class="total-known-breakdown-learned" data-cat="医療">0</span>
+                    <span class="total-known-breakdown-slash"> / </span>
+                    <span class="total-known-breakdown-total" data-cat="医療">0</span>
+                  </span>
+                </span>
+              </div>
+              <div class="daily-stat-breakdown-cell">
+                <span class="daily-stat-breakdown-cat">社会</span>
+                <span class="total-known-breakdown-stats">
+                  <span class="total-known-breakdown-frac">
+                    <span class="total-known-breakdown-learned" data-cat="社会">0</span>
+                    <span class="total-known-breakdown-slash"> / </span>
+                    <span class="total-known-breakdown-total" data-cat="社会">0</span>
+                  </span>
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 

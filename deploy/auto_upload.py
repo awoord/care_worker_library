@@ -4,7 +4,12 @@ import re
 import subprocess
 import time
 from ftplib import FTP_TLS
+from pathlib import Path
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
+
+# リポジトリルート（このファイルは deploy/ 配下）
+ROOT_DIR = Path(__file__).resolve().parent.parent
+os.chdir(ROOT_DIR)
 
 # 設定情報
 FTP_HOST = "www1165.conoha.ne.jp"

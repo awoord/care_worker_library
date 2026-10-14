@@ -1265,31 +1265,129 @@ function loadRubyThen(next) {
     });
 }
 
+function appendThemeCard(parent, t) {
+  var a = document.createElement("a");
+  a.className = "theme-card";
+  a.href = t.href || ("view.html?t=" + encodeURIComponent(t.slug));
+  var title = document.createElement("h3");
+  title.className = "theme-card-title";
+  fillWithRuby(title, t.label || t.title || "");
+  a.appendChild(title);
+  var meta = document.createElement("p");
+  meta.className = "theme-card-meta";
+  meta.textContent =
+    (t.displayCount != null ? t.displayCount : t.count || 0) + " 問";
+  a.appendChild(meta);
+  parent.appendChild(a);
+}
+
+var THEME_GROUP_OPEN_KEY = "themes.groupOpen.";
+
+function isThemeGroupOpen(groupKey) {
+  try {
+    return localStorage.getItem(THEME_GROUP_OPEN_KEY + groupKey) === "1";
+  } catch (e) {
+    return false;
+  }
+}
+
+function setThemeGroupOpen(groupKey, open) {
+  try {
+    localStorage.setItem(THEME_GROUP_OPEN_KEY + groupKey, open ? "1" : "0");
+  } catch (e) {
+    /* ignore */
+  }
+}
+
+function appendThemeGroup(root, group) {
+  var title = group.title || "テーマ";
+  var groupKey = group.id || title;
+  var open = isThemeGroupOpen(groupKey);
+  var children = group.themes || [];
+  var themeN = children.length;
+  var qN = group.displayCount != null ? group.displayCount : group.count || 0;
+  var panelId = "theme-group-panel-" + String(groupKey).replace(/\s+/g, "-");
+
+  var section = document.createElement("section");
+  section.className = "theme-group" + (open ? " is-open" : "");
+  section.setAttribute("aria-label", title);
+
+  var toggle = document.createElement("button");
+  toggle.type = "button";
+  toggle.className = "theme-group-toggle";
+  toggle.setAttribute("aria-expanded", open ? "true" : "false");
+  toggle.setAttribute("aria-controls", panelId);
+
+  var chevron = document.createElement("span");
+  chevron.className = "theme-group-chevron";
+  chevron.setAttribute("aria-hidden", "true");
+  chevron.textContent = "›";
+  toggle.appendChild(chevron);
+
+  var textWrap = document.createElement("span");
+  textWrap.className = "theme-group-toggle-text";
+  var h2 = document.createElement("span");
+  h2.className = "theme-group-title";
+  h2.textContent = title;
+  textWrap.appendChild(h2);
+  var gmeta = document.createElement("span");
+  gmeta.className = "theme-group-meta";
+  gmeta.textContent = themeN + " テーマ · " + qN + " 問";
+  textWrap.appendChild(gmeta);
+  toggle.appendChild(textWrap);
+  section.appendChild(toggle);
+
+  var list = document.createElement("div");
+  list.className = "theme-group-list";
+  list.id = panelId;
+  list.hidden = !open;
+  for (var i = 0; i < children.length; i++) {
+    appendThemeCard(list, children[i]);
+  }
+  section.appendChild(list);
+
+  toggle.addEventListener("click", function () {
+    var next = !section.classList.contains("is-open");
+    section.classList.toggle("is-open", next);
+    toggle.setAttribute("aria-expanded", next ? "true" : "false");
+    list.hidden = !next;
+    setThemeGroupOpen(groupKey, next);
+  });
+
+  root.appendChild(section);
+}
+
 function renderThemeIndex(payload) {
   var root = document.getElementById("themeList");
   root.textContent = "";
   var themes = (payload && payload.themes) || [];
-  if (!themes.length) {
-    showHint("テーマがまだありません。important_theme_extract に .txt ファイルを置いてデプロイしてください。");
+  var groups = (payload && payload.groups) || [];
+  var ungrouped = (payload && payload.ungrouped) || [];
+  if (!themes.length && !groups.length) {
+    showHint("テーマがまだありません。work/theme_extract に .txt ファイルを置いてデプロイしてください。");
     setStatus("0 テーマ");
     return;
   }
   setStatus(themes.length + " テーマ");
-  for (var i = 0; i < themes.length; i++) {
-    var t = themes[i];
-    var a = document.createElement("a");
-    a.className = "theme-card";
-    a.href = t.href || ("view.html?t=" + encodeURIComponent(t.slug));
-    var title = document.createElement("h2");
-    title.className = "theme-card-title";
-    fillWithRuby(title, t.title || "");
-    a.appendChild(title);
-    var meta = document.createElement("p");
-    meta.className = "theme-card-meta";
-    meta.textContent =
-      (t.displayCount != null ? t.displayCount : t.count || 0) + " 問";
-    a.appendChild(meta);
-    root.appendChild(a);
+
+  if (groups.length || ungrouped.length) {
+    for (var g = 0; g < groups.length; g++) {
+      appendThemeGroup(root, groups[g]);
+    }
+    if (ungrouped.length) {
+      var flat = document.createElement("div");
+      flat.className = "theme-ungrouped";
+      flat.setAttribute("aria-label", "その他のテーマ");
+      for (var u = 0; u < ungrouped.length; u++) {
+        appendThemeCard(flat, ungrouped[u]);
+      }
+      root.appendChild(flat);
+    }
+    return;
+  }
+
+  for (var j = 0; j < themes.length; j++) {
+    appendThemeCard(root, themes[j]);
   }
 }
 
@@ -1470,12 +1568,20 @@ function renderThemeMoreButton(olderQuestions, displayCount) {
   main.parentNode.insertBefore(wrap, main.nextSibling);
 }
 
+function getSiteIndexTitle() {
+  var body = document.body;
+  if (body && body.getAttribute("data-index-title")) {
+    return body.getAttribute("data-index-title");
+  }
+  return "介護福祉士国家試験 重要テーマ";
+}
+
 function bootIndex() {
   wireBackToTop();
   setStatus("読み込み中…");
   loadRubyThen(function () {
     var h1 = document.querySelector(".page-header h1");
-    if (h1) fillWithRuby(h1, "介護福祉士国家試験 重要テーマ");
+    if (h1) fillWithRuby(h1, getSiteIndexTitle());
     fetch("index.json?_t=" + Date.now())
       .then(function (res) {
         if (!res.ok) throw new Error("index.json の読み込みに失敗しました");

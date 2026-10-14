@@ -11,7 +11,7 @@ kaigo_kakomon_all.txt からキーワードを含む問題を抽出する。
   python3 extract_by_keyword.py          # 対話入力（キーワード）
 
 結果は ../keyword_extract/キーワード.txt に保存する。
-入力過去問は ../kakomon_v2/kaigo_kakomon_all.txt。
+入力過去問は ../data/kakomon_v2/kaigo_kakomon_all.txt。
 各問題の末尾に過去問ドットコムの解説ページURLを付ける。
 総合問題・科目内の共有事例は、同一セットの後続問にも冒頭文を付けて出力する。
 """
@@ -32,7 +32,7 @@ except ImportError:  # python3 extract_by_keyword.py で直接実行
 
 DIR = Path(__file__).resolve().parent
 ROOT = DIR.parent
-KAKOMON_TXT = ROOT / "kakomon_v2" / "kaigo_kakomon_all.txt"
+KAKOMON_TXT = ROOT / "data" / "kakomon_v2" / "kaigo_kakomon_all.txt"
 OUTPUT_DIR = ROOT / "keyword_extract"
 # 対象回（ここを書き換えて範囲を変える。例: 30 と 38）
 SESSION_MIN = 33

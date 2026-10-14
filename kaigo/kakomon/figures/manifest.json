@@ -1,10 +1,5 @@
 {
   "items": {
-    "29-102": {
-      "file": "29-102.png",
-      "bytes": 25572,
-      "source": "source_pdfs"
-    },
     "29-24": {
       "file": "29-24.png",
       "bytes": 21006,
@@ -25,9 +20,9 @@
       "bytes": 14324,
       "source": "source_pdfs"
     },
-    "30-121": {
-      "file": "30-121.png",
-      "bytes": 34671,
+    "29-102": {
+      "file": "29-102.png",
+      "bytes": 25572,
       "source": "source_pdfs"
     },
     "30-88": {
@@ -40,6 +35,26 @@
       "bytes": 88758,
       "source": "source_pdfs"
     },
+    "30-121": {
+      "file": "30-121.png",
+      "bytes": 34671,
+      "source": "source_pdfs"
+    },
+    "31-40": {
+      "file": "31-40.png",
+      "bytes": 84858,
+      "source": "source_pdfs"
+    },
+    "31-69": {
+      "file": "31-69.png",
+      "bytes": 50370,
+      "source": "user_correction_2026-10-13"
+    },
+    "31-80": {
+      "file": "31-80.png",
+      "bytes": 6284,
+      "source": "source_pdfs"
+    },
     "31-100": {
       "file": "31-100.png",
       "bytes": 5489,
@@ -48,21 +63,6 @@
     "31-115": {
       "file": "31-115.png",
       "bytes": 16394,
-      "source": "source_pdfs"
-    },
-    "31-40": {
-      "file": "31-40.png",
-      "bytes": 84858,
-      "source": "source_pdfs"
-    },
-    "31-68": {
-      "file": "31-68.png",
-      "bytes": 14856,
-      "source": "source_pdfs"
-    },
-    "31-80": {
-      "file": "31-80.png",
-      "bytes": 6284,
       "source": "source_pdfs"
     },
     "32-42": {
@@ -90,11 +90,6 @@
       "bytes": 56912,
       "source": "source_pdfs"
     },
-    "35-114": {
-      "file": "35-114.png",
-      "bytes": 141807,
-      "source": "source_pdfs"
-    },
     "35-31": {
       "file": "35-31.png",
       "bytes": 56578,
@@ -110,29 +105,39 @@
       "bytes": 104592,
       "source": "source_pdfs"
     },
+    "35-114": {
+      "file": "35-114.png",
+      "bytes": 141807,
+      "source": "source_pdfs"
+    },
     "36-71": {
       "file": "36-71.png",
       "bytes": 1029,
       "source": "kaigojob"
+    },
+    "36-105": {
+      "file": "36-105.png",
+      "bytes": 69080,
+      "source": "source_pdfs/36.pdf#page=52"
     },
     "37-121": {
       "file": "37-121.png",
       "bytes": 37640,
       "source": "source_pdfs"
     },
-    "36-105": {
-      "file": "36-105.png",
-      "bytes": 69080,
-      "source": "source_pdfs/36.pdf#page=52"
+    "38-49": {
+      "file": "38-49.png",
+      "bytes": 74824,
+      "source": "sssc_no38_k_am_06_38.pdf#page=6"
     }
   },
   "sources": [
     "kaigo/source_pdfs/{29..37}.pdf",
-    "kaigojob (36-71 only)"
+    "kaigojob (36-71 only)",
+    "sssc no38 k_am_06_38.pdf (38-49)"
   ],
   "notes": {
-    "31-69": "防災図記号は31.pdf当該ページで図が欠落（空白）のため未収録。正解は避難場所。",
     "36-71": "36.pdfに当該図記号の記述が見つからず既存取得画像を維持。",
-    "38": "第38回は画像なし。"
+    "38": "第38回は38-49（腹部清拭）を sssc PDF から取得。"
   }
 }

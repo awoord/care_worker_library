@@ -103,9 +103,10 @@ def load_words_from_csv(file_path):
 if __name__ == "__main__":
     current_dir = Path(__file__).resolve().parent
 
-    kakomon_dir = current_dir.parent / "kakomon"
+    repo_root = current_dir.parent.parent
+    kakomon_dir = repo_root / "data" / "kakomon"
     if not kakomon_dir.exists():
-        kakomon_dir = current_dir.parent.parent / "kakomon"
+        kakomon_dir = repo_root / "kakomon"
 
     excluded_word_dir = current_dir.parent / "excluded_word"
 

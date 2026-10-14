@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""重要テーマ過去問を /kaigo/kakomon/themes/ に公開する。
+"""重要テーマ・付録過去問を /kaigo/kakomon/themes/ と /appendix/ に公開する。
 
-- 入力: important_theme_extract/ の「.txt」ファイル
+- 入力: work/theme_extract/（重要テーマ）、work/appendix_extract/（付録）
 - ファイル名（拡張子除く）→ ページ見出し
 - 本文の 【回-番号｜…】 → questions.json から問題を抽出
 - 表示は kakomon と同じカード形式（style / ルビ / 正誤UI）
@@ -25,19 +25,22 @@ from copy import deepcopy
 from ftplib import FTP_TLS
 from pathlib import Path
 
-SITE_DIR = Path(__file__).resolve().parent
-KAKOMON_DIR = SITE_DIR.parent
+THEMES_DIR = Path(__file__).resolve().parent
+KAKOMON_DIR = THEMES_DIR.parent
+APPENDIX_DIR = KAKOMON_DIR / "appendix"
 ROOT = KAKOMON_DIR.parent.parent
-THEME_SRC_DIR = ROOT / "important_theme_extract"
+THEME_SRC_DIR = ROOT / "work" / "theme_extract"
+APPENDIX_SRC_DIR = ROOT / "work" / "appendix_extract"
 QUESTIONS_JSON = KAKOMON_DIR / "questions.json"
-DATA_DIR = SITE_DIR / "data"
 
 FTP_HOST = "www1165.conoha.ne.jp"
 FTP_USER = "ao@nihongo.site"
 FTP_PASS = "highway#61"
 REMOTE_BASE_DIR = "/public_html/nihongo.site"
-REMOTE_SITE_DIR = f"{REMOTE_BASE_DIR}/kaigo/kakomon/themes"
-PUBLIC_URL = "https://nihongo.site/kaigo/kakomon/themes/"
+REMOTE_THEMES_DIR = f"{REMOTE_BASE_DIR}/kaigo/kakomon/themes"
+REMOTE_APPENDIX_DIR = f"{REMOTE_BASE_DIR}/kaigo/kakomon/appendix"
+PUBLIC_THEMES_URL = "https://nihongo.site/kaigo/kakomon/themes/"
+PUBLIC_APPENDIX_URL = "https://nihongo.site/kaigo/kakomon/appendix/"
 
 # 初期表示する直近回（見出しの問題数もこの範囲）
 RECENT_SESSION_MIN = 34
@@ -45,9 +48,62 @@ RECENT_SESSION_MAX = 38
 # 図あり問題を questions.json から自動生成するテーマ名
 ILLUST_THEME_TITLE = "イラスト問題"
 # 全件・ファイル順で出すテーマ（もっと見るなし）
-SHOW_ALL_IN_ORDER_TITLES = frozenset({"同じ問題"})
+SHOW_ALL_IN_ORDER_TITLES = frozenset({"過去問の再利用", "同じ問題"})
+
+# 一覧の親グループ（見出し）→ 子テーマ（.txt の stem）。
+# 空ならすべてフラット。括弧短縮ラベルはグループ内の子だけに使う。
+THEME_GROUPS: list[tuple[str, list[str]]] = []
 
 RE_QID = re.compile(r"【\s*(\d+)\s*-\s*(\d+)")
+RE_KAIGO_HOKEN_PAREN = re.compile(r"^介護保険（(.+)）$")
+
+# 公開しない作業用テーマ（stem に含まれる文字列）
+THEME_SRC_SKIP_SUBSTRINGS = ("削除問題", "削除検討", "全ての問題", "すべての問題")
+
+
+def short_theme_label(title: str) -> str:
+    """グループ内の子用の短い表示名（介護保険（制度のしくみ）→ 制度のしくみ）。"""
+    m = RE_KAIGO_HOKEN_PAREN.match(title)
+    if m:
+        return m.group(1)
+    return title
+
+
+def build_grouped_index(themes: list[dict]) -> tuple[list[dict], list[dict]]:
+    by_title = {t["title"]: t for t in themes}
+    used: set[str] = set()
+    groups: list[dict] = []
+
+    for group_title, child_titles in THEME_GROUPS:
+        children: list[dict] = []
+        for title in child_titles:
+            theme = by_title.get(title)
+            if not theme:
+                continue
+            used.add(title)
+            entry = dict(theme)
+            entry["label"] = short_theme_label(title)
+            children.append(entry)
+        if not children:
+            continue
+        groups.append(
+            {
+                "title": group_title,
+                "count": sum(int(c.get("count") or 0) for c in children),
+                "displayCount": sum(int(c.get("displayCount") or 0) for c in children),
+                "themes": children,
+            }
+        )
+
+    ungrouped: list[dict] = []
+    for theme in themes:
+        if theme["title"] in used:
+            continue
+        entry = dict(theme)
+        # フラット一覧はファイル名どおり（介護保険（制度のしくみ）など）
+        entry["label"] = theme["title"]
+        ungrouped.append(entry)
+    return groups, ungrouped
 
 HTACCESS_CONTENT = """
 <IfModule mod_headers.c>
@@ -89,17 +145,24 @@ def make_slug(title: str) -> str:
     return digest
 
 
-def list_theme_source_files() -> list[Path]:
-    if not THEME_SRC_DIR.is_dir():
+def list_theme_source_files(*, appendix: bool) -> list[Path]:
+    base = APPENDIX_SRC_DIR if appendix else THEME_SRC_DIR
+    if not base.is_dir():
+        if appendix:
+            return []
         raise FileNotFoundError(f"テーマ元フォルダがありません: {THEME_SRC_DIR}")
     files = []
-    for path in sorted(THEME_SRC_DIR.iterdir(), key=lambda p: p.name):
+    for path in sorted(base.iterdir(), key=lambda p: p.name):
         if not path.is_file():
             continue
         if path.name.startswith("."):
             continue
+        if path.name.lower() == "readme.md":
+            continue
         # .txt のみ（見出しは stem）
         if path.suffix.lower() != ".txt":
+            continue
+        if any(s in path.stem for s in THEME_SRC_SKIP_SUBSTRINGS):
             continue
         files.append(path)
     return files
@@ -161,9 +224,10 @@ def regenerate_illustration_theme_txt(by_id: dict[str, dict]) -> None:
             qid = f"{int(q.get('round') or 0)}-{int(q.get('number') or 0)}"
         subject = str(q.get("subject") or "").strip()
         lines.append(f"【{qid}｜{subject}】")
-    out = THEME_SRC_DIR / f"{ILLUST_THEME_TITLE}.txt"
+    APPENDIX_SRC_DIR.mkdir(parents=True, exist_ok=True)
+    out = APPENDIX_SRC_DIR / f"{ILLUST_THEME_TITLE}.txt"
     out.write_text(("\n".join(lines) + ("\n" if lines else "")), encoding="utf-8")
-    print(f"自動生成: {out.name} → {len(lines)} 問")
+    print(f"自動生成: appendix_extract/{out.name} → {len(lines)} 問")
 
 
 def rewrite_asset_path(path: str) -> str:
@@ -212,26 +276,32 @@ def load_questions_by_id() -> dict[str, dict]:
     return by_id
 
 
-def sync_shared_assets() -> None:
-    shutil.copy2(KAKOMON_DIR / "style.css", SITE_DIR / "style.css")
+def sync_shared_assets(site_dir: Path) -> None:
+    shutil.copy2(KAKOMON_DIR / "style.css", site_dir / "style.css")
     ruby_src = KAKOMON_DIR / "ruby.json"
     if ruby_src.is_file():
-        shutil.copy2(ruby_src, SITE_DIR / "ruby.json")
+        shutil.copy2(ruby_src, site_dir / "ruby.json")
     else:
-        (SITE_DIR / "ruby.json").write_text("[]\n", encoding="utf-8")
+        (site_dir / "ruby.json").write_text("[]\n", encoding="utf-8")
+    if site_dir.resolve() != THEMES_DIR.resolve():
+        shutil.copy2(THEMES_DIR / "themes.css", site_dir / "themes.css")
+        shutil.copy2(THEMES_DIR / "app.js", site_dir / "app.js")
 
 
-def build_site() -> list[dict]:
-    sync_shared_assets()
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-    for old in DATA_DIR.glob("*.json"):
+def build_site(*, site_dir: Path, index_title: str, appendix: bool) -> list[dict]:
+    sync_shared_assets(site_dir)
+    data_dir = site_dir / "data"
+    data_dir.mkdir(parents=True, exist_ok=True)
+    for old in data_dir.glob("*.json"):
         old.unlink()
 
     by_id = load_questions_by_id()
-    regenerate_illustration_theme_txt(by_id)
-    sources = list_theme_source_files()
+    if not appendix:
+        regenerate_illustration_theme_txt(by_id)
+    sources = list_theme_source_files(appendix=appendix)
     if not sources:
-        print(f"警告: .txt のテーマファイルがありません → {THEME_SRC_DIR}")
+        label = "付録" if appendix else "重要テーマ"
+        print(f"警告: {label}用 .txt がありません → {THEME_SRC_DIR}")
 
     themes: list[dict] = []
     for path in sources:
@@ -273,7 +343,7 @@ def build_site() -> list[dict]:
             "missing": missing,
             "questions": questions,
         }
-        out = DATA_DIR / f"{slug}.json"
+        out = data_dir / f"{slug}.json"
         out.write_text(
             json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + "\n",
             encoding="utf-8",
@@ -281,6 +351,7 @@ def build_site() -> list[dict]:
         themes.append(
             {
                 "title": title,
+                "label": title,
                 "slug": slug,
                 "count": len(questions),
                 "recentCount": recent_count,
@@ -301,16 +372,23 @@ def build_site() -> list[dict]:
             msg += f"（欠番 {len(missing)}: {', '.join(missing[:8])}{'…' if len(missing) > 8 else ''}）"
         print(msg)
 
+    groups, ungrouped = build_grouped_index(themes)
     index_payload = {
-        "title": "介護福祉士国家試験 重要テーマ",
+        "title": index_title,
         "count": len(themes),
+        "groups": groups,
+        "ungrouped": ungrouped,
         "themes": themes,
     }
-    (SITE_DIR / "index.json").write_text(
+    (site_dir / "index.json").write_text(
         json.dumps(index_payload, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
-    print(f"一覧: {len(themes)} テーマ → {SITE_DIR / 'index.json'}")
+    site_label = "付録" if appendix else "重要テーマ"
+    print(
+        f"[{site_label}] 一覧: {len(themes)} テーマ / グループ {len(groups)} / "
+        f"フラット {len(ungrouped)} → {site_dir / 'index.json'}"
+    )
     return themes
 
 
@@ -325,21 +403,27 @@ def ensure_remote_dir(ftps: FTP_TLS, path: str) -> None:
             ftps.cwd(part)
 
 
-def upload_site() -> None:
-    version = make_cache_bust_version()
-    ftps = FTP_TLS()
-    ftps.connect(FTP_HOST, 21, timeout=30)
-    ftps.login(FTP_USER, FTP_PASS)
-    ftps.prot_p()
-    ftps.set_pasv(True)
-    ensure_remote_dir(ftps, REMOTE_SITE_DIR)
+def upload_one_site(
+    ftps: FTP_TLS,
+    *,
+    site_dir: Path,
+    remote_dir: str,
+    public_url: str,
+    html_dir: Path,
+    version: str,
+    label: str,
+) -> None:
+    ensure_remote_dir(ftps, remote_dir)
 
     htaccess_bytes = io.BytesIO(HTACCESS_CONTENT.strip().encode("utf-8"))
     ftps.storbinary("STOR .htaccess", htaccess_bytes)
-    print("アップロード完了: .htaccess")
+    print(f"[{label}] アップロード完了: .htaccess")
 
     for name in DEPLOY_STATIC:
-        local_path = SITE_DIR / name
+        if name.endswith(".html"):
+            local_path = html_dir / name
+        else:
+            local_path = site_dir / name
         if not local_path.is_file():
             raise FileNotFoundError(f"不足: {local_path}")
         if name.endswith(".html"):
@@ -348,21 +432,50 @@ def upload_site() -> None:
         else:
             with local_path.open("rb") as f:
                 ftps.storbinary(f"STOR {name}", f)
-        print(f"アップロード完了: {name}")
+        print(f"[{label}] アップロード完了: {name}")
 
-    index_json = SITE_DIR / "index.json"
+    index_json = site_dir / "index.json"
     with index_json.open("rb") as f:
         ftps.storbinary("STOR index.json", f)
-    print("アップロード完了: index.json")
+    print(f"[{label}] アップロード完了: index.json")
 
-    ensure_remote_dir(ftps, f"{REMOTE_SITE_DIR}/data")
-    for path in sorted(DATA_DIR.glob("*.json")):
+    data_dir = site_dir / "data"
+    ensure_remote_dir(ftps, f"{remote_dir}/data")
+    for path in sorted(data_dir.glob("*.json")):
         with path.open("rb") as f:
             ftps.storbinary(f"STOR {path.name}", f)
-        print(f"アップロード完了: data/{path.name}")
+        print(f"[{label}] アップロード完了: data/{path.name}")
 
+    print(f"[{label}] 公開URL: {public_url}?_cb={version}")
+
+
+def upload_sites() -> None:
+    version = make_cache_bust_version()
+    ftps = FTP_TLS()
+    ftps.connect(FTP_HOST, 21, timeout=30)
+    ftps.login(FTP_USER, FTP_PASS)
+    ftps.prot_p()
+    ftps.set_pasv(True)
+
+    upload_one_site(
+        ftps,
+        site_dir=THEMES_DIR,
+        remote_dir=REMOTE_THEMES_DIR,
+        public_url=PUBLIC_THEMES_URL,
+        html_dir=THEMES_DIR,
+        version=version,
+        label="重要テーマ",
+    )
+    upload_one_site(
+        ftps,
+        site_dir=APPENDIX_DIR,
+        remote_dir=REMOTE_APPENDIX_DIR,
+        public_url=PUBLIC_APPENDIX_URL,
+        html_dir=APPENDIX_DIR,
+        version=version,
+        label="付録",
+    )
     ftps.quit()
-    print(f"\n公開URL: {PUBLIC_URL}?_cb={version}")
 
 
 def main() -> int:
@@ -374,9 +487,18 @@ def main() -> int:
     )
     args = parser.parse_args()
     try:
-        build_site()
+        build_site(
+            site_dir=THEMES_DIR,
+            index_title="介護福祉士国家試験 重要テーマ",
+            appendix=False,
+        )
+        build_site(
+            site_dir=APPENDIX_DIR,
+            index_title="介護福祉士国家試験 付録",
+            appendix=True,
+        )
         if not args.build_only:
-            upload_site()
+            upload_sites()
     except Exception as err:
         print(str(err), file=sys.stderr)
         return 1

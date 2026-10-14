@@ -9,15 +9,52 @@ var DB_SHEET_TEST_MISSING_ERROR = "参照するdbがありません";
 var PROD_CATEGORY_ORDER = ["基本", "介護", "医療", "社会"];
 var FLASH_CURSORS_PROP_PROD = "FLASH_CURSORS_prod";
 var FLASH_CURSORS_PROP_TEST = "FLASH_CURSORS_test";
-var FLASH_CURSORS_SHEET = "cursors";
-var FLASH_CURSORS_SHEET_HEADERS = ["環境", "カテゴリ", "位置", "次", "次の語", "カテゴリ語数", "更新"];
+var FLASH_CURSORS_SHEET = "cursors"; // 廃止。Properties のみ。シートは削除してよい
 var LEARNED_DATE_NUMBER_FORMAT = "yyyy/mm/dd hh:mm";
+// 秘密URL生徒ごとの db 進捗列（1-based）。単語マスタは共有、I/J は J 専用のまま。
+// writeDailyLogSheet: daily_log シートへ日次集計を書くか（JF は不要）
+var PRIVATE_PROGRESS_BY_USER = {
+  J: { learnedCol: 9, dateCol: 10, writeDailyLogSheet: true },
+  JF: { learnedCol: 11, dateCol: 12, writeDailyLogSheet: false }
+};
 // 未設定時はスクリプト実行者のメールへ送信。別アドレスへ送る場合は
 // スクリプトプロパティ PROD_CHECK_NOTIFY_EMAIL を設定する。
 // ※ 単語チェック通知メールは廃止（学習時は送らない）。有料申し込みメールのみ送信。
 //
 // 申し込みメールが「send_mail の権限がない」になるとき:
 // エディタで authorizePaidMail を実行 → 権限を許可 → 必要ならウェブアプリを再デプロイ。
+
+function normalizePrivateUser_(user) {
+  var raw = String(user || "J").trim();
+  if (!raw) {
+    return "J";
+  }
+  var keys = Object.keys(PRIVATE_PROGRESS_BY_USER);
+  for (var i = 0; i < keys.length; i++) {
+    if (keys[i].toUpperCase() === raw.toUpperCase()) {
+      return keys[i];
+    }
+  }
+  return "J";
+}
+
+function resolvePrivateUser_(e, params) {
+  params = params || {};
+  var fromParams = params.user;
+  if (fromParams == null && e && e.parameter) {
+    fromParams = e.parameter.user;
+  }
+  return normalizePrivateUser_(fromParams);
+}
+
+function getPrivateProgressCols_(user) {
+  var u = normalizePrivateUser_(user);
+  return PRIVATE_PROGRESS_BY_USER[u] || PRIVATE_PROGRESS_BY_USER.J;
+}
+
+function shouldWriteDailyLogSheet_(user) {
+  return !!getPrivateProgressCols_(user).writeDailyLogSheet;
+}
 
 function authorizePaidMail() {
   MailApp.getRemainingDailyQuota();
@@ -53,11 +90,15 @@ function doGet(e) {
     return jsonResponse({ error: sheetInfo.error, allWords: [], categories: {}, roadmap: {} });
   }
 
-  var data = loadInitialAppData(sheetInfo.sheet);
-  data.cursors = loadFlashCursors(sheetInfo.isTest);
-  // J専用（本番）: きょう見た用の語セットも返す（端末依存を解消）
+  var user = resolvePrivateUser_(e, params);
+  // テストシートは I/J のみ想定のため進捗列は常に J
+  var progressUser = sheetInfo.isTest ? "J" : user;
+  var data = loadInitialAppData(sheetInfo.sheet, progressUser);
+  data.cursors = loadFlashCursors(sheetInfo.isTest, user);
+  data.user = user;
+  // 秘密URL（本番）: きょう見た用の語セットも返す（端末依存を解消）
   if (!sheetInfo.isTest) {
-    data.dailySeen = loadDailySeenPayload_("J", "");
+    data.dailySeen = loadDailySeenPayload_(user, "");
   }
   return jsonResponse(data);
 }
@@ -77,6 +118,10 @@ function doPost(e) {
     if (String(params.action || "") === "loadDailySeen") {
       return jsonResponse(loadDailySeenPayload_(params.user, params.date));
     }
+    // JF のきょう見た・カーソルだけ消す（J は拒否）
+    if (String(params.action || "") === "resetJfSession") {
+      return jsonResponse(resetJfSessionOnly_(params));
+    }
     if (isKaigoApp(e, params)) {
       return handleKaigoPost(e, params);
     }
@@ -86,20 +131,51 @@ function doPost(e) {
       return jsonResponse({ error: sheetInfo.error });
     }
 
+    var user = resolvePrivateUser_(e, params);
+    var progressUser = sheetInfo.isTest ? "J" : user;
+    var action = String(params.action || "");
     var checkedWords = params.checkedWords || [];
     var uncheckedWords = params.uncheckedWords || [];
     var hasChecks = checkedWords.length > 0 || uncheckedWords.length > 0;
-    var result = { success: true };
+    var result = { success: true, user: user };
+
+    // セッション完了直後の仮確定（シート未反映・他端末の GET には出ない）
+    if (action === "saveTentativeChecks") {
+      result = saveFlashTentativeChecks_(
+        sheetInfo.isTest,
+        progressUser,
+        checkedWords,
+        uncheckedWords
+      );
+      result.user = user;
+      if (params.cursors) {
+        saveFlashCursors(params.cursors, sheetInfo.isTest, user);
+      }
+      return jsonResponse(result);
+    }
+    if (action === "clearTentativeChecks") {
+      result = clearFlashTentativeChecks_(sheetInfo.isTest, progressUser);
+      result.user = user;
+      return jsonResponse(result);
+    }
 
     if (hasChecks) {
-      result = submitCategoryUpdate(checkedWords, uncheckedWords, sheetInfo.sheet);
+      result = submitCategoryUpdate(
+        checkedWords,
+        uncheckedWords,
+        sheetInfo.sheet,
+        progressUser
+      );
       if (result && result.error) {
         return jsonResponse(result);
       }
+      result.user = user;
+      // 本確定したら仮確定は破棄
+      clearFlashTentativeChecks_(sheetInfo.isTest, progressUser);
     }
 
     if (params.cursors) {
-      saveFlashCursors(params.cursors, sheetInfo.isTest);
+      saveFlashCursors(params.cursors, sheetInfo.isTest, user);
     }
 
     return jsonResponse(result);
@@ -158,8 +234,89 @@ function jsonResponse(payload) {
   return jsonpOrJson_(payload, "");
 }
 
-function getFlashCursorsPropertyKey(isTest) {
-  return isTest ? FLASH_CURSORS_PROP_TEST : FLASH_CURSORS_PROP_PROD;
+function getFlashCursorsPropertyKey(isTest, user) {
+  if (isTest) {
+    return FLASH_CURSORS_PROP_TEST;
+  }
+  var u = normalizePrivateUser_(user);
+  // J は既存キーを維持（互換）
+  if (u === "J") {
+    return FLASH_CURSORS_PROP_PROD;
+  }
+  return "FLASH_CURSORS_prod_" + u;
+}
+
+var JF_DAILY_SEEN_RESET_LOCK_KEY = "JF_DAILY_SEEN_RESET_LOCK";
+
+function getJstDateKeyNow_() {
+  return Utilities.formatDate(new Date(), "Asia/Tokyo", "yyyy-MM-dd");
+}
+
+/** JF のきょう見た再同期ロック（その日だけ有効。J は対象外） */
+function isJfDailySeenResetLocked_(user, dateKey) {
+  if (String(user || "").trim().toUpperCase() !== "JF") {
+    return false;
+  }
+  var lock = PropertiesService.getScriptProperties().getProperty(
+    JF_DAILY_SEEN_RESET_LOCK_KEY
+  );
+  return !!lock && String(lock) === String(dateKey || "");
+}
+
+/**
+ * JF のきょう見た・カーソルだけ削除する。
+ * J のキー（FLASH_CURSORS_prod / DAILY_SEEN_WORDS_J_*）は絶対に触らない。
+ * Apps Script エディタから resetJfSessionOnly() を実行するか、
+ * POST action=resetJfSession&user=JF で呼ぶ。
+ */
+function resetJfSessionOnly_(params) {
+  var raw = String((params && params.user) || "").trim().toUpperCase();
+  if (raw !== "JF") {
+    return {
+      success: false,
+      error: "refused: JF only (got " + (raw || "(empty)") + ")"
+    };
+  }
+
+  var props = PropertiesService.getScriptProperties();
+  var all = props.getProperties() || {};
+  var deleted = [];
+  var keys = Object.keys(all);
+  var i;
+  for (i = 0; i < keys.length; i++) {
+    var key = keys[i];
+    // JF の日次見ただけ。J / test は除外
+    if (key.indexOf("DAILY_SEEN_WORDS_JF_") === 0) {
+      props.deleteProperty(key);
+      deleted.push(key);
+    }
+  }
+
+  // JF カーソルのみ。FLASH_CURSORS_prod（J）や FLASH_CURSORS_test は触らない
+  var jfCursorKey = "FLASH_CURSORS_prod_JF";
+  if (all[jfCursorKey] != null || props.getProperty(jfCursorKey) != null) {
+    props.deleteProperty(jfCursorKey);
+    deleted.push(jfCursorKey);
+  }
+
+  // 汚れた端末が dailyLog で書き戻すのを、当日中ブロック
+  var todayKey = getJstDateKeyNow_();
+  props.setProperty(JF_DAILY_SEEN_RESET_LOCK_KEY, todayKey);
+  saveStoredDailyByCat_("JF", todayKey, emptyDailyByCat_(), false);
+
+  return {
+    success: true,
+    user: "JF",
+    deleted: deleted,
+    lockDate: todayKey
+  };
+}
+
+/** エディタ実行用: JF セッションだけリセット（J は触らない） */
+function resetJfSessionOnly() {
+  var result = resetJfSessionOnly_({ user: "JF" });
+  Logger.log(JSON.stringify(result));
+  return result;
 }
 
 function parseCursorEntry(raw) {
@@ -216,9 +373,11 @@ function mergeCursorsByTime(baseMap, incomingMap) {
   return merged;
 }
 
-function loadFlashCursors(isTest) {
+function loadFlashCursors(isTest, user) {
   try {
-    var raw = PropertiesService.getScriptProperties().getProperty(getFlashCursorsPropertyKey(isTest));
+    var raw = PropertiesService.getScriptProperties().getProperty(
+      getFlashCursorsPropertyKey(isTest, user)
+    );
     if (!raw) {
       return {};
     }
@@ -228,7 +387,7 @@ function loadFlashCursors(isTest) {
   }
 }
 
-function saveFlashCursors(incoming, isTest) {
+function saveFlashCursors(incoming, isTest, user) {
   var incomingMap = normalizeCursorsMap(incoming);
   if (!Object.keys(incomingMap).length) {
     return;
@@ -240,146 +399,38 @@ function saveFlashCursors(incoming, isTest) {
   }
 
   try {
-    var merged = mergeCursorsByTime(loadFlashCursors(isTest), incomingMap);
+    var merged = mergeCursorsByTime(loadFlashCursors(isTest, user), incomingMap);
     PropertiesService.getScriptProperties().setProperty(
-      getFlashCursorsPropertyKey(isTest),
+      getFlashCursorsPropertyKey(isTest, user),
       JSON.stringify(merged)
     );
-    syncFlashCursorsSheetBestEffort_(merged, isTest);
+    // cursors シートへの書き出しは廃止（Properties のみ）
   } finally {
     lock.releaseLock();
   }
 }
 
-function ensureFlashCursorsSheet() {
+/** GASエディタから実行: 不要になった cursors シートを削除する */
+function removeCursorsSheetNow() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName(FLASH_CURSORS_SHEET);
   if (!sheet) {
-    sheet = ss.insertSheet(FLASH_CURSORS_SHEET);
+    return { success: true, removed: false, message: "cursors シートはありません" };
   }
-
-  var existing = sheet.getRange(1, 1, 1, FLASH_CURSORS_SHEET_HEADERS.length).getValues()[0];
-  var needHeader = false;
-  for (var i = 0; i < FLASH_CURSORS_SHEET_HEADERS.length; i++) {
-    if (String(existing[i] || "") !== FLASH_CURSORS_SHEET_HEADERS[i]) {
-      needHeader = true;
-      break;
-    }
-  }
-  if (needHeader) {
-    sheet.getRange(1, 1, 1, FLASH_CURSORS_SHEET_HEADERS.length).setValues([FLASH_CURSORS_SHEET_HEADERS]);
-    sheet.setFrozenRows(1);
-    sheet.setColumnWidths(1, FLASH_CURSORS_SHEET_HEADERS.length, 120);
-    sheet.setColumnWidth(5, 220);
-  }
-  return sheet;
+  ss.deleteSheet(sheet);
+  return { success: true, removed: true, message: "cursors シートを削除しました" };
 }
 
-function getFlashCursorsDbSheet_(isTest) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  return ss.getSheetByName(isTest ? DB_SHEET_TEST : DB_SHEET_PROD);
+function getInitialAppCacheKey(sheetName, user) {
+  return "initial_" + sheetName + "_" + normalizePrivateUser_(user);
 }
 
-function buildCategoryWordListsFromSheet_(sheet) {
-  var lists = {};
-  var i;
-  for (i = 0; i < PROD_CATEGORY_ORDER.length; i++) {
-    lists[PROD_CATEGORY_ORDER[i]] = [];
-  }
-  if (!sheet) {
-    return lists;
-  }
-
-  var lastRow = sheet.getLastRow();
-  if (lastRow < 2) {
-    return lists;
-  }
-
-  var data = sheet.getRange(2, 2, lastRow - 1, 3).getValues();
-  for (i = 0; i < data.length; i++) {
-    var word = String(data[i][0] || "").trim();
-    var cat = String(data[i][2] || "").trim();
-    if (!word || !lists[cat]) {
-      continue;
-    }
-    lists[cat].push(word);
-  }
-  return lists;
+function invalidateInitialAppCache(sheetName, user) {
+  CacheService.getScriptCache().remove(getInitialAppCacheKey(sheetName, user));
 }
 
-function formatFlashCursorUpdatedAt_(updatedAt) {
-  if (typeof updatedAt !== "number" || !isFinite(updatedAt) || updatedAt <= 0) {
-    return "";
-  }
-  try {
-    return Utilities.formatDate(new Date(updatedAt), "Asia/Tokyo", "yyyy-MM-dd HH:mm:ss");
-  } catch (err) {
-    return "";
-  }
-}
-
-function buildFlashCursorsSheetRows_(cursorsMap, isTest) {
-  var envLabel = isTest ? "test" : "prod";
-  var lists = buildCategoryWordListsFromSheet_(getFlashCursorsDbSheet_(isTest));
-  var rows = [];
-  for (var i = 0; i < PROD_CATEGORY_ORDER.length; i++) {
-    var cat = PROD_CATEGORY_ORDER[i];
-    var words = lists[cat] || [];
-    var entry = cursorsMap[cat] || { i: 0, t: 0 };
-    var index = entry.i || 0;
-    if (index < 0) {
-      index = 0;
-    }
-    var nextWord = "";
-    if (words.length > 0) {
-      nextWord = words[index % words.length] || "";
-    }
-    rows.push([
-      envLabel,
-      cat,
-      index,
-      words.length > 0 ? (index % words.length) + 1 : "",
-      nextWord,
-      words.length,
-      formatFlashCursorUpdatedAt_(entry.t)
-    ]);
-  }
-  return rows;
-}
-
-function writeFlashCursorsSheet_(cursorsMap, isTest) {
-  var sheet = ensureFlashCursorsSheet();
-  var startRow = isTest ? 6 : 2;
-  var rows = buildFlashCursorsSheetRows_(cursorsMap, isTest);
-  sheet.getRange(startRow, 1, rows.length, FLASH_CURSORS_SHEET_HEADERS.length).setValues(rows);
-  SpreadsheetApp.flush();
-  return rows.length;
-}
-
-function syncFlashCursorsSheetBestEffort_(cursorsMap, isTest) {
-  try {
-    writeFlashCursorsSheet_(cursorsMap, isTest);
-  } catch (err) {
-    console.error("cursors sheet sync failed: " + err);
-  }
-}
-
-/** GASエディタから実行: 保存済みカーソルを見る用シートへ書き出す */
-function syncFlashCursorsSheetNow() {
-  writeFlashCursorsSheet_(loadFlashCursors(false), false);
-  writeFlashCursorsSheet_(loadFlashCursors(true), true);
-}
-
-function getInitialAppCacheKey(sheetName) {
-  return "initial_" + sheetName;
-}
-
-function invalidateInitialAppCache(sheetName) {
-  CacheService.getScriptCache().remove(getInitialAppCacheKey(sheetName));
-}
-
-function loadInitialAppData(sheet) {
-  var cacheKey = getInitialAppCacheKey(sheet.getName());
+function loadInitialAppData(sheet, user) {
+  var cacheKey = getInitialAppCacheKey(sheet.getName(), user);
   var cache = CacheService.getScriptCache();
   var cached = cache.get(cacheKey);
   if (cached) {
@@ -388,20 +439,24 @@ function loadInitialAppData(sheet) {
     } catch (cacheErr) {}
   }
 
-  var payload = buildInitialAppData(sheet);
+  var payload = buildInitialAppData(sheet, user);
   try {
     cache.put(cacheKey, JSON.stringify(payload), 180);
   } catch (putErr) {}
   return payload;
 }
 
-function buildInitialAppData(sheet) {
+function buildInitialAppData(sheet, user) {
   var lastRow = sheet.getLastRow();
   if (lastRow < 2) {
     return { allWords: [], categories: {}, roadmap: {} };
   }
 
-  var data = sheet.getRange(2, 1, lastRow, 10).getValues();
+  var cols = getPrivateProgressCols_(user);
+  var lastCol = Math.max(10, cols.dateCol);
+  var data = sheet.getRange(2, 1, lastRow, lastCol).getValues();
+  var learnedIdx = cols.learnedCol - 1;
+  var dateIdx = cols.dateCol - 1;
   var allWords = [];
   var learnedDates = [];
 
@@ -413,8 +468,9 @@ function buildInitialAppData(sheet) {
     var eng = String(row[5] || "").trim();
     var meaning = String(row[6] || "").trim();
     var example = String(row[7] || "").trim();
-    var isLearned = (row[8] === true || String(row[8]).toUpperCase() === "TRUE");
-    var learnedDate = row[9];
+    var learnedCell = row[learnedIdx];
+    var isLearned = learnedCell === true || String(learnedCell).toUpperCase() === "TRUE";
+    var learnedDate = row[dateIdx];
     var learnedDateStr = "";
 
     if (!word) continue;
@@ -448,7 +504,33 @@ function buildInitialAppData(sheet) {
   };
 }
 
-function submitCategoryUpdate(checkedWords, uncheckedWords, sheet) {
+/** 仮確定 Properties キー（シートには書かない。GET の allWords にも載せない） */
+function getFlashTentativePropKey_(isTest, user) {
+  var env = isTest ? "test" : "prod";
+  return "FLASH_TENTATIVE_" + env + "_" + normalizePrivateUser_(user);
+}
+
+function saveFlashTentativeChecks_(isTest, user, checkedWords, uncheckedWords) {
+  var payload = {
+    checkedWords: normalizeWordList_(checkedWords),
+    uncheckedWords: normalizeWordList_(uncheckedWords),
+    t: Date.now()
+  };
+  PropertiesService.getScriptProperties().setProperty(
+    getFlashTentativePropKey_(isTest, user),
+    JSON.stringify(payload)
+  );
+  return { success: true, tentative: true };
+}
+
+function clearFlashTentativeChecks_(isTest, user) {
+  PropertiesService.getScriptProperties().deleteProperty(
+    getFlashTentativePropKey_(isTest, user)
+  );
+  return { success: true, cleared: true };
+}
+
+function submitCategoryUpdate(checkedWords, uncheckedWords, sheet, user) {
   var lock = LockService.getScriptLock();
   if (!lock.tryLock(10000)) {
     return { error: "サーバーが混み合っています。再度お試しください。" };
@@ -460,33 +542,38 @@ function submitCategoryUpdate(checkedWords, uncheckedWords, sheet) {
       return { success: true };
     }
 
-    var flagsRange = sheet.getRange(2, 2, lastRow, 10);
-    var values = flagsRange.getValues();
+    var cols = getPrivateProgressCols_(user);
+    var wordValues = sheet.getRange(2, 2, lastRow, 2).getValues();
+    var learnedRange = sheet.getRange(2, cols.learnedCol, lastRow, cols.learnedCol);
+    var dateRange = sheet.getRange(2, cols.dateCol, lastRow, cols.dateCol);
+    var learnedValues = learnedRange.getValues();
+    var dateValues = dateRange.getValues();
     var today = new Date();
     var isModified = false;
 
     var checkedSet = toWordSet(checkedWords);
     var uncheckedSet = toWordSet(uncheckedWords);
 
-    for (var i = 0; i < values.length; i++) {
-      var word = String(values[i][0] || "").trim();
+    for (var i = 0; i < wordValues.length; i++) {
+      var word = String(wordValues[i][0] || "").trim();
       if (!word) continue;
 
       if (checkedSet[word]) {
-        values[i][7] = true;
-        values[i][8] = today;
+        learnedValues[i][0] = true;
+        dateValues[i][0] = today;
         isModified = true;
       } else if (uncheckedSet[word]) {
-        values[i][7] = false;
-        values[i][8] = "";
+        learnedValues[i][0] = false;
+        dateValues[i][0] = "";
         isModified = true;
       }
     }
 
     if (isModified) {
-      flagsRange.setValues(values);
-      formatLearnedDateColumn_(sheet);
-      invalidateInitialAppCache(sheet.getName());
+      learnedRange.setValues(learnedValues);
+      dateRange.setValues(dateValues);
+      formatLearnedDateColumn_(sheet, user);
+      invalidateInitialAppCache(sheet.getName(), user);
     }
 
     return { success: true };
@@ -495,7 +582,7 @@ function submitCategoryUpdate(checkedWords, uncheckedWords, sheet) {
   }
 }
 
-function formatLearnedDateColumn_(sheet) {
+function formatLearnedDateColumn_(sheet, user) {
   if (!sheet) {
     return;
   }
@@ -503,14 +590,27 @@ function formatLearnedDateColumn_(sheet) {
   if (lastRow < 2) {
     return;
   }
-  sheet.getRange(2, 10, lastRow - 1, 1).setNumberFormat(LEARNED_DATE_NUMBER_FORMAT);
+  var cols = getPrivateProgressCols_(user);
+  sheet
+    .getRange(2, cols.dateCol, lastRow, cols.dateCol)
+    .setNumberFormat(LEARNED_DATE_NUMBER_FORMAT);
 }
 
-/** GASエディタから実行: db / db のコピー のJ列を日時表示にする（アプリの値は変えない） */
+/** GASエディタから実行: db / db のコピー の学習日列を日時表示にする（アプリの値は変えない） */
 function formatLearnedDateColumnNow() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  formatLearnedDateColumn_(ss.getSheetByName(DB_SHEET_PROD));
-  formatLearnedDateColumn_(ss.getSheetByName(DB_SHEET_TEST));
+  var users = Object.keys(PRIVATE_PROGRESS_BY_USER);
+  var prod = ss.getSheetByName(DB_SHEET_PROD);
+  var test = ss.getSheetByName(DB_SHEET_TEST);
+  for (var i = 0; i < users.length; i++) {
+    if (prod) {
+      formatLearnedDateColumn_(prod, users[i]);
+    }
+  }
+  // テストシートは J 列のみ
+  if (test) {
+    formatLearnedDateColumn_(test, "J");
+  }
 }
 
 function toWordSet(words) {
@@ -569,19 +669,8 @@ function sendProdCheckNotifyEmail(dbValues) {
 
 var DAILY_LOG_SHEET = "daily_log";
 var DAILY_LOG_CATS = ["基本", "介護", "医療", "社会"];
-var DAILY_LOG_HEADERS = [
-  "date",
-  "見た_基本",
-  "見た_介護",
-  "見た_医療",
-  "見た_社会",
-  "見た_合計",
-  "知ってる_基本",
-  "知ってる_介護",
-  "知ってる_医療",
-  "知ってる_社会",
-  "知ってる_合計"
-];
+// 見た数のみ。列順: 日付 / 合計 / 基本 / 介護 / 医療 / 社会
+var DAILY_LOG_HEADERS = ["日付", "合計", "基本", "介護", "医療", "社会"];
 
 function ensureDailyLogSheet_() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -599,12 +688,61 @@ function ensureDailyLogSheet_() {
     }
   }
   if (needHeader) {
+    // ヘッダー変更時は見た数だけ残して作り直す（旧「知ってる_*」列は捨てる）
+    var oldRows = [];
+    var lastRow = sheet.getLastRow();
+    if (lastRow >= 2) {
+      var oldHeader = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), 1)).getValues()[0];
+      var oldData = sheet.getRange(2, 1, lastRow, Math.max(sheet.getLastColumn(), 1)).getValues();
+      oldRows = migrateDailyLogRowsToSeenOnly_(oldHeader, oldData);
+    }
     sheet.clear();
     sheet.getRange(1, 1, 1, DAILY_LOG_HEADERS.length).setValues([DAILY_LOG_HEADERS]);
+    if (oldRows.length) {
+      sheet.getRange(2, 1, oldRows.length + 1, DAILY_LOG_HEADERS.length).setValues(oldRows);
+    }
     sheet.setFrozenRows(1);
     sheet.getRange("A:A").setNumberFormat("@");
   }
   return sheet;
+}
+
+/** 旧 daily_log 行を 日付/合計/基本/介護/医療/社会 に寄せる */
+function migrateDailyLogRowsToSeenOnly_(oldHeader, oldData) {
+  function colIndex(names) {
+    var i;
+    var j;
+    for (i = 0; i < names.length; i++) {
+      for (j = 0; j < oldHeader.length; j++) {
+        if (String(oldHeader[j] || "").trim() === names[i]) {
+          return j;
+        }
+      }
+    }
+    return -1;
+  }
+  var dateIdx = colIndex(["日付", "date"]);
+  var totalIdx = colIndex(["合計", "見た_合計"]);
+  var kihonIdx = colIndex(["基本", "見た_基本"]);
+  var kaigoIdx = colIndex(["介護", "見た_介護"]);
+  var iryoIdx = colIndex(["医療", "見た_医療"]);
+  var shakaiIdx = colIndex(["社会", "見た_社会"]);
+  var rows = [];
+  for (var r = 0; r < oldData.length; r++) {
+    var row = oldData[r];
+    var dateKey = dateIdx >= 0 ? dailyLogDateKey_(row[dateIdx]) : "";
+    if (!dateKey) {
+      continue;
+    }
+    var kihon = kihonIdx >= 0 ? Number(row[kihonIdx]) || 0 : 0;
+    var kaigo = kaigoIdx >= 0 ? Number(row[kaigoIdx]) || 0 : 0;
+    var iryo = iryoIdx >= 0 ? Number(row[iryoIdx]) || 0 : 0;
+    var shakai = shakaiIdx >= 0 ? Number(row[shakaiIdx]) || 0 : 0;
+    var total =
+      totalIdx >= 0 ? Number(row[totalIdx]) || 0 : kihon + kaigo + iryo + shakai;
+    rows.push([dateKey, total, kihon, kaigo, iryo, shakai]);
+  }
+  return rows;
 }
 
 function normalizeDailyWordList_(raw) {
@@ -744,6 +882,17 @@ function countsFromDailyByCat_(byCat) {
   return counts;
 }
 
+function isDailyByCatEmpty_(byCat) {
+  byCat = normalizeDailyByCat_(byCat);
+  for (var i = 0; i < DAILY_LOG_CATS.length; i++) {
+    var cat = DAILY_LOG_CATS[i];
+    if (byCat[cat].knownWords.length || byCat[cat].unknownWords.length) {
+      return false;
+    }
+  }
+  return true;
+}
+
 function loadStoredDailyByCat_(user, dateKey) {
   try {
     var raw = PropertiesService.getScriptProperties().getProperty(
@@ -756,7 +905,15 @@ function loadStoredDailyByCat_(user, dateKey) {
     if (parsed && parsed.byCat) {
       return normalizeDailyByCat_(parsed.byCat);
     }
-    // 旧形式: flat lists only
+    // 旧形式: flat lists のみ → カテゴリ不明なので「基本」に仮置き（合計を消さない）
+    if (parsed && (parsed.knownWords || parsed.unknownWords)) {
+      var byCat = emptyDailyByCat_();
+      byCat["基本"] = {
+        knownWords: normalizeDailyWordList_(parsed.knownWords),
+        unknownWords: normalizeDailyWordList_(parsed.unknownWords)
+      };
+      return byCat;
+    }
     return emptyDailyByCat_();
   } catch (err) {
     return emptyDailyByCat_();
@@ -794,20 +951,28 @@ function findDailyLogRowIndex_(sheet, dateKey) {
 
 function writeDailyLogSummaryRow_(dateKey, counts) {
   var sheet = ensureDailyLogSheet_();
+  var seen = Number(counts && counts.total && counts.total.seen) || 0;
+  var row = findDailyLogRowIndex_(sheet, dateKey);
+
+  // 空同期で 0 行を増やしたり、既存の非ゼロを 0 で潰さない
+  if (seen <= 0) {
+    if (!row) {
+      return;
+    }
+    var prevTotal = Number(sheet.getRange(row, 2).getValue()) || 0;
+    if (prevTotal > 0) {
+      return;
+    }
+  }
+
   var rowValues = [
     dateKey,
+    seen,
     counts["基本"].seen,
     counts["介護"].seen,
     counts["医療"].seen,
-    counts["社会"].seen,
-    counts.total.seen,
-    counts["基本"].known,
-    counts["介護"].known,
-    counts["医療"].known,
-    counts["社会"].known,
-    counts.total.known
+    counts["社会"].seen
   ];
-  var row = findDailyLogRowIndex_(sheet, dateKey);
   if (row) {
     sheet.getRange(row, 1, row, DAILY_LOG_HEADERS.length).setValues([rowValues]);
   } else {
@@ -837,21 +1002,29 @@ function loadDailySeenPayload_(user, dateKey) {
   user = String(user || "J").trim() || "J";
   dateKey = String(dateKey || "").trim().slice(0, 10);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) {
-    dateKey = Utilities.formatDate(new Date(), "Asia/Tokyo", "yyyy-MM-dd");
+    dateKey = getJstDateKeyNow_();
   }
-  var stored = null;
+  if (isJfDailySeenResetLocked_(user, dateKey)) {
+    var clearedPayload = buildDailySeenPayloadFromByCat_(
+      dateKey,
+      "JF",
+      emptyDailyByCat_(),
+      false
+    );
+    clearedPayload.cleared = true;
+    return clearedPayload;
+  }
+  var byCat = loadStoredDailyByCat_(user, dateKey);
+  var star = false;
   try {
     var raw = PropertiesService.getScriptProperties().getProperty(
       getDailySeenWordsPropKey_(user, dateKey)
     );
     if (raw) {
-      stored = JSON.parse(raw);
+      var stored = JSON.parse(raw);
+      star = !!(stored && stored.star === true);
     }
-  } catch (err) {
-    stored = null;
-  }
-  var byCat = stored && stored.byCat ? stored.byCat : emptyDailyByCat_();
-  var star = stored && stored.star === true;
+  } catch (err) {}
   return buildDailySeenPayloadFromByCat_(dateKey, user, byCat, star);
 }
 
@@ -860,16 +1033,43 @@ function upsertDailyLog_(params) {
   params = params || {};
   var dateKey = String(params.date || "").trim().slice(0, 10);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) {
-    dateKey = Utilities.formatDate(new Date(), "Asia/Tokyo", "yyyy-MM-dd");
+    dateKey = getJstDateKeyNow_();
   }
   var user = String(params.user || "J").trim() || "J";
+
+  // JF リセット当日は端末からの書き戻しを拒否（J は対象外）
+  if (isJfDailySeenResetLocked_(user, dateKey)) {
+    saveStoredDailyByCat_("JF", dateKey, emptyDailyByCat_(), false);
+    var lockedPayload = buildDailySeenPayloadFromByCat_(
+      dateKey,
+      "JF",
+      emptyDailyByCat_(),
+      false
+    );
+    lockedPayload.cleared = true;
+    return lockedPayload;
+  }
+
   var incomingByCat = normalizeDailyByCat_(params.byCategory || params.byCat || {});
 
-  // 旧クライアント互換: flat lists だけ来た場合は「合計」扱いにせず空のまま（カテゴリ不明）
-  // ただし knownWords/unknownWords がある場合は byCategory が空なら合計用に医療などに振り分けない
+  // 旧クライアント互換: byCategory が空で flat lists だけ来た場合は「基本」に仮置き
+  if (isDailyByCatEmpty_(incomingByCat)) {
+    var flatKnown = normalizeDailyWordList_(params.knownWords);
+    var flatUnknown = normalizeDailyWordList_(params.unknownWords);
+    if (flatKnown.length || flatUnknown.length) {
+      incomingByCat["基本"] = {
+        knownWords: flatKnown,
+        unknownWords: flatUnknown
+      };
+    }
+  }
 
   var existingByCat = loadStoredDailyByCat_(user, dateKey);
-  var mergedByCat = mergeDailyByCat_(existingByCat, incomingByCat);
+  var incomingEmpty = isDailyByCatEmpty_(incomingByCat);
+  // 空の書き込みで既存 Properties を消さない
+  var mergedByCat = incomingEmpty
+    ? existingByCat
+    : mergeDailyByCat_(existingByCat, incomingByCat);
 
   var star =
     params.star === true ||
@@ -888,8 +1088,13 @@ function upsertDailyLog_(params) {
   } catch (err) {}
 
   var payload = buildDailySeenPayloadFromByCat_(dateKey, user, mergedByCat, star);
-  saveStoredDailyByCat_(user, dateKey, mergedByCat, payload.star);
-  writeDailyLogSummaryRow_(dateKey, payload.byCategory);
+  if (!incomingEmpty || !isDailyByCatEmpty_(mergedByCat)) {
+    saveStoredDailyByCat_(user, dateKey, mergedByCat, payload.star);
+  }
+  // J のみ daily_log シートへ集計。JF などは Properties のみ。
+  if (shouldWriteDailyLogSheet_(user)) {
+    writeDailyLogSummaryRow_(dateKey, payload.byCategory);
+  }
   return payload;
 }
 

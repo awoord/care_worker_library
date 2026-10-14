@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """過去問キーワード検索サイトを生成し、/kaigo/kakomon/ にアップロードする。
 
-- データ: kakomon_v2/kaigo_kakomon_all.txt（BUILD_SESSION_MIN/MAX の範囲を JSON 化）
+- データ: data/kakomon_v2/kaigo_kakomon_all.txt（BUILD_SESSION_MIN/MAX の範囲を JSON 化）
 - 画面上で回の範囲を絞り込めるよう、データは広めに入れる
 - 解説の外部リンクは付けない
 - ルート・J専用URL・/test/ には触らない

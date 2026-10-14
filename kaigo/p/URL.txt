@@ -1,9 +1,23 @@
-# J専用（ログインなし）の秘密URL
+# 秘密URL（ログインなし）一覧
 # このファイルとトークンは生徒以外に公開しないこと。
 # ルート https://nihongo.site/ とは別。リダイレクトはしない。
 
-TOKEN=NrtaCnSFK08mJF-SnlCWBmmr
-URL=https://nihongo.site/kaigo/p/NrtaCnSFK08mJF-SnlCWBmmr/
+# デプロイ:
+#   python3 kaigo/p/deploy_private.py        # 全生徒
+#   python3 kaigo/p/deploy_private.py J
+#   python3 kaigo/p/deploy_private.py JF
 
-# デプロイ（ルートは触れない。test/ からコピー → 本番 db）:
-#   python3 kaigo/p/deploy_private.py
+# GAS 再デプロイ（進捗列・生徒切替の変更後は必須）:
+#   1. Apps Script エディタで gas/webapp.js を反映
+#   2. デプロイ → デプロイを管理 → 編集 → 新バージョン → デプロイ
+#   3. db シートに K=覚えた（JF） / L=学習日（JF） があること（I/J は J 用のまま）
+
+# --- J ---
+# db列: I/J（覚えた / 学習日）
+TOKEN_J=NrtaCnSFK08mJF-SnlCWBmmr
+URL_J=https://nihongo.site/kaigo/p/NrtaCnSFK08mJF-SnlCWBmmr/
+
+# --- JF ---
+# db列: K/L（覚えた（JF） / 学習日（JF））
+TOKEN_JF=AHB6rudP29TOi4p6AWDyROZQ
+URL_JF=https://nihongo.site/kaigo/p/AHB6rudP29TOi4p6AWDyROZQ/

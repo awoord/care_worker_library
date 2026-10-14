@@ -13,18 +13,42 @@ var AUTO_SESSION_PLAN = {
 };
 var CATEGORIES = ["基本", "介護", "医療", "社会"];
 var EXAM_DATE_JST = "2027-01-31";
+// deploy_private が生徒ごとに差し替える（空=非秘密URL）
+var PRIVATE_STUDENT_CODE = "J";
 // test / J専用: 端末に残っていない達成日を補完（きろく⭐️・れんぞく用）
+// JF などシード不要の生徒はデプロイ時に [] へ差し替え
 var PRIVATE_SEEDED_ACHIEVED_DATES = ["2026-09-15"];
 
-// test専用: このトークン未適用端末の「きょう見た」を0に戻す
-var TEST_TODAY_SEEN_RESET_TOKEN = "20260925_seen0";
+// test専用: このトークン未適用端末の「きょう見た」とカーソルをリセット
+var TEST_TODAY_SEEN_RESET_TOKEN = "20261003_seen0_cursor0";
 
 function isTestDeploy() {
   return /\/test(?:\/|$)/.test(window.location.pathname);
 }
 
+function isPrivateDeploy() {
+  return /\/kaigo\/p\//.test(window.location.pathname);
+}
+
+function getPrivateStudentCode() {
+  if (PRIVATE_STUDENT_CODE) {
+    return String(PRIVATE_STUDENT_CODE).trim();
+  }
+  // 旧デプロイ互換: 秘密URLでコード未注入なら J
+  if (isPrivateDeploy()) {
+    return "J";
+  }
+  return "";
+}
+
 function getStorageKey(base) {
-  return base + (isTestDeploy() ? "_test" : "_prod");
+  var suffix = isTestDeploy() ? "_test" : "_prod";
+  var student = getPrivateStudentCode();
+  // J は従来キー（_prod）を維持。他生徒だけサフィックスを付ける
+  if (student && student !== "J") {
+    suffix += "_" + student;
+  }
+  return base + suffix;
 }
 
 function getApiUrl() {
@@ -32,7 +56,19 @@ function getApiUrl() {
   if (isTestDeploy()) {
     qs = "env=test&" + qs;
   }
+  var student = getPrivateStudentCode();
+  if (student) {
+    qs = "user=" + encodeURIComponent(student) + "&" + qs;
+  }
   return GAS_BASE_URL + "?" + qs;
+}
+
+function withPrivateUser(payload) {
+  var student = getPrivateStudentCode();
+  if (student) {
+    payload.user = student;
+  }
+  return payload;
 }
 
 var bootPrefetchPromise = null;
@@ -187,7 +223,9 @@ function normalizeApiPayload(res) {
   return {
     allWords: (res.allWords || []).map(normalizeWordItem),
     roadmap: res.roadmap || {},
-    cursors: res.cursors || {}
+    cursors: res.cursors || {},
+    dailySeen: res.dailySeen || null,
+    user: res.user || ""
   };
 }
 
@@ -252,6 +290,8 @@ var trackedJSTDateKey = "";
 var pendingChecks = {};
 var postInFlightWords = {};
 var pendingChecksSendPromise = Promise.resolve();
+/** 完了画面中にサーバーへ仮確定済み（シート未反映） */
+var flashTentativeActive = false;
 var searchCheckSendTimer = null;
 var flashCursorsSendTimer = null;
 var flashCursorsSendPromise = Promise.resolve();
@@ -342,6 +382,29 @@ function loadUiState() {
   loadFlashSessionFromStorage();
 }
 
+function resetTestFlashCursorsToStart() {
+  var now = Date.now();
+  var cursors = {};
+  CATEGORIES.forEach(function (catName) {
+    cursors[catName] = { i: 0, t: now };
+  });
+  saveFlashCategoryCursors(cursors);
+  try {
+    sessionStorage.removeItem(getStorageKey("care_worker_flash_session_v2"));
+  } catch (e) {}
+  flashSession = {
+    cat: "",
+    wordNames: [],
+    initialCount: 0,
+    index: 0,
+    revealed: false,
+    completed: false,
+    advancing: false,
+    answerLog: [],
+    lapStart: null
+  };
+}
+
 function applyTestTodaySeenReset() {
   if (!isTestDeploy()) {
     return false;
@@ -368,6 +431,9 @@ function applyTestTodaySeenReset() {
   if (initialLearnedDatesMap && initialLearnedDatesMap[todayKey]) {
     delete initialLearnedDatesMap[todayKey];
   }
+
+  // カーソルを先頭へ（新しい t でサーバー上書き用）
+  resetTestFlashCursorsToStart();
 
   // リセット後は端末の今日セッションのみを「きょう見た」に数える
   localStorage.setItem(getStorageKey("test_seen_local_only_date"), todayKey);
@@ -566,6 +632,10 @@ function buildDailySeenCountMap() {
   }
   map[getTodayJSTStr()] = getTodaySeenCount();
   return map;
+}
+
+function getRoadmapTotalStatCount() {
+  return getLiveTotalLearnedCount();
 }
 
 function refreshDailyBoundariesIfNeeded() {
@@ -1005,8 +1075,9 @@ function syncTodayCommittedLearnedWithServer() {
 }
 
 function syncAchievementCachesFromServer() {
+  // syncTodayCommittedLearnedWithServer が個別に整理済み。
+  // pruneStaleTodayCommittedIfNeeded は今日分を一括消去して daily_log を 0 にするので呼ばない。
   syncTodayCommittedLearnedWithServer();
-  pruneStaleTodayCommittedIfNeeded();
 
   var todayKey = getTodayJSTStr();
   var keepTodayAchieved = hasTodayStreakAchievement();
@@ -1091,6 +1162,41 @@ function refreshStreakDisplay() {
   setDailyStatValue(streakEl, getStreakCount(), "日");
 }
 
+function getTodayCardBaseLabel() {
+  return isKnownRoadmapMode() ? "きょう 覚えた" : "きょう 見た";
+}
+
+function getTotalBreakdownBaseLabel() {
+  return "これまで 覚えた";
+}
+
+function syncBreakdownTileLabel(btn, baseText, open, showCaret) {
+  if (!btn) {
+    return;
+  }
+  var textEl = btn.querySelector(".daily-stat-label-text");
+  var caretEl = btn.querySelector(".daily-stat-label-caret");
+  if (textEl) {
+    textEl.textContent = baseText;
+  }
+  if (caretEl) {
+    var visible = showCaret !== false;
+    caretEl.hidden = !visible;
+    caretEl.textContent = open ? "▴" : "▾";
+  }
+}
+
+function syncTodayCardLabel() {
+  var card = document.getElementById("cardTodayWords");
+  if (!card) {
+    return;
+  }
+  var textEl = card.querySelector(".daily-stat-label-text");
+  if (textEl) {
+    textEl.textContent = getTodayCardBaseLabel();
+  }
+}
+
 function refreshTodayLearnedDisplay() {
   persistTodaySeenCount();
   var todayEl = document.getElementById("valTodayWords");
@@ -1099,6 +1205,65 @@ function refreshTodayLearnedDisplay() {
   }
   var todayCount = isKnownRoadmapMode() ? getTodayLearnedCount() : getTodaySeenCount();
   setDailyStatValue(todayEl, todayCount, "語");
+  syncTodayCardLabel();
+}
+
+function getKnownCountsByCategory() {
+  var counts = {};
+  CATEGORIES.forEach(function (cat) {
+    var words = getCategoryWords(cat);
+    var learned = 0;
+    for (var i = 0; i < words.length; i++) {
+      if (getWordChecked(words[i])) {
+        learned++;
+      }
+    }
+    counts[cat] = { learned: learned, total: words.length };
+  });
+  return counts;
+}
+
+function refreshTotalKnownBreakdown() {
+  var root = document.getElementById("totalKnownBreakdown");
+  if (!root) {
+    return;
+  }
+  root.classList.add("is-known");
+  root.classList.remove("is-seen-lap");
+  var counts = getKnownCountsByCategory();
+  var learnedEls = root.querySelectorAll(".total-known-breakdown-learned");
+  var totalEls = root.querySelectorAll(".total-known-breakdown-total");
+  var i;
+  for (i = 0; i < learnedEls.length; i++) {
+    var catL = learnedEls[i].getAttribute("data-cat");
+    learnedEls[i].textContent = String((counts[catL] && counts[catL].learned) || 0);
+  }
+  for (i = 0; i < totalEls.length; i++) {
+    var catT = totalEls[i].getAttribute("data-cat");
+    totalEls[i].textContent = String((counts[catT] && counts[catT].total) || 0);
+  }
+}
+
+function setTotalKnownBreakdownOpen(open) {
+  var btn = document.getElementById("btnTotalKnownBreakdown");
+  var panel = document.getElementById("totalKnownBreakdown");
+  if (!btn || !panel) {
+    return;
+  }
+  var next = !!open;
+  btn.classList.toggle("is-breakdown-open", next);
+  btn.classList.remove("is-breakdown-disabled");
+  btn.setAttribute("aria-expanded", next ? "true" : "false");
+  panel.hidden = !next;
+  var base = getTotalBreakdownBaseLabel();
+  syncBreakdownTileLabel(btn, base, next, true);
+  btn.setAttribute(
+    "aria-label",
+    next ? "これまで覚えたの合計を表示" : "これまで覚えたのカテゴリ内訳を表示"
+  );
+  if (next) {
+    refreshTotalKnownBreakdown();
+  }
 }
 
 function shiftJSTDateStr(dateStr, days) {
@@ -1132,13 +1297,10 @@ function updateDailyStatLensUI() {
     panelDaily.classList.toggle("is-roadmap-known", isKnownRoadmapMode());
     panelDaily.classList.toggle("is-roadmap-seen", !isKnownRoadmapMode());
   }
-  var todayLabel = document.querySelector("#panelDaily .daily-stat-card.today .daily-stat-label");
-  if (todayLabel) {
-    todayLabel.textContent = isKnownRoadmapMode() ? "きょう 覚えた" : "きょう 見た";
-  }
-  var totalLabel = document.querySelector("#panelDaily .daily-stat-card.words .daily-stat-label");
-  if (totalLabel) {
-    totalLabel.textContent = "これまで 覚えた";
+  syncTodayCardLabel();
+  var knownBtn = document.getElementById("btnTotalKnownBreakdown");
+  if (knownBtn) {
+    setTotalKnownBreakdownOpen(knownBtn.classList.contains("is-breakdown-open"));
   }
 }
 
@@ -1151,8 +1313,9 @@ function refreshLearnedCountDisplays(refreshRoadmapFully) {
 
   var totalEl = document.getElementById("valTotalWords");
   if (totalEl) {
-    setDailyStatValue(totalEl, getLiveTotalLearnedCount(), "語");
+    setDailyStatValue(totalEl, getRoadmapTotalStatCount(), "語");
   }
+  refreshTotalKnownBreakdown();
 
   refreshStreakDisplay();
   refreshTodayLearnedDisplay();
@@ -1341,10 +1504,10 @@ function sendFlashCursorsToServer() {
     return Promise.resolve();
   }
 
-  var postPayload = {
+  var postPayload = withPrivateUser({
     action: "saveCursors",
     cursors: cursors
-  };
+  });
   if (isTestDeploy()) {
     postPayload.env = "test";
   }
@@ -1881,6 +2044,7 @@ function canUndoFlashcard() {
   if (!flashSession.answerLog.length || flashSession.wordNames.length === 0) {
     return false;
   }
+  // 完了画面でも直前1問は戻せる（仮確定の取り消しとセット）
   if (!flashSession.completed && flashSession.index === 0) {
     return false;
   }
@@ -1973,6 +2137,7 @@ function undoFlashcard() {
   }
   if (!canUndoFlashcard()) return;
 
+  var wasCompleted = flashSession.completed;
   var entry = flashSession.answerLog.pop();
   if (!entry) return;
 
@@ -1992,6 +2157,11 @@ function undoFlashcard() {
   updateFlashSessionUI();
   persistFlashSession();
   refreshLearnedCountDisplays(true);
+
+  // 完了画面からの戻し → 仮確定を破棄（シートはまだ書いていない）
+  if (wasCompleted) {
+    clearTentativeChecksOnServer();
+  }
 }
 
 function fillFlashcardAnswer(item) {
@@ -2259,10 +2429,6 @@ function updateFlashSessionUI(options) {
   updateFlashUndoButton();
 }
 
-function isPrivateDeploy() {
-  return /\/kaigo\/p\//.test(window.location.pathname);
-}
-
 function applyPrivateSeededAchievedDates() {
   if (!isPrivateDeploy() && !isTestDeploy()) {
     return false;
@@ -2321,6 +2487,12 @@ function buildTodayDailyLogByCategory() {
     byCat[cat] = { knownWords: [], unknownWords: [] };
   });
 
+  function resolveDailyLogCat(wordName) {
+    var item = findWordByKey(wordName);
+    var cat = item ? getWordCategoryKey(item) : "";
+    return byCat[cat] ? cat : "基本";
+  }
+
   // 知ってる: 端末の今日コミットを正とする（checked フラグ欠落で落とさない）
   Object.keys(todayCommittedLearned).forEach(function (wordName) {
     if (!todayCommittedLearned[wordName]) {
@@ -2329,22 +2501,13 @@ function buildTodayDailyLogByCategory() {
     if (pendingChecks.hasOwnProperty(wordName) && pendingChecks[wordName] === false) {
       return;
     }
-    var item = findWordByKey(wordName);
-    var cat = item ? getWordCategoryKey(item) : "";
-    if (!byCat[cat]) {
-      return;
-    }
-    byCat[cat].knownWords.push(wordName);
+    byCat[resolveDailyLogCat(wordName)].knownWords.push(wordName);
   });
 
   // 画面上「きょう覚えた」に入る語も拾う（日付付きの今日分）
   var learned = collectTodayLearnedWords();
   Object.keys(learned).forEach(function (wordName) {
-    var item = findWordByKey(wordName);
-    var cat = item ? getWordCategoryKey(item) : "";
-    if (!byCat[cat]) {
-      return;
-    }
+    var cat = resolveDailyLogCat(wordName);
     if (byCat[cat].knownWords.indexOf(wordName) === -1) {
       byCat[cat].knownWords.push(wordName);
     }
@@ -2361,12 +2524,7 @@ function buildTodayDailyLogByCategory() {
     if (!todaySkippedWords[wordName] || knownSet[wordName]) {
       return;
     }
-    var item = findWordByKey(wordName);
-    var cat = item ? getWordCategoryKey(item) : "";
-    if (!byCat[cat]) {
-      return;
-    }
-    byCat[cat].unknownWords.push(wordName);
+    byCat[resolveDailyLogCat(wordName)].unknownWords.push(wordName);
   });
 
   return byCat;
@@ -2384,6 +2542,49 @@ function applyServerDailySeen(dailySeen) {
   var changed = false;
   var knownWords = Array.isArray(dailySeen.knownWords) ? dailySeen.knownWords : [];
   var unknownWords = Array.isArray(dailySeen.unknownWords) ? dailySeen.unknownWords : [];
+  var serverSeen = Number(dailySeen.seen);
+  if (!isFinite(serverSeen)) {
+    serverSeen = knownWords.length + unknownWords.length;
+  }
+
+  // 明示クリア（JFリセット等）のときだけ端末を空にする。通常の空レスポンスでは消さない。
+  if (serverSeen === 0 && knownWords.length === 0 && unknownWords.length === 0) {
+    if (dailySeen.cleared !== true) {
+      return false;
+    }
+    var hadCommitted = false;
+    var hadSkipped = false;
+    var wordName;
+    for (wordName in todayCommittedLearned) {
+      if (todayCommittedLearned.hasOwnProperty(wordName)) {
+        hadCommitted = true;
+        break;
+      }
+    }
+    for (wordName in todaySkippedWords) {
+      if (todaySkippedWords.hasOwnProperty(wordName)) {
+        hadSkipped = true;
+        break;
+      }
+    }
+    todayCommittedLearned = {};
+    todaySkippedWords = {};
+    if (dailySeen.star !== true && localAchievedDates[todayKey]) {
+      delete localAchievedDates[todayKey];
+      changed = true;
+    }
+    if (hadCommitted || hadSkipped) {
+      changed = true;
+    }
+    if (changed) {
+      persistTodayCommittedLearned();
+      persistTodaySkippedWords();
+      persistTodaySeenCount();
+      persistAchievedDates();
+    }
+    return changed;
+  }
+
   var i;
 
   for (i = 0; i < knownWords.length; i++) {
@@ -2453,15 +2654,20 @@ function sendDailyLogNow() {
     knownWords = knownWords.concat(byCategory[cat].knownWords);
     unknownWords = unknownWords.concat(byCategory[cat].unknownWords);
   });
-  var payload = {
+
+  // 空の POST は送らない（daily_log を 0 で埋めるのを防ぐ）。復元は GET dailySeen。
+  if (knownWords.length === 0 && unknownWords.length === 0) {
+    return;
+  }
+
+  var payload = withPrivateUser({
     action: "dailyLog",
     date: getTodayJSTStr(),
-    user: "J",
     byCategory: byCategory,
     knownWords: knownWords,
     unknownWords: unknownWords,
     star: hasTodayStreakAchievement()
-  };
+  });
 
   dailyLogSyncInFlight = true;
   fetch(getApiUrl(), {
@@ -2516,8 +2722,10 @@ function advanceFlashcard(markLearned) {
     flashSession.index++;
     flashSession.revealed = false;
 
+    var sessionJustCompleted = false;
     if (flashSession.index >= flashSession.wordNames.length) {
       flashSession.completed = true;
+      sessionJustCompleted = true;
     }
 
     flashSession.advancing = false;
@@ -2526,18 +2734,23 @@ function advanceFlashcard(markLearned) {
       animateEnter: !flashSession.completed
     });
     persistFlashSession();
+
+    // 完了時点で仮確定（シート未反映）。戻せる／他端末には本確定まで見えない
+    if (sessionJustCompleted) {
+      saveTentativeChecksToServer();
+    }
   });
 }
 
 function restartFlashSession() {
-  flushPendingChecksNow();
+  confirmTentativeChecksIfNeeded();
   startFlashSession(uiState.learnCat, true);
   updateFlashSessionUI();
 }
 
 function finishFlashSession() {
   if (!flashSession.completed || flashSession.initialCount === 0) return;
-  flushPendingChecksNow();
+  confirmTentativeChecksIfNeeded();
   resetFlashcardView();
   startFlashSession(uiState.learnCat, true);
   persistFlashSession();
@@ -2983,7 +3196,7 @@ function renderFlashCompleteToday() {
   seenCountEl.className = "flash-complete-today-count flash-complete-today-seen-count";
   seenCountEl.textContent = String(seenStart);
   todayMain.appendChild(seenCountEl);
-  todayMain.appendChild(document.createTextNode(" / " + FLASH_TODAY_SEEN_GOAL + "語"));
+  todayMain.appendChild(document.createTextNode(" / " + FLASH_TODAY_SEEN_GOAL + " 語"));
   todayMain.classList.toggle("is-goal-met", seenEnd >= FLASH_TODAY_SEEN_GOAL);
   todayEl.appendChild(todayMain);
 
@@ -3069,6 +3282,119 @@ function flushPendingChecksNow() {
   applyAndSendPendingChecks();
 }
 
+function setFlashTentativeActiveFlag(active) {
+  flashTentativeActive = !!active;
+  try {
+    var key = getStorageKey("flash_tentative_active");
+    if (flashTentativeActive) {
+      sessionStorage.setItem(key, "1");
+    } else {
+      sessionStorage.removeItem(key);
+    }
+  } catch (e) {}
+}
+
+function isFlashTentativeActiveFlag() {
+  if (flashTentativeActive) {
+    return true;
+  }
+  try {
+    return sessionStorage.getItem(getStorageKey("flash_tentative_active")) === "1";
+  } catch (e) {
+    return false;
+  }
+}
+
+function collectPendingCheckLists() {
+  var checkedWords = [];
+  var uncheckedWords = [];
+  Object.keys(pendingChecks).forEach(function (wordName) {
+    if (pendingChecks[wordName]) {
+      checkedWords.push(wordName);
+    } else {
+      uncheckedWords.push(wordName);
+    }
+  });
+  return { checkedWords: checkedWords, uncheckedWords: uncheckedWords };
+}
+
+function postPrivateChecksAction(action, checkedWords, uncheckedWords, includeCursors) {
+  var postPayload = withPrivateUser({
+    action: action,
+    checkedWords: checkedWords || [],
+    uncheckedWords: uncheckedWords || []
+  });
+  if (includeCursors) {
+    postPayload.cursors = loadFlashCategoryCursors();
+  }
+  if (isTestDeploy()) {
+    postPayload.env = "test";
+  }
+  return fetch(getApiUrl(), {
+    method: "POST",
+    headers: {
+      "Content-Type": "text/plain;charset=utf-8"
+    },
+    body: JSON.stringify(postPayload),
+    keepalive: true
+  });
+}
+
+/** セッション完了時: Properties に仮保存（db シートは更新しない） */
+function saveTentativeChecksToServer() {
+  var lists = collectPendingCheckLists();
+  if (!lists.checkedWords.length && !lists.uncheckedWords.length) {
+    return Promise.resolve();
+  }
+  setFlashTentativeActiveFlag(true);
+  return postPrivateChecksAction(
+    "saveTentativeChecks",
+    lists.checkedWords,
+    lists.uncheckedWords,
+    true
+  )
+    .then(function (res) {
+      if (!res.ok) {
+        throw new Error("tentative POST failed: " + res.status);
+      }
+    })
+    .catch(function (err) {
+      console.error("仮確定エラー:", err);
+    });
+}
+
+/** 完了画面から戻したとき: 仮確定だけ消す */
+function clearTentativeChecksOnServer() {
+  var wasActive = isFlashTentativeActiveFlag();
+  setFlashTentativeActiveFlag(false);
+  if (!wasActive) {
+    return Promise.resolve();
+  }
+  return postPrivateChecksAction("clearTentativeChecks", [], [], false)
+    .then(function (res) {
+      if (!res.ok) {
+        throw new Error("clear tentative failed: " + res.status);
+      }
+    })
+    .catch(function (err) {
+      console.error("仮確定クリアエラー:", err);
+    });
+}
+
+/** おしまい／タブ切替／画面を閉じる前: 仮確定を本確定へ */
+function confirmTentativeChecksIfNeeded() {
+  if (!flashSession.completed && !isFlashTentativeActiveFlag()) {
+    return;
+  }
+  var lists = collectPendingCheckLists();
+  if (lists.checkedWords.length || lists.uncheckedWords.length) {
+    flushPendingChecksNow(); // 本書き込み時に GAS 側でも仮確定を消す
+  } else if (isFlashTentativeActiveFlag()) {
+    clearTentativeChecksOnServer();
+  }
+  setFlashTentativeActiveFlag(false);
+}
+
 function finalizeCommittedChecks(wordsToCommit) {
   wordsToCommit.forEach(function (wordName) {
     delete postInFlightWords[wordName];
@@ -3137,13 +3463,13 @@ function flushPendingChecksOnce() {
   persistLocalLearnedOverrides();
   refreshLearnedCountDisplays(false);
 
-  var postPayload = {
+  var postPayload = withPrivateUser({
     category: uiState.learnCat,
     checkedWords: checkedWords,
     uncheckedWords: uncheckedWords,
     currentWords: [],
     cursors: loadFlashCategoryCursors()
-  };
+  });
   if (isTestDeploy()) {
     postPayload.env = "test";
   }
@@ -3159,6 +3485,8 @@ function flushPendingChecksOnce() {
     if (!res.ok) {
       throw new Error("POST failed: " + res.status);
     }
+    // 本確定成功 → 仮確定フラグも落とす（GAS 側でも delete 済み）
+    setFlashTentativeActiveFlag(false);
     return loadDataFromDB(false);
   }).then(function () {
     applyLocalLearnedSnapshot(snapshot);
@@ -3274,6 +3602,8 @@ function applyAppData(res, options) {
       if (hasRestoredSession) {
         if (flashSession.completed) {
           updateFlashSessionUI();
+          // 完了画面のまま再読込されたら仮確定を本確定へ
+          confirmTentativeChecksIfNeeded();
         } else {
           refreshFlashSessionAfterDataLoad();
         }
@@ -3347,6 +3677,14 @@ function bindEvents() {
   document.getElementById("btnRoadmapDisplayMode").addEventListener("click", function () {
     toggleRoadmapDisplayMode();
   });
+  var totalKnownBreakdownBtn = document.getElementById("btnTotalKnownBreakdown");
+  if (totalKnownBreakdownBtn) {
+    totalKnownBreakdownBtn.addEventListener("click", function () {
+      setTotalKnownBreakdownOpen(
+        !totalKnownBreakdownBtn.classList.contains("is-breakdown-open")
+      );
+    });
+  }
   document.getElementById("btnModeSearch").addEventListener("click", function () {
     switchMainMode("search");
   });
@@ -3419,6 +3757,10 @@ scheduleBootApp();
 
 document.addEventListener("visibilitychange", function () {
   if (document.hidden) {
+    // 完了画面のまま裏へ回したら仮確定を本確定へ（端末間ズレ防止）
+    if (flashSession.completed || isFlashTentativeActiveFlag()) {
+      confirmTentativeChecksIfNeeded();
+    }
     flushFlashCursorsNow();
     return;
   }
@@ -3427,6 +3769,12 @@ document.addEventListener("visibilitychange", function () {
   if (learnDataReady) {
     bootPrefetchPromise = null;
     loadDataFromDB(false);
+  }
+});
+
+window.addEventListener("pagehide", function () {
+  if (flashSession.completed || isFlashTentativeActiveFlag()) {
+    confirmTentativeChecksIfNeeded();
   }
 });
 
@@ -3494,6 +3842,7 @@ function switchMainMode(mode, options) {
   options = options || {};
   if ((mode === "daily" || mode === "search") && uiState.mode === "learn") {
     flushPendingChecksNow();
+    setFlashTentativeActiveFlag(false);
   }
 
   if (mode !== "search") {
@@ -3919,9 +4268,9 @@ function buildSearchStatusText(matchCount, query, hasCatFilter, hasStatusFilter)
   var statusLabel = "";
 
   if (hasLearned && !hasUnlearned) {
-    statusLabel = "知ってる単語";
+    statusLabel = "知ってる / 覚えた単語";
   } else if (hasUnlearned && !hasLearned) {
-    statusLabel = "知らない単語";
+    statusLabel = "知らない / 忘れた単語";
   }
 
   var catLabel = hasCatFilter ? selectedCats.join("・") : "";
@@ -4319,14 +4668,13 @@ function renderRoadmap() {
   if (!roadmapData) return;
 
   var todayKey = getTodayJSTStr();
-  var totalLearned = getLiveTotalLearnedCount();
   var dynamicLearnedMap = buildLearnedDatesMap();
   var showKnown = isKnownRoadmapMode();
   var dailyCountMap = showKnown ? buildDailyLearnedCountMap() : buildDailySeenCountMap();
   var streakCount = getStreakCount();
 
   setDailyStatValue(document.getElementById("valStreak"), streakCount, "日");
-  setDailyStatValue(document.getElementById("valTotalWords"), totalLearned, "語");
+  setDailyStatValue(document.getElementById("valTotalWords"), getRoadmapTotalStatCount(), "語");
   refreshTodayLearnedDisplay();
   updateDailyStatLensUI();
   updateExamCountdown();
@@ -4335,24 +4683,13 @@ function renderRoadmap() {
   var tbody = document.getElementById("roadmapTableBody");
   tbody.innerHTML = "";
 
-  var now = new Date();
-  var currentDay = now.getDay();
-  var mondayOffset = now.getDate() - currentDay + (currentDay === 0 ? -6 : 1);
-  var nowMonday = new Date(now.getFullYear(), now.getMonth(), mondayOffset);
-  var nowMondayKey = formatDateStr(nowMonday);
-
   var totalWeeks = 23;
   var baseMonday = new Date(2026, 7, 24);
 
   for (var w = 0; w < totalWeeks; w++) {
     var thisMon = new Date(baseMonday.getFullYear(), baseMonday.getMonth(), baseMonday.getDate() + (w * 7));
-    var thisMonKey = formatDateStr(thisMon);
-    var isCurrentWeek = (thisMonKey === nowMondayKey);
 
     var tr = document.createElement("tr");
-    if (isCurrentWeek) {
-      tr.className = "current-week";
-    }
 
     var startStr = (thisMon.getMonth() + 1) + "/" + thisMon.getDate() + "〜";
     var weekLabel = startStr;
@@ -4367,6 +4704,7 @@ function renderRoadmap() {
       var targetKey = formatDateStr(targetD);
       var symbol = "";
       var dayCount = dailyCountMap ? (dailyCountMap[targetKey] || 0) : 0;
+      var dayClasses = [];
 
       if (targetKey < "2026-08-28") {
         symbol = "";
@@ -4388,13 +4726,19 @@ function renderRoadmap() {
       var tdDay = document.createElement("td");
       tdDay.textContent = symbol;
       if (/^\d+$/.test(symbol)) {
-        tdDay.className = "roadmap-day-count";
+        dayClasses.push("roadmap-day-count");
       } else if (symbol === "⭐️") {
-        tdDay.className = "roadmap-day-star";
+        dayClasses.push("roadmap-day-star");
       } else if (symbol === "📘") {
-        tdDay.className = "roadmap-day-book";
+        dayClasses.push("roadmap-day-book");
       } else if (symbol === "⬜️" || symbol === "⚪️") {
-        tdDay.className = "roadmap-day-gray";
+        dayClasses.push("roadmap-day-gray");
+      }
+      if (targetKey === todayKey) {
+        dayClasses.push("roadmap-day-today");
+      }
+      if (dayClasses.length) {
+        tdDay.className = dayClasses.join(" ");
       }
       tr.appendChild(tdDay);
     }

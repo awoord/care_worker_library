@@ -9,17 +9,54 @@ var DB_SHEET_TEST_MISSING_ERROR = "参照するdbがありません";
 var PROD_CATEGORY_ORDER = ["基本", "介護", "医療", "社会"];
 var FLASH_CURSORS_PROP_PROD = "FLASH_CURSORS_prod";
 var FLASH_CURSORS_PROP_TEST = "FLASH_CURSORS_test";
+// 秘密URL生徒ごとの db 進捗列（1-based）。I/J=J、K/L=JF
+var PRIVATE_PROGRESS_BY_USER = {
+  J: { learnedCol: 9, dateCol: 10 },
+  JF: { learnedCol: 11, dateCol: 12 }
+};
 // 未設定時はスクリプト実行者のメールへ送信。別アドレスへ送る場合は
 // スクリプトプロパティ PROD_CHECK_NOTIFY_EMAIL を設定する。
 
+function normalizePrivateUser_(user) {
+  var raw = String(user || "J").trim();
+  if (!raw) {
+    return "J";
+  }
+  var keys = Object.keys(PRIVATE_PROGRESS_BY_USER);
+  for (var i = 0; i < keys.length; i++) {
+    if (keys[i].toUpperCase() === raw.toUpperCase()) {
+      return keys[i];
+    }
+  }
+  return "J";
+}
+
+function resolvePrivateUser_(e, params) {
+  params = params || {};
+  var fromParams = params.user;
+  if (fromParams == null && e && e.parameter) {
+    fromParams = e.parameter.user;
+  }
+  return normalizePrivateUser_(fromParams);
+}
+
+function getPrivateProgressCols_(user) {
+  var u = normalizePrivateUser_(user);
+  return PRIVATE_PROGRESS_BY_USER[u] || PRIVATE_PROGRESS_BY_USER.J;
+}
+
 function doGet(e) {
+  var params = (e && e.parameter) || {};
   var sheetInfo = resolveDbSheet(e);
   if (sheetInfo.error) {
     return jsonResponse({ error: sheetInfo.error, allWords: [], categories: {}, roadmap: {} });
   }
 
-  var data = loadInitialAppData(sheetInfo.sheet);
-  data.cursors = loadFlashCursors(sheetInfo.isTest);
+  var user = resolvePrivateUser_(e, params);
+  var progressUser = sheetInfo.isTest ? "J" : user;
+  var data = loadInitialAppData(sheetInfo.sheet, progressUser);
+  data.cursors = loadFlashCursors(sheetInfo.isTest, user);
+  data.user = user;
   return jsonResponse(data);
 }
 
@@ -31,20 +68,28 @@ function doPost(e) {
       return jsonResponse({ error: sheetInfo.error });
     }
 
+    var user = resolvePrivateUser_(e, params);
+    var progressUser = sheetInfo.isTest ? "J" : user;
     var checkedWords = params.checkedWords || [];
     var uncheckedWords = params.uncheckedWords || [];
     var hasChecks = checkedWords.length > 0 || uncheckedWords.length > 0;
-    var result = { success: true };
+    var result = { success: true, user: user };
 
     if (hasChecks) {
-      result = submitCategoryUpdate(checkedWords, uncheckedWords, sheetInfo.sheet);
+      result = submitCategoryUpdate(
+        checkedWords,
+        uncheckedWords,
+        sheetInfo.sheet,
+        progressUser
+      );
       if (result && result.error) {
         return jsonResponse(result);
       }
+      result.user = user;
     }
 
     if (params.cursors) {
-      saveFlashCursors(params.cursors, sheetInfo.isTest);
+      saveFlashCursors(params.cursors, sheetInfo.isTest, user);
     }
 
     return jsonResponse(result);
@@ -104,8 +149,15 @@ function jsonResponse(payload) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
-function getFlashCursorsPropertyKey(isTest) {
-  return isTest ? FLASH_CURSORS_PROP_TEST : FLASH_CURSORS_PROP_PROD;
+function getFlashCursorsPropertyKey(isTest, user) {
+  if (isTest) {
+    return FLASH_CURSORS_PROP_TEST;
+  }
+  var u = normalizePrivateUser_(user);
+  if (u === "J") {
+    return FLASH_CURSORS_PROP_PROD;
+  }
+  return "FLASH_CURSORS_prod_" + u;
 }
 
 function parseCursorEntry(raw) {
@@ -162,9 +214,11 @@ function mergeCursorsByTime(baseMap, incomingMap) {
   return merged;
 }
 
-function loadFlashCursors(isTest) {
+function loadFlashCursors(isTest, user) {
   try {
-    var raw = PropertiesService.getScriptProperties().getProperty(getFlashCursorsPropertyKey(isTest));
+    var raw = PropertiesService.getScriptProperties().getProperty(
+      getFlashCursorsPropertyKey(isTest, user)
+    );
     if (!raw) {
       return {};
     }
@@ -174,7 +228,7 @@ function loadFlashCursors(isTest) {
   }
 }
 
-function saveFlashCursors(incoming, isTest) {
+function saveFlashCursors(incoming, isTest, user) {
   var incomingMap = normalizeCursorsMap(incoming);
   if (!Object.keys(incomingMap).length) {
     return;
@@ -186,9 +240,9 @@ function saveFlashCursors(incoming, isTest) {
   }
 
   try {
-    var merged = mergeCursorsByTime(loadFlashCursors(isTest), incomingMap);
+    var merged = mergeCursorsByTime(loadFlashCursors(isTest, user), incomingMap);
     PropertiesService.getScriptProperties().setProperty(
-      getFlashCursorsPropertyKey(isTest),
+      getFlashCursorsPropertyKey(isTest, user),
       JSON.stringify(merged)
     );
   } finally {
@@ -196,16 +250,16 @@ function saveFlashCursors(incoming, isTest) {
   }
 }
 
-function getInitialAppCacheKey(sheetName) {
-  return "initial_" + sheetName;
+function getInitialAppCacheKey(sheetName, user) {
+  return "initial_" + sheetName + "_" + normalizePrivateUser_(user);
 }
 
-function invalidateInitialAppCache(sheetName) {
-  CacheService.getScriptCache().remove(getInitialAppCacheKey(sheetName));
+function invalidateInitialAppCache(sheetName, user) {
+  CacheService.getScriptCache().remove(getInitialAppCacheKey(sheetName, user));
 }
 
-function loadInitialAppData(sheet) {
-  var cacheKey = getInitialAppCacheKey(sheet.getName());
+function loadInitialAppData(sheet, user) {
+  var cacheKey = getInitialAppCacheKey(sheet.getName(), user);
   var cache = CacheService.getScriptCache();
   var cached = cache.get(cacheKey);
   if (cached) {
@@ -214,20 +268,24 @@ function loadInitialAppData(sheet) {
     } catch (cacheErr) {}
   }
 
-  var payload = buildInitialAppData(sheet);
+  var payload = buildInitialAppData(sheet, user);
   try {
     cache.put(cacheKey, JSON.stringify(payload), 180);
   } catch (putErr) {}
   return payload;
 }
 
-function buildInitialAppData(sheet) {
+function buildInitialAppData(sheet, user) {
   var lastRow = sheet.getLastRow();
   if (lastRow < 2) {
     return { allWords: [], categories: {}, roadmap: {} };
   }
 
-  var data = sheet.getRange(2, 1, lastRow, 10).getValues();
+  var cols = getPrivateProgressCols_(user);
+  var lastCol = Math.max(10, cols.dateCol);
+  var data = sheet.getRange(2, 1, lastRow, lastCol).getValues();
+  var learnedIdx = cols.learnedCol - 1;
+  var dateIdx = cols.dateCol - 1;
   var allWords = [];
   var learnedDates = [];
 
@@ -239,8 +297,9 @@ function buildInitialAppData(sheet) {
     var eng = String(row[5] || "").trim();
     var meaning = String(row[6] || "").trim();
     var example = String(row[7] || "").trim();
-    var isLearned = (row[8] === true || String(row[8]).toUpperCase() === "TRUE");
-    var learnedDate = row[9];
+    var learnedCell = row[learnedIdx];
+    var isLearned = learnedCell === true || String(learnedCell).toUpperCase() === "TRUE";
+    var learnedDate = row[dateIdx];
     var learnedDateStr = "";
 
     if (!word) continue;
@@ -274,7 +333,7 @@ function buildInitialAppData(sheet) {
   };
 }
 
-function submitCategoryUpdate(checkedWords, uncheckedWords, sheet) {
+function submitCategoryUpdate(checkedWords, uncheckedWords, sheet, user) {
   var lock = LockService.getScriptLock();
   if (!lock.tryLock(10000)) {
     return { error: "サーバーが混み合っています。再度お試しください。" };
@@ -286,32 +345,37 @@ function submitCategoryUpdate(checkedWords, uncheckedWords, sheet) {
       return { success: true };
     }
 
-    var flagsRange = sheet.getRange(2, 2, lastRow, 10);
-    var values = flagsRange.getValues();
+    var cols = getPrivateProgressCols_(user);
+    var wordValues = sheet.getRange(2, 2, lastRow, 2).getValues();
+    var learnedRange = sheet.getRange(2, cols.learnedCol, lastRow, cols.learnedCol);
+    var dateRange = sheet.getRange(2, cols.dateCol, lastRow, cols.dateCol);
+    var learnedValues = learnedRange.getValues();
+    var dateValues = dateRange.getValues();
     var today = new Date();
     var isModified = false;
 
     var checkedSet = toWordSet(checkedWords);
     var uncheckedSet = toWordSet(uncheckedWords);
 
-    for (var i = 0; i < values.length; i++) {
-      var word = String(values[i][0] || "").trim();
+    for (var i = 0; i < wordValues.length; i++) {
+      var word = String(wordValues[i][0] || "").trim();
       if (!word) continue;
 
       if (checkedSet[word]) {
-        values[i][7] = true;
-        values[i][8] = today;
+        learnedValues[i][0] = true;
+        dateValues[i][0] = today;
         isModified = true;
       } else if (uncheckedSet[word]) {
-        values[i][7] = false;
-        values[i][8] = "";
+        learnedValues[i][0] = false;
+        dateValues[i][0] = "";
         isModified = true;
       }
     }
 
     if (isModified) {
-      flagsRange.setValues(values);
-      invalidateInitialAppCache(sheet.getName());
+      learnedRange.setValues(learnedValues);
+      dateRange.setValues(dateValues);
+      invalidateInitialAppCache(sheet.getName(), user);
     }
 
     return { success: true };

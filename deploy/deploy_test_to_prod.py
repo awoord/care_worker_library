@@ -12,7 +12,8 @@ import sys
 import time
 from ftplib import FTP_TLS
 
-ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+# リポジトリルート（このファイルは deploy/ 配下）
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 FTP_HOST = "www1165.conoha.ne.jp"
 FTP_USER = "ao@nihongo.site"

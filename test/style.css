@@ -1173,7 +1173,7 @@ body.search-chrome-collapsed:has(#panelSearch.active) .bottom-nav-bar {
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 4px;
+        gap: 2px;
         padding: 0;
         color: #ffffff;
         font-family: inherit;
@@ -1226,10 +1226,19 @@ body.search-chrome-collapsed:has(#panelSearch.active) .bottom-nav-bar {
 }
 
 .flash-circle-btn-label {
-        font-size: clamp(13px, 3vw, 15px);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0;
+        font-size: clamp(11px, 2.6vw, 13px);
         font-weight: 700;
         line-height: 1.15;
-        letter-spacing: 0.02em;
+        letter-spacing: 0.01em;
+}
+
+.flash-circle-btn-line {
+        display: block;
 }
 
 .flash-unknown-btn {
@@ -2404,8 +2413,27 @@ body.env-test .flash-progress {
         border: 1px solid #fde68a;
 }
 
+.daily-stat-card.today .daily-stat-label,
+.daily-stat-card.words .daily-stat-label {
+        display: inline-flex;
+        align-items: baseline;
+        justify-content: center;
+        gap: 0.2em;
+}
+
+.daily-stat-label-caret {
+        font-size: 1.15em;
+        font-weight: 700;
+        line-height: 1;
+        opacity: 0.8;
+}
+
 .daily-stat-card.today .daily-stat-label {
         color: #b45309;
+}
+
+.daily-stat-card.words.is-breakdown-open .daily-stat-label-caret {
+        opacity: 1;
 }
 
 .daily-stat-card.today .daily-stat-value {
@@ -2415,18 +2443,188 @@ body.env-test .flash-progress {
 .daily-stat-card.words {
         background-color: #fefce8;
         border: 1px solid #fef08a;
+        cursor: pointer;
+        font: inherit;
+        -webkit-appearance: none;
+        appearance: none;
+        -webkit-tap-highlight-color: transparent;
+}
+
+.daily-stat-card.words:focus-visible {
+        outline: 2px solid #ca8a04;
+        outline-offset: 2px;
+}
+
+.daily-stat-card.words.is-breakdown-disabled {
+        cursor: default;
+}
+
+.daily-stat-card.words.is-breakdown-open {
+        box-shadow: 0 0 0 2px rgba(202, 138, 4, 0.35);
 }
 
 .daily-stat-card.words .daily-stat-label {
         color: #a16207;
 }
 
-#panelDaily.is-roadmap-seen .daily-stat-card.words {
+/* 「これまで 覚えた」は見た／覚えたレンズとも常時表示 */
+.daily-stat-card.words .daily-stat-value {
+        color: #ca8a04;
+}
+
+/* タイル下のフル幅内訳（2×2） */
+.daily-stat-breakdown-slot {
+        flex-shrink: 0;
+}
+
+.daily-stat-breakdown-panel {
+        box-sizing: border-box;
+        width: 100%;
+        border-radius: var(--radius-md);
+        padding: 12px 14px;
+        box-shadow: var(--shadow-soft);
+}
+
+.daily-stat-breakdown-panel.is-today,
+.daily-stat-breakdown-panel.is-seen-lap {
+        background-color: #fffbeb;
+        border: 1px solid #fde68a;
+}
+
+.daily-stat-breakdown-panel.is-known {
+        background-color: #fefce8;
+        border: 1px solid #fef08a;
+}
+
+/* 2列均等。各セルは「カテゴリ＋数値」を一塊にして左から並べる */
+.daily-stat-breakdown-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        column-gap: 18px;
+        row-gap: 10px;
+        width: 100%;
+}
+
+.daily-stat-breakdown-cell {
+        display: flex;
+        flex-wrap: nowrap;
+        align-items: baseline;
+        justify-content: flex-start;
+        gap: 0.45em;
+        min-width: 0;
+        font-variant-numeric: tabular-nums;
+        line-height: 1.35;
+}
+
+.daily-stat-breakdown-panel.is-today .daily-stat-breakdown-cell {
+        color: #d97706;
+}
+
+.daily-stat-breakdown-panel.is-known .daily-stat-breakdown-cell {
+        color: #ca8a04;
+}
+
+.daily-stat-breakdown-panel.is-seen-lap .daily-stat-breakdown-cell {
+        color: #d97706;
+}
+
+.daily-stat-breakdown-cat {
+        flex: 0 0 auto;
+        width: 2em;
+        font-size: clamp(12px, 3.2vw, 14px);
+        font-weight: 700;
+        white-space: nowrap;
+}
+
+.daily-stat-breakdown-panel.is-today .daily-stat-breakdown-cat,
+.daily-stat-breakdown-panel.is-seen-lap .daily-stat-breakdown-cat {
+        color: #b45309;
+}
+
+.daily-stat-breakdown-panel.is-known .daily-stat-breakdown-cat {
+        color: #a16207;
+}
+
+.today-seen-breakdown-num {
+        flex: 0 0 auto;
+        min-width: 1.4em;
+        font-size: clamp(15px, 4vw, 18px);
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        text-align: right;
+        white-space: nowrap;
+}
+
+/* 数値群は伸びさせず、カテゴリの直後に密着 */
+.total-known-breakdown-stats {
+        display: inline-flex;
+        flex: 0 1 auto;
+        flex-wrap: nowrap;
+        align-items: baseline;
+        justify-content: flex-start;
+        gap: 0;
+        min-width: 0;
+}
+
+.total-known-breakdown-frac {
+        display: inline-flex;
+        flex: 0 1 auto;
+        align-items: baseline;
+        gap: 0.18em;
+        font-size: clamp(13px, 3.5vw, 16px);
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+}
+
+.total-known-breakdown-learned,
+.total-known-breakdown-total {
+        text-align: left;
+}
+
+.total-known-breakdown-slash {
+        font-size: 1.15em;
+        font-weight: 800;
+        opacity: 0.7;
+}
+
+.total-known-breakdown-lap,
+.total-known-breakdown-pct {
+        flex: 0 0 auto;
+        margin-left: 0.55em;
+        font-size: clamp(11px, 2.9vw, 13px);
+        font-weight: 700;
+        letter-spacing: 0.01em;
+        white-space: nowrap;
+}
+
+.total-known-breakdown-lap {
+        color: #b45309;
+}
+
+.total-known-breakdown-pct {
+        color: #a16207;
+}
+
+.daily-stat-breakdown-panel.is-seen-lap .total-known-breakdown-pct {
         display: none;
 }
 
-.daily-stat-card.words .daily-stat-value {
-        color: #ca8a04;
+@media (max-width: 360px) {
+        .daily-stat-breakdown-panel {
+                padding: 10px 12px;
+        }
+
+        .daily-stat-breakdown-grid {
+                column-gap: 12px;
+                row-gap: 8px;
+        }
+
+        .total-known-breakdown-lap,
+        .total-known-breakdown-pct {
+                margin-left: 0.4em;
+        }
 }
 
 .roadmap-title {
@@ -2608,13 +2806,10 @@ body.env-test .flash-progress {
         border-right: 1px solid var(--color-border-soft);
 }
 
-.roadmap-table tr.current-week td {
+.roadmap-table td.roadmap-day-today {
         background-color: #fff7ed;
-}
-
-.roadmap-table tr.current-week td.td-week {
-        background-color: #ffedd5;
-        color: #c2410c;
+        box-shadow: inset 0 0 0 2px rgba(234, 88, 12, 0.45);
+        border-radius: 8px;
 }
 
 /* 3. さがす */
@@ -2732,9 +2927,13 @@ body.env-test .flash-progress {
 }
 
 .filter-chip-row:not(.filter-chip-row-cats) .filter-chip {
-        flex: 0 1 auto;
-        min-width: 5.5em;
-        max-width: 38%;
+        flex: 1 1 0;
+        min-width: 0;
+        max-width: none;
+        white-space: nowrap;
+        font-size: clamp(12px, 3.2vw, 14px);
+        padding-left: 6px;
+        padding-right: 6px;
 }
 
 #panelSearch.active {
@@ -3669,38 +3868,203 @@ body.env-test .flash-progress {
 
 }
 
-/* スマホ横向き — 最後に置き min-width 系の上書きを打ち消す。黄金比は維持しない */
+/* タブレット横向き — 縦並び（カード上・ボタン下）を維持。黄金比を保ちつつ重なりを防ぐ */
+@media (orientation: landscape) and (min-height: 521px) and (max-height: 1100px) {
+        :root {
+                --page-block-gap: 6px;
+                --flash-action-gap: 6px;
+                --learn-shadow-card-bleed-x: 12px;
+                --learn-shadow-card-bleed-y: 12px;
+                --flash-circle-btn-size: clamp(64px, 10.5vh, 78px);
+                --flash-answer-btn-gap: clamp(18px, 4vw, 32px);
+                --flash-undo-size: 30px;
+                --flash-card-stack-head: calc(8px + clamp(4px, 1vh, 8px));
+        }
+
+        .learn-study-column {
+                gap: var(--page-block-gap);
+        }
+
+        .flash-study,
+        .flash-complete {
+                min-height: 0;
+                overflow: hidden;
+        }
+
+        .flashcard-stack {
+                display: flex;
+                flex-direction: column;
+                align-items: stretch;
+                width: 100%;
+                max-height: 100%;
+                min-height: 0;
+                overflow: hidden;
+        }
+
+        .flashcard-block {
+                flex: 1 1 auto;
+                min-height: 0;
+                width: 100%;
+                overflow: hidden;
+        }
+
+        .flashcard-fit {
+                flex: 1 1 auto;
+                min-height: 0;
+                width: 100%;
+                justify-content: center;
+                align-items: center;
+                overflow: hidden;
+        }
+
+        /* 上余白によるボタン食い込みをやめ、可用高さ内に黄金比カードを収める */
+        .flashcard-column {
+                margin-top: 0;
+                width: min(
+                        100%,
+                        var(--flash-card-max-width),
+                        calc((100cqh - var(--flash-card-stack-head)) * var(--golden-ratio))
+                );
+                max-height: 100%;
+                justify-content: center;
+                align-items: center;
+                gap: clamp(4px, 1vh, 8px);
+        }
+
+        .flashcard-column > .flash-progress {
+                padding: 0 0 2px;
+        }
+
+        .flashcard-size-box {
+                aspect-ratio: var(--golden-ratio) / 1;
+                width: 100%;
+                max-width: 100%;
+                height: auto;
+                max-height: calc(100cqh - var(--flash-card-stack-head));
+                flex: 0 1 auto;
+                padding: 0 var(--learn-shadow-card-bleed-x) var(--learn-shadow-card-bleed-y);
+                overflow: hidden;
+        }
+
+        .flashcard-size-box > .flashcard {
+                width: calc(100% + (2 * var(--learn-shadow-card-bleed-x)));
+                height: calc(100% + var(--learn-shadow-card-bleed-y));
+                max-width: none;
+                max-height: none;
+                margin: 0 calc(-1 * var(--learn-shadow-card-bleed-x)) calc(-1 * var(--learn-shadow-card-bleed-y));
+                aspect-ratio: var(--golden-ratio) / 1;
+        }
+
+        .flashcard {
+                aspect-ratio: var(--golden-ratio) / 1;
+                overflow: hidden;
+        }
+
+        .flash-complete-word-spacer {
+                display: none;
+        }
+
+        .flash-complete-column {
+                justify-content: center;
+                gap: clamp(10px, 2vh, 18px);
+        }
+
+        /* ボタン帯は下に固定（横並びの回答ボタンはそのまま） */
+        .flash-action-slot {
+                flex: 0 0 auto;
+                width: 100%;
+                margin-top: 0;
+                padding-top: var(--page-block-gap);
+                gap: var(--flash-action-gap);
+                z-index: 2;
+        }
+
+        .flash-action-row {
+                width: 100%;
+                min-height: var(--flash-circle-btn-size);
+                justify-content: center;
+        }
+
+        .flash-answer-btns {
+                flex-direction: row;
+                justify-content: center;
+                align-items: center;
+                gap: var(--flash-answer-btn-gap);
+                width: 100%;
+        }
+
+        .flash-reveal-btn {
+                width: min(100%, calc(var(--flash-circle-btn-size) * 2 + var(--flash-answer-btn-gap)));
+                min-height: var(--flash-circle-btn-size);
+        }
+
+        .flash-complete-skip-note {
+                text-align: center;
+                font-size: clamp(11px, 1.8vh, 13px);
+        }
+}
+
+/* スマホ横向き — 左に黄金比カード（引き伸ばさない）／右に操作 */
 @media (orientation: landscape) and (max-height: 520px) {
         :root {
                 --page-block-gap: 4px;
                 --flash-card-action-gap: 0;
                 --flash-action-gap: 6px;
                 --flash-action-height: auto;
-                --learn-card-pad-x: 12px;
+                --flash-action-nav-gap: 4px;
+                --app-body-pad-top: max(2px, env(safe-area-inset-top, 0px));
+                --app-body-pad-bottom: max(2px, env(safe-area-inset-bottom, 0px));
+                --app-container-gap: 4px;
+                --app-bottom-nav-height: 34px;
+                --learn-card-pad-x: 14px;
                 --learn-card-pad-y: 8px;
                 --learn-front-pad-y: 4px;
-                --vocab-type-base: clamp(11px, 3.4vh, 14px);
-                --vocab-ratio-learn-title: 1.9;
-                --vocab-ratio-learn-english: 1.4;
+                --learn-shadow-card-bleed-x: 8px;
+                --learn-shadow-card-bleed-y: 8px;
+                --learn-radius-card: 14px;
+                --vocab-type-base: clamp(11px, 3.2vh, 14px);
+                --vocab-ratio-learn-title: 2.05;
+                --vocab-ratio-learn-english: 1.36;
                 --vocab-ratio-search-title: 1.28;
-                --vocab-ratio-example: 0.92;
-                --learn-font-word: clamp(22px, calc(var(--vocab-type-base) * var(--vocab-ratio-learn-title)), 32px);
-                --learn-font-btn: clamp(12px, 3.6vh, 14px);
+                --vocab-ratio-example: 0.9;
+                --learn-font-word: clamp(22px, calc(var(--vocab-type-base) * var(--vocab-ratio-learn-title)), 34px);
+                --learn-font-cat: clamp(11px, 3vh, 13px);
+                --learn-font-btn: clamp(12px, 3.2vh, 14px);
+                --font-size-nav: clamp(11px, 3vh, 13px);
                 --flash-undo-size: 24px;
-                --flash-circle-btn-size: clamp(56px, 12.2vh, 75px);
-                --flash-answer-btn-gap: clamp(12px, 3.2vh, 24px);
-                --flash-landscape-action-col: clamp(108px, 28vw, 148px);
+                --flash-circle-btn-size: clamp(52px, 14vh, 64px);
+                --flash-answer-btn-gap: clamp(10px, 3vh, 18px);
+                --flash-landscape-action-col: clamp(72px, 16vw, 96px);
+                --flash-card-stack-head: 14px;
+                --learn-cat-gap: 4px;
+        }
+
+        html,
+        body {
+                height: 100%;
+                max-height: 100dvh;
+                overflow: hidden;
         }
 
         body {
-                padding-top: max(2px, env(safe-area-inset-top));
-                padding-bottom: max(2px, env(safe-area-inset-bottom));
+                padding-top: var(--app-body-pad-top);
+                padding-bottom: var(--app-body-pad-bottom);
+                padding-left: env(safe-area-inset-left, 0px);
+                padding-right: env(safe-area-inset-right, 0px);
         }
 
         .container {
                 gap: var(--page-block-gap);
                 min-height: 0;
+                height: 100%;
+                max-height: 100%;
                 overflow: hidden;
+                max-width: none;
+                padding-inline: 10px;
+        }
+
+        .container:has(#panelLearn.active) {
+                gap: var(--flash-action-nav-gap);
         }
 
         #panelLearn {
@@ -3711,27 +4075,44 @@ body.env-test .flash-progress {
 
         .learn-study-column {
                 gap: var(--page-block-gap);
+                min-height: 0;
+                overflow: hidden;
         }
 
-        .learn-tab-btn {
-                min-height: 26px;
-                padding: 2px 2px;
-                font-size: clamp(11px, 3vh, 12px);
+        .learn-cat-row {
+                gap: var(--learn-cat-gap);
+                flex: 0 0 auto;
+        }
+
+        .learn-tab-btn,
+        #panelLearn .learn-tab-btn {
+                min-height: 28px !important;
+                max-height: none;
+                padding: 4px 6px !important;
+                font-size: var(--learn-font-cat) !important;
+                line-height: 1.2;
         }
 
         .bottom-nav-bar {
-                flex-shrink: 0;
+                flex: 0 0 auto;
+                height: var(--app-bottom-nav-height);
+                max-height: var(--app-bottom-nav-height);
                 padding-top: 2px;
+                padding-bottom: 2px;
         }
 
         .nav-btn {
-                min-height: 30px;
-                padding: 3px var(--space-xs);
-                font-size: clamp(11px, 3vh, 13px);
+                min-height: 28px !important;
+                height: auto;
+                max-height: none;
+                padding: 4px var(--space-xs) !important;
+                font-size: var(--font-size-nav) !important;
+                line-height: 1.2;
         }
 
-        .flash-study {
-                flex: 1;
+        .flash-study,
+        .flash-complete {
+                flex: 1 1 0;
                 min-height: 0;
                 overflow: hidden;
                 padding: 0;
@@ -3743,20 +4124,18 @@ body.env-test .flash-progress {
                 padding: 0;
         }
 
-        /* 左=ことば・右=操作（進捗ドットはカード直上） */
+        /* カード＋操作をひと塊にして中央配置（左右に空きすぎない） */
         .flashcard-stack {
                 width: 100%;
+                flex: 1 1 0;
+                min-height: 0;
                 max-height: 100%;
-                height: auto;
                 align-self: stretch;
-                display: grid;
-                grid-template-columns: minmax(0, 1fr) var(--flash-landscape-action-col);
-                grid-template-rows: auto;
-                grid-template-areas:
-                        "card actions";
-                align-items: stretch;
-                column-gap: 8px;
-                row-gap: var(--page-block-gap);
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+                justify-content: center;
+                gap: 14px;
                 overflow: hidden;
         }
 
@@ -3765,10 +4144,11 @@ body.env-test .flash-progress {
                 flex-direction: row;
                 align-items: center;
                 justify-content: center;
-                gap: 8px;
+                gap: 6px;
                 margin-top: 0;
-                padding: 0 2px 4px;
+                padding: 0 0 2px;
                 min-height: 0;
+                flex: 0 0 auto;
         }
 
         .flash-progress-dots {
@@ -3777,81 +4157,152 @@ body.env-test .flash-progress {
         }
 
         .flash-progress-dot {
-                width: 8px;
-                height: 8px;
+                width: 7px;
+                height: 7px;
         }
 
         .flashcard-block {
-                grid-area: card;
                 display: flex;
                 flex-direction: column;
-                align-items: flex-start;
-                justify-content: flex-start;
-                gap: var(--flash-card-undo-gap);
+                align-items: center;
+                justify-content: center;
+                gap: 0;
+                min-width: 0;
                 min-height: 0;
-                height: 100%;
-                width: 100%;
+                max-height: 100%;
+                flex: 0 0 auto;
+                width: auto;
                 overflow: visible;
         }
 
-        .flashcard-size-box {
-                flex: 1 1 auto;
+        .flashcard-fit {
+                /* size 包含だと子で幅が決まらず 0 になる */
+                container-type: normal;
+                flex: 0 0 auto;
                 min-height: 0;
+                width: auto;
+                max-height: 100%;
+                justify-content: center;
+                align-items: center;
+                overflow: visible;
+        }
+
+        .flashcard-column {
+                margin-top: 0 !important;
+                --flash-phone-card-h: min(240px, 62vh);
+                --flash-phone-card-w: calc(var(--flash-phone-card-h) * var(--golden-ratio));
+                width: var(--flash-phone-card-w);
+                max-width: calc(100vw - var(--flash-landscape-action-col) - 48px);
+                max-height: 100%;
+                height: auto;
+                min-height: 0;
+                flex: 0 0 auto;
+                justify-content: center;
+                align-items: center;
+                gap: 6px;
+                overflow: visible;
+        }
+
+        /* 高さ・幅を両方明示 */
+        .flashcard-size-box {
+                aspect-ratio: var(--golden-ratio) / 1;
+                height: var(--flash-phone-card-h);
                 width: 100%;
-                container-type: unset;
+                max-width: var(--flash-phone-card-w);
+                max-height: var(--flash-phone-card-h);
+                flex: 0 0 auto;
+                min-height: 0;
+                container-type: size;
+                padding: 0 var(--learn-shadow-card-bleed-x) var(--learn-shadow-card-bleed-y);
+                overflow: visible;
+                box-sizing: border-box;
+        }
+
+        .flashcard-size-box > .flashcard {
+                width: calc(100% + (2 * var(--learn-shadow-card-bleed-x)));
+                height: calc(100% + var(--learn-shadow-card-bleed-y));
+                max-width: none;
+                max-height: none;
+                margin: 0 calc(-1 * var(--learn-shadow-card-bleed-x)) calc(-1 * var(--learn-shadow-card-bleed-y));
+                aspect-ratio: var(--golden-ratio) / 1;
         }
 
         .flashcard {
                 grid-area: auto;
                 display: grid;
                 grid-template-rows: minmax(0, 1fr) minmax(0, 1.618fr);
-                flex: 1 1 auto;
+                flex: 0 0 auto;
                 min-height: 0;
-                height: auto;
-                max-height: min(calc(100dvh - var(--app-chrome-bottom) - 118px), 100%);
                 width: 100%;
-                aspect-ratio: auto;
-                align-self: stretch;
+                height: 100%;
+                aspect-ratio: var(--golden-ratio) / 1;
+                align-self: center;
                 overflow: hidden;
         }
 
         .flashcard-back {
-                padding: clamp(4px, 1.2vh, 8px) 0;
-                --flash-back-bleed-x: 6px;
+                padding: clamp(2px, 1vh, 6px) 0;
+                --flash-back-bleed-x: 4px;
+        }
+
+        .flash-complete-word-spacer {
+                display: none;
+        }
+
+        .flash-complete-column {
+                height: auto;
+                max-height: 100%;
+                min-height: 0;
+                justify-content: center;
+                gap: 6px;
         }
 
         .flash-action-slot {
-                grid-area: actions;
                 display: flex;
                 flex-direction: column;
                 justify-content: center;
-                align-items: stretch;
+                align-items: center;
+                flex: 0 0 var(--flash-landscape-action-col);
                 width: var(--flash-landscape-action-col);
-                min-width: 0;
+                min-width: var(--flash-landscape-action-col);
                 min-height: 0;
                 height: auto;
-                align-self: stretch;
+                max-height: 100%;
+                align-self: center;
                 margin-top: 0;
                 gap: var(--flash-action-gap);
                 padding: 0;
+                overflow: visible;
         }
 
         .flash-action-row {
-                flex: 1 1 auto;
+                flex: 0 1 auto;
                 min-height: 0;
+                max-height: 100%;
+                width: 100%;
                 position: relative;
                 justify-content: center;
+                align-items: center;
+                overflow: hidden;
         }
 
         .flash-action-panel {
                 width: 100%;
                 min-height: 0;
+                max-height: 100%;
                 flex: none;
+                display: flex;
+                justify-content: center;
+                align-items: center;
         }
 
         .flash-reveal-btn {
                 width: 100%;
+                max-width: var(--flash-circle-btn-size);
                 min-height: var(--flash-circle-btn-size);
+                height: var(--flash-circle-btn-size);
+                border-radius: 999px;
+                margin-inline: auto;
         }
 
         .flash-answer-btns {
@@ -3861,45 +4312,51 @@ body.env-test .flash-progress {
                 align-items: center;
                 gap: var(--flash-answer-btn-gap);
                 width: 100%;
-                flex: 1 1 auto;
+                flex: 0 1 auto;
                 min-height: 0;
+                overflow: hidden;
         }
 
         .flash-circle-btn {
                 flex: 0 0 var(--flash-circle-btn-size);
                 width: var(--flash-circle-btn-size);
                 height: var(--flash-circle-btn-size);
+                max-height: var(--flash-circle-btn-size);
         }
 
         .flash-undo-btn-study {
                 position: absolute;
-                left: 0;
-                top: 0;
-                bottom: 0;
-                margin-top: auto;
-                margin-bottom: auto;
+                left: 50%;
+                top: auto;
+                bottom: calc(100% + 6px);
+                transform: translateX(-50%);
+                margin: 0;
         }
 
         .flash-undo-btn {
                 width: var(--flash-undo-size);
                 height: var(--flash-undo-size);
                 flex: 0 0 var(--flash-undo-size);
-                font-size: 14px;
+                font-size: 13px;
         }
 
         .flash-complete-head {
-                gap: 10px;
+                gap: 6px;
         }
 
         .flash-complete-message {
-                font-size: clamp(22px, 5.6vh, 28px);
+                font-size: clamp(16px, 4.5vh, 22px);
         }
 
         .flash-complete-today-main {
-                font-size: clamp(16px, 4.2vh, 20px);
+                font-size: clamp(12px, 3.4vh, 16px);
         }
 
         .flash-complete-detail {
-                font-size: clamp(16px, 4.2vh, 20px);
+                font-size: clamp(11px, 3.2vh, 15px);
+        }
+
+        .flash-complete-skip-note {
+                font-size: clamp(10px, 2.6vh, 12px);
         }
 }

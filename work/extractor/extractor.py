@@ -112,11 +112,12 @@ if __name__ == "__main__":
     # --------------------------------------------------
     current_dir = Path(__file__).resolve().parent
 
-    kakomon_dir = current_dir.parent / "kakomon"
+    # work/extractor → リポジトリルート / data/kakomon・work/excluded_word
+    repo_root = current_dir.parent.parent
+    kakomon_dir = repo_root / "data" / "kakomon"
     if not kakomon_dir.exists():
-        kakomon_dir = current_dir.parent.parent / "kakomon"
+        kakomon_dir = repo_root / "kakomon"
 
-    # excluded_wordフォルダのパスを設定（dictionaryフォルダの1つ上にある階層）
     excluded_word_dir = current_dir.parent / "excluded_word"
 
     # --------------------------------------------------

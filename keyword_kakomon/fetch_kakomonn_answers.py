@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """過去問ドットコムの各問題ページから正解番号を拾い、CSVにする。
 
-- 問の一覧・番号は kakomon_v2/kaigo_kakomon_all.txt（load_questions）に合わせる
+- 問の一覧・番号は data/kakomon_v2/kaigo_kakomon_all.txt（load_questions）に合わせる
 - URL は kakomonn_links（問題文突合済み ID）を使う
 - 取得元は非公式サイトのため、公式正答との突合を推奨
 - サイト負荷を抑えるため待機を入れる。利用規約に注意

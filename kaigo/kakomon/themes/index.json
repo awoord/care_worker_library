@@ -1,7 +1,209 @@
 {
   "title": "介護福祉士国家試験 重要テーマ",
-  "count": 18,
-  "groups": [],
+  "count": 30,
+  "groups": [
+    {
+      "title": "介護保険法",
+      "count": 53,
+      "displayCount": 27,
+      "themes": [
+        {
+          "title": "介護保険（理念）",
+          "label": "理念",
+          "slug": "40ebc39ebc64",
+          "count": 2,
+          "recentCount": 1,
+          "olderCount": 1,
+          "displayCount": 1,
+          "missingCount": 0,
+          "href": "view.html?t=40ebc39ebc64"
+        },
+        {
+          "title": "介護保険（保険者・被保険者）",
+          "label": "保険者・被保険者",
+          "slug": "ad1298351fdf",
+          "count": 3,
+          "recentCount": 0,
+          "olderCount": 3,
+          "displayCount": 3,
+          "missingCount": 0,
+          "href": "view.html?t=ad1298351fdf"
+        },
+        {
+          "title": "介護保険（財源・負担）",
+          "label": "財源・負担",
+          "slug": "bbd60c010026",
+          "count": 7,
+          "recentCount": 5,
+          "olderCount": 2,
+          "displayCount": 5,
+          "missingCount": 0,
+          "href": "view.html?t=bbd60c010026"
+        },
+        {
+          "title": "介護保険（認定・利用）",
+          "label": "認定・利用",
+          "slug": "333fb8a5989e",
+          "count": 6,
+          "recentCount": 2,
+          "olderCount": 4,
+          "displayCount": 2,
+          "missingCount": 0,
+          "href": "view.html?t=333fb8a5989e"
+        },
+        {
+          "title": "介護保険（地域包括）",
+          "label": "地域包括",
+          "slug": "1aa229df7ece",
+          "count": 4,
+          "recentCount": 3,
+          "olderCount": 1,
+          "displayCount": 3,
+          "missingCount": 0,
+          "href": "view.html?t=1aa229df7ece"
+        },
+        {
+          "title": "介護保険（指定・人員）",
+          "label": "指定・人員",
+          "slug": "46f7abe336e2",
+          "count": 3,
+          "recentCount": 2,
+          "olderCount": 1,
+          "displayCount": 2,
+          "missingCount": 0,
+          "href": "view.html?t=46f7abe336e2"
+        },
+        {
+          "title": "介護保険（会議・計画）",
+          "label": "会議・計画",
+          "slug": "9d9d0bb867a3",
+          "count": 9,
+          "recentCount": 3,
+          "olderCount": 6,
+          "displayCount": 3,
+          "missingCount": 0,
+          "href": "view.html?t=9d9d0bb867a3"
+        },
+        {
+          "title": "介護保険（訪問・通所・短期入所サービス）",
+          "label": "訪問・通所・短期入所サービス",
+          "slug": "f75a31870e25",
+          "count": 12,
+          "recentCount": 7,
+          "olderCount": 5,
+          "displayCount": 7,
+          "missingCount": 0,
+          "href": "view.html?t=f75a31870e25"
+        },
+        {
+          "title": "介護保険（共同生活・施設サービス）",
+          "label": "共同生活・施設サービス",
+          "slug": "7964e028755f",
+          "count": 7,
+          "recentCount": 1,
+          "olderCount": 6,
+          "displayCount": 1,
+          "missingCount": 0,
+          "href": "view.html?t=7964e028755f"
+        }
+      ]
+    },
+    {
+      "title": "障害者総合支援法",
+      "count": 36,
+      "displayCount": 22,
+      "themes": [
+        {
+          "title": "障害者総合支援法（定義・改正）",
+          "label": "定義・改正",
+          "slug": "0f7795e5df7c",
+          "count": 2,
+          "recentCount": 0,
+          "olderCount": 2,
+          "displayCount": 2,
+          "missingCount": 0,
+          "href": "view.html?t=0f7795e5df7c"
+        },
+        {
+          "title": "障害者総合支援法（機関・体制）",
+          "label": "機関・体制",
+          "slug": "26a3a8b00d81",
+          "count": 7,
+          "recentCount": 5,
+          "olderCount": 2,
+          "displayCount": 5,
+          "missingCount": 0,
+          "href": "view.html?t=26a3a8b00d81"
+        },
+        {
+          "title": "障害者総合支援法（認定・申請）",
+          "label": "認定・申請",
+          "slug": "a1e95bf8031d",
+          "count": 5,
+          "recentCount": 1,
+          "olderCount": 4,
+          "displayCount": 1,
+          "missingCount": 0,
+          "href": "view.html?t=a1e95bf8031d"
+        },
+        {
+          "title": "障害者総合支援法（負担・給付）",
+          "label": "負担・給付",
+          "slug": "0f9b0f132f92",
+          "count": 2,
+          "recentCount": 2,
+          "olderCount": 0,
+          "displayCount": 2,
+          "missingCount": 0,
+          "href": "view.html?t=0f9b0f132f92"
+        },
+        {
+          "title": "障害者総合支援法（相談支援）",
+          "label": "相談支援",
+          "slug": "62a7290b48fe",
+          "count": 3,
+          "recentCount": 2,
+          "olderCount": 1,
+          "displayCount": 2,
+          "missingCount": 0,
+          "href": "view.html?t=62a7290b48fe"
+        },
+        {
+          "title": "障害者総合支援法（訪問・移動）",
+          "label": "訪問・移動",
+          "slug": "b0198030ea19",
+          "count": 8,
+          "recentCount": 5,
+          "olderCount": 3,
+          "displayCount": 5,
+          "missingCount": 0,
+          "href": "view.html?t=b0198030ea19"
+        },
+        {
+          "title": "障害者総合支援法（日中・居住・就労）",
+          "label": "日中・居住・就労",
+          "slug": "be900b82cfda",
+          "count": 6,
+          "recentCount": 4,
+          "olderCount": 2,
+          "displayCount": 4,
+          "missingCount": 0,
+          "href": "view.html?t=be900b82cfda"
+        },
+        {
+          "title": "障害者総合支援法（補装具）",
+          "label": "補装具",
+          "slug": "8e87b673294b",
+          "count": 3,
+          "recentCount": 1,
+          "olderCount": 2,
+          "displayCount": 1,
+          "missingCount": 0,
+          "href": "view.html?t=8e87b673294b"
+        }
+      ]
+    }
+  ],
   "ungrouped": [
     {
       "title": "ICF（国際生活機能分類）",
@@ -15,6 +217,17 @@
       "href": "view.html?t=efd0cd941521"
     },
     {
+      "title": "テスト",
+      "label": "テスト",
+      "slug": "63b560db8849",
+      "count": 0,
+      "recentCount": 0,
+      "olderCount": 0,
+      "displayCount": 0,
+      "missingCount": 0,
+      "href": "view.html?t=63b560db8849"
+    },
+    {
       "title": "人体のしくみ",
       "label": "人体のしくみ",
       "slug": "75aeba0b7893",
@@ -24,39 +237,6 @@
       "displayCount": 45,
       "missingCount": 0,
       "href": "view.html?t=75aeba0b7893"
-    },
-    {
-      "title": "介護保険法（サービス内容）",
-      "label": "介護保険法（サービス内容）",
-      "slug": "ddcecc843844",
-      "count": 18,
-      "recentCount": 8,
-      "olderCount": 10,
-      "displayCount": 8,
-      "missingCount": 0,
-      "href": "view.html?t=ddcecc843844"
-    },
-    {
-      "title": "介護保険法（利用者対応・多職種連携）",
-      "label": "介護保険法（利用者対応・多職種連携）",
-      "slug": "cb7bf2ee96e7",
-      "count": 12,
-      "recentCount": 5,
-      "olderCount": 7,
-      "displayCount": 5,
-      "missingCount": 0,
-      "href": "view.html?t=cb7bf2ee96e7"
-    },
-    {
-      "title": "介護保険法（基本のしくみ）",
-      "label": "介護保険法（基本のしくみ）",
-      "slug": "317c54f3db83",
-      "count": 21,
-      "recentCount": 10,
-      "olderCount": 11,
-      "displayCount": 10,
-      "missingCount": 0,
-      "href": "view.html?t=317c54f3db83"
     },
     {
       "title": "利用者本位・自立支援",
@@ -84,10 +264,10 @@
       "title": "地域包括支援センター・地域支援事業",
       "label": "地域包括支援センター・地域支援事業",
       "slug": "b36896f5f1b8",
-      "count": 11,
-      "recentCount": 6,
+      "count": 10,
+      "recentCount": 5,
       "olderCount": 5,
-      "displayCount": 6,
+      "displayCount": 5,
       "missingCount": 0,
       "href": "view.html?t=b36896f5f1b8"
     },
@@ -167,39 +347,6 @@
       "displayCount": 15,
       "missingCount": 0,
       "href": "view.html?t=06414d1eeaf8"
-    },
-    {
-      "title": "障害者総合支援法（しくみの基本）",
-      "label": "障害者総合支援法（しくみの基本）",
-      "slug": "52f41e597e63",
-      "count": 10,
-      "recentCount": 3,
-      "olderCount": 7,
-      "displayCount": 3,
-      "missingCount": 0,
-      "href": "view.html?t=52f41e597e63"
-    },
-    {
-      "title": "障害者総合支援法（サービスの内容）",
-      "label": "障害者総合支援法（サービスの内容）",
-      "slug": "476cab7a4fe0",
-      "count": 18,
-      "recentCount": 11,
-      "olderCount": 7,
-      "displayCount": 11,
-      "missingCount": 0,
-      "href": "view.html?t=476cab7a4fe0"
-    },
-    {
-      "title": "障害者総合支援法（業務の内容）",
-      "label": "障害者総合支援法（業務の内容）",
-      "slug": "35abe0b760a7",
-      "count": 10,
-      "recentCount": 6,
-      "olderCount": 4,
-      "displayCount": 6,
-      "missingCount": 0,
-      "href": "view.html?t=35abe0b760a7"
     }
   ],
   "themes": [
@@ -215,6 +362,17 @@
       "href": "view.html?t=efd0cd941521"
     },
     {
+      "title": "テスト",
+      "label": "テスト",
+      "slug": "63b560db8849",
+      "count": 0,
+      "recentCount": 0,
+      "olderCount": 0,
+      "displayCount": 0,
+      "missingCount": 0,
+      "href": "view.html?t=63b560db8849"
+    },
+    {
       "title": "人体のしくみ",
       "label": "人体のしくみ",
       "slug": "75aeba0b7893",
@@ -226,37 +384,103 @@
       "href": "view.html?t=75aeba0b7893"
     },
     {
-      "title": "介護保険法（サービス内容）",
-      "label": "介護保険法（サービス内容）",
-      "slug": "ddcecc843844",
-      "count": 18,
-      "recentCount": 8,
-      "olderCount": 10,
-      "displayCount": 8,
+      "title": "介護保険（会議・計画）",
+      "label": "介護保険（会議・計画）",
+      "slug": "9d9d0bb867a3",
+      "count": 9,
+      "recentCount": 3,
+      "olderCount": 6,
+      "displayCount": 3,
       "missingCount": 0,
-      "href": "view.html?t=ddcecc843844"
+      "href": "view.html?t=9d9d0bb867a3"
     },
     {
-      "title": "介護保険法（利用者対応・多職種連携）",
-      "label": "介護保険法（利用者対応・多職種連携）",
-      "slug": "cb7bf2ee96e7",
+      "title": "介護保険（保険者・被保険者）",
+      "label": "介護保険（保険者・被保険者）",
+      "slug": "ad1298351fdf",
+      "count": 3,
+      "recentCount": 0,
+      "olderCount": 3,
+      "displayCount": 3,
+      "missingCount": 0,
+      "href": "view.html?t=ad1298351fdf"
+    },
+    {
+      "title": "介護保険（共同生活・施設サービス）",
+      "label": "介護保険（共同生活・施設サービス）",
+      "slug": "7964e028755f",
+      "count": 7,
+      "recentCount": 1,
+      "olderCount": 6,
+      "displayCount": 1,
+      "missingCount": 0,
+      "href": "view.html?t=7964e028755f"
+    },
+    {
+      "title": "介護保険（地域包括）",
+      "label": "介護保険（地域包括）",
+      "slug": "1aa229df7ece",
+      "count": 4,
+      "recentCount": 3,
+      "olderCount": 1,
+      "displayCount": 3,
+      "missingCount": 0,
+      "href": "view.html?t=1aa229df7ece"
+    },
+    {
+      "title": "介護保険（指定・人員）",
+      "label": "介護保険（指定・人員）",
+      "slug": "46f7abe336e2",
+      "count": 3,
+      "recentCount": 2,
+      "olderCount": 1,
+      "displayCount": 2,
+      "missingCount": 0,
+      "href": "view.html?t=46f7abe336e2"
+    },
+    {
+      "title": "介護保険（理念）",
+      "label": "介護保険（理念）",
+      "slug": "40ebc39ebc64",
+      "count": 2,
+      "recentCount": 1,
+      "olderCount": 1,
+      "displayCount": 1,
+      "missingCount": 0,
+      "href": "view.html?t=40ebc39ebc64"
+    },
+    {
+      "title": "介護保険（訪問・通所・短期入所サービス）",
+      "label": "介護保険（訪問・通所・短期入所サービス）",
+      "slug": "f75a31870e25",
       "count": 12,
+      "recentCount": 7,
+      "olderCount": 5,
+      "displayCount": 7,
+      "missingCount": 0,
+      "href": "view.html?t=f75a31870e25"
+    },
+    {
+      "title": "介護保険（認定・利用）",
+      "label": "介護保険（認定・利用）",
+      "slug": "333fb8a5989e",
+      "count": 6,
+      "recentCount": 2,
+      "olderCount": 4,
+      "displayCount": 2,
+      "missingCount": 0,
+      "href": "view.html?t=333fb8a5989e"
+    },
+    {
+      "title": "介護保険（財源・負担）",
+      "label": "介護保険（財源・負担）",
+      "slug": "bbd60c010026",
+      "count": 7,
       "recentCount": 5,
-      "olderCount": 7,
+      "olderCount": 2,
       "displayCount": 5,
       "missingCount": 0,
-      "href": "view.html?t=cb7bf2ee96e7"
-    },
-    {
-      "title": "介護保険法（基本のしくみ）",
-      "label": "介護保険法（基本のしくみ）",
-      "slug": "317c54f3db83",
-      "count": 21,
-      "recentCount": 10,
-      "olderCount": 11,
-      "displayCount": 10,
-      "missingCount": 0,
-      "href": "view.html?t=317c54f3db83"
+      "href": "view.html?t=bbd60c010026"
     },
     {
       "title": "利用者本位・自立支援",
@@ -284,10 +508,10 @@
       "title": "地域包括支援センター・地域支援事業",
       "label": "地域包括支援センター・地域支援事業",
       "slug": "b36896f5f1b8",
-      "count": 11,
-      "recentCount": 6,
+      "count": 10,
+      "recentCount": 5,
       "olderCount": 5,
-      "displayCount": 6,
+      "displayCount": 5,
       "missingCount": 0,
       "href": "view.html?t=b36896f5f1b8"
     },
@@ -369,37 +593,92 @@
       "href": "view.html?t=06414d1eeaf8"
     },
     {
-      "title": "障害者総合支援法（しくみの基本）",
-      "label": "障害者総合支援法（しくみの基本）",
-      "slug": "52f41e597e63",
-      "count": 10,
-      "recentCount": 3,
-      "olderCount": 7,
-      "displayCount": 3,
+      "title": "障害者総合支援法（定義・改正）",
+      "label": "障害者総合支援法（定義・改正）",
+      "slug": "0f7795e5df7c",
+      "count": 2,
+      "recentCount": 0,
+      "olderCount": 2,
+      "displayCount": 2,
       "missingCount": 0,
-      "href": "view.html?t=52f41e597e63"
+      "href": "view.html?t=0f7795e5df7c"
     },
     {
-      "title": "障害者総合支援法（サービスの内容）",
-      "label": "障害者総合支援法（サービスの内容）",
-      "slug": "476cab7a4fe0",
-      "count": 18,
-      "recentCount": 11,
-      "olderCount": 7,
-      "displayCount": 11,
+      "title": "障害者総合支援法（日中・居住・就労）",
+      "label": "障害者総合支援法（日中・居住・就労）",
+      "slug": "be900b82cfda",
+      "count": 6,
+      "recentCount": 4,
+      "olderCount": 2,
+      "displayCount": 4,
       "missingCount": 0,
-      "href": "view.html?t=476cab7a4fe0"
+      "href": "view.html?t=be900b82cfda"
     },
     {
-      "title": "障害者総合支援法（業務の内容）",
-      "label": "障害者総合支援法（業務の内容）",
-      "slug": "35abe0b760a7",
-      "count": 10,
-      "recentCount": 6,
+      "title": "障害者総合支援法（機関・体制）",
+      "label": "障害者総合支援法（機関・体制）",
+      "slug": "26a3a8b00d81",
+      "count": 7,
+      "recentCount": 5,
+      "olderCount": 2,
+      "displayCount": 5,
+      "missingCount": 0,
+      "href": "view.html?t=26a3a8b00d81"
+    },
+    {
+      "title": "障害者総合支援法（相談支援）",
+      "label": "障害者総合支援法（相談支援）",
+      "slug": "62a7290b48fe",
+      "count": 3,
+      "recentCount": 2,
+      "olderCount": 1,
+      "displayCount": 2,
+      "missingCount": 0,
+      "href": "view.html?t=62a7290b48fe"
+    },
+    {
+      "title": "障害者総合支援法（補装具）",
+      "label": "障害者総合支援法（補装具）",
+      "slug": "8e87b673294b",
+      "count": 3,
+      "recentCount": 1,
+      "olderCount": 2,
+      "displayCount": 1,
+      "missingCount": 0,
+      "href": "view.html?t=8e87b673294b"
+    },
+    {
+      "title": "障害者総合支援法（訪問・移動）",
+      "label": "障害者総合支援法（訪問・移動）",
+      "slug": "b0198030ea19",
+      "count": 8,
+      "recentCount": 5,
+      "olderCount": 3,
+      "displayCount": 5,
+      "missingCount": 0,
+      "href": "view.html?t=b0198030ea19"
+    },
+    {
+      "title": "障害者総合支援法（認定・申請）",
+      "label": "障害者総合支援法（認定・申請）",
+      "slug": "a1e95bf8031d",
+      "count": 5,
+      "recentCount": 1,
       "olderCount": 4,
-      "displayCount": 6,
+      "displayCount": 1,
       "missingCount": 0,
-      "href": "view.html?t=35abe0b760a7"
+      "href": "view.html?t=a1e95bf8031d"
+    },
+    {
+      "title": "障害者総合支援法（負担・給付）",
+      "label": "障害者総合支援法（負担・給付）",
+      "slug": "0f9b0f132f92",
+      "count": 2,
+      "recentCount": 2,
+      "olderCount": 0,
+      "displayCount": 2,
+      "missingCount": 0,
+      "href": "view.html?t=0f9b0f132f92"
     }
   ]
 }

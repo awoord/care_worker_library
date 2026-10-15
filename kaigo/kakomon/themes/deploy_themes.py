@@ -52,18 +52,48 @@ SHOW_ALL_IN_ORDER_TITLES = frozenset({"過去問の再利用", "同じ問題"})
 
 # 一覧の親グループ（見出し）→ 子テーマ（.txt の stem）。
 # 空ならすべてフラット。括弧短縮ラベルはグループ内の子だけに使う。
-THEME_GROUPS: list[tuple[str, list[str]]] = []
+THEME_GROUPS: list[tuple[str, list[str]]] = [
+    (
+        "介護保険法",
+        [
+            "介護保険（理念）",
+            "介護保険（保険者・被保険者）",
+            "介護保険（財源・負担）",
+            "介護保険（認定・利用）",
+            "介護保険（地域包括）",
+            "介護保険（指定・人員）",
+            "介護保険（会議・計画）",
+            "介護保険（訪問・通所・短期入所サービス）",
+            "介護保険（共同生活・施設サービス）",
+        ],
+    ),
+    (
+        "障害者総合支援法",
+        [
+            "障害者総合支援法（定義・改正）",
+            "障害者総合支援法（機関・体制）",
+            "障害者総合支援法（認定・申請）",
+            "障害者総合支援法（負担・給付）",
+            "障害者総合支援法（相談支援）",
+            "障害者総合支援法（訪問・移動）",
+            "障害者総合支援法（日中・居住・就労）",
+            "障害者総合支援法（補装具）",
+        ],
+    ),
+]
 
 RE_QID = re.compile(r"【\s*(\d+)\s*-\s*(\d+)")
-RE_KAIGO_HOKEN_PAREN = re.compile(r"^介護保険（(.+)）$")
+RE_GROUP_CHILD_PAREN = re.compile(
+    r"^(?:介護保険|障害者総合支援法)（(.+)）$"
+)
 
 # 公開しない作業用テーマ（stem に含まれる文字列）
 THEME_SRC_SKIP_SUBSTRINGS = ("削除問題", "削除検討", "全ての問題", "すべての問題")
 
 
 def short_theme_label(title: str) -> str:
-    """グループ内の子用の短い表示名（介護保険（制度のしくみ）→ 制度のしくみ）。"""
-    m = RE_KAIGO_HOKEN_PAREN.match(title)
+    """グループ内の子用の短い表示名（介護保険（理念）→ 理念）。"""
+    m = RE_GROUP_CHILD_PAREN.match(title)
     if m:
         return m.group(1)
     return title

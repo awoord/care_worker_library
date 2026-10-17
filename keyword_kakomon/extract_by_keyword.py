@@ -170,6 +170,14 @@ def is_note_line(stripped: str) -> bool:
     return stripped.startswith("（注）") or stripped.startswith("(注)")
 
 
+# （注）1 の次行「2  「○○法」とは…」など。選択肢（1。…）とは区別する。
+RE_NOTE_CONTINUATION = re.compile(r"^\d+[\s　]+")
+
+
+def is_note_continuation(stripped: str) -> bool:
+    return bool(RE_NOTE_CONTINUATION.match(stripped))
+
+
 def partition_trailing_notes(
     trailing: list[str],
 ) -> tuple[list[str], list[str]]:
@@ -182,12 +190,15 @@ def partition_trailing_notes(
             j = i + 1
             while j < len(trailing) and not trailing[j].strip():
                 j += 1
-            if j < len(trailing) and is_note_line(trailing[j].strip()):
+            if j >= len(trailing):
+                break
+            nxt = trailing[j].strip()
+            if is_note_line(nxt) or (notes and is_note_continuation(nxt)):
                 notes.append(trailing[i])
                 i += 1
                 continue
             break
-        if is_note_line(stripped):
+        if is_note_line(stripped) or (notes and is_note_continuation(stripped)):
             notes.append(trailing[i])
             i += 1
             continue
@@ -296,6 +307,11 @@ def parse_question(
                 continue
             if stem_parts:
                 stem_parts.append("")
+            continue
+
+        # 注の2行目以降（「2  「○○法」とは…」）は選択肢に見せない
+        if in_choices and footnote_parts and is_note_continuation(stripped):
+            footnote_parts.append(stripped)
             continue
 
         if is_choice_line(stripped):

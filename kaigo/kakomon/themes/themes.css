@@ -41,7 +41,7 @@
   padding: 14px 16px;
   border: 1px solid var(--border);
   border-radius: 12px;
-  background: #eef1f7;
+  background: var(--surface);
   color: inherit;
   font: inherit;
   text-align: left;
@@ -51,7 +51,7 @@
 
 .theme-group-toggle:hover {
   border-color: #c9d0e0;
-  background: #e8ecf5;
+  background: #fbfbfd;
 }
 
 .theme-group-toggle:focus-visible {

@@ -1,11 +1,296 @@
 {
   "title": "介護福祉士国家試験 重要テーマ",
-  "count": 30,
+  "count": 57,
   "groups": [
     {
+      "title": "生活支援技術",
+      "count": 260,
+      "displayCount": 130,
+      "themes": [
+        {
+          "title": "生活支援技術（食事）",
+          "label": "食事",
+          "slug": "fd4b3f75d204",
+          "count": 53,
+          "recentCount": 26,
+          "olderCount": 27,
+          "displayCount": 26,
+          "missingCount": 0,
+          "href": "view.html?t=fd4b3f75d204"
+        },
+        {
+          "title": "生活支援技術（移動・体位）",
+          "label": "移動・体位",
+          "slug": "c26f638e12e2",
+          "count": 34,
+          "recentCount": 16,
+          "olderCount": 18,
+          "displayCount": 16,
+          "missingCount": 0,
+          "href": "view.html?t=c26f638e12e2"
+        },
+        {
+          "title": "生活支援技術（排泄）",
+          "label": "排泄",
+          "slug": "5f6071387f8f",
+          "count": 30,
+          "recentCount": 13,
+          "olderCount": 17,
+          "displayCount": 13,
+          "missingCount": 0,
+          "href": "view.html?t=5f6071387f8f"
+        },
+        {
+          "title": "生活支援技術（入浴・清潔・整容）",
+          "label": "入浴・清潔・整容",
+          "slug": "eeaacd30b55f",
+          "count": 27,
+          "recentCount": 16,
+          "olderCount": 11,
+          "displayCount": 16,
+          "missingCount": 0,
+          "href": "view.html?t=eeaacd30b55f"
+        },
+        {
+          "title": "生活支援技術（障害・認知症への配慮）",
+          "label": "障害・認知症への配慮",
+          "slug": "1059ffe00d0e",
+          "count": 27,
+          "recentCount": 16,
+          "olderCount": 11,
+          "displayCount": 16,
+          "missingCount": 0,
+          "href": "view.html?t=1059ffe00d0e"
+        },
+        {
+          "title": "生活支援技術（終末期・看取り）",
+          "label": "終末期・看取り",
+          "slug": "cfeeedbfa430",
+          "count": 22,
+          "recentCount": 11,
+          "olderCount": 11,
+          "displayCount": 11,
+          "missingCount": 0,
+          "href": "view.html?t=cfeeedbfa430"
+        },
+        {
+          "title": "生活支援技術（着脱・衣類）",
+          "label": "着脱・衣類",
+          "slug": "c9756669dcb8",
+          "count": 21,
+          "recentCount": 9,
+          "olderCount": 12,
+          "displayCount": 9,
+          "missingCount": 0,
+          "href": "view.html?t=c9756669dcb8"
+        },
+        {
+          "title": "生活支援技術（基本・自立支援）",
+          "label": "基本・自立支援",
+          "slug": "ca71d9302b70",
+          "count": 15,
+          "recentCount": 7,
+          "olderCount": 8,
+          "displayCount": 7,
+          "missingCount": 0,
+          "href": "view.html?t=ca71d9302b70"
+        },
+        {
+          "title": "生活支援技術（睡眠・休息）",
+          "label": "睡眠・休息",
+          "slug": "d9766d31e731",
+          "count": 14,
+          "recentCount": 9,
+          "olderCount": 5,
+          "displayCount": 9,
+          "missingCount": 0,
+          "href": "view.html?t=d9766d31e731"
+        },
+        {
+          "title": "生活支援技術（住環境・福祉用具）",
+          "label": "住環境・福祉用具",
+          "slug": "8d5ad3f8f580",
+          "count": 11,
+          "recentCount": 5,
+          "olderCount": 6,
+          "displayCount": 5,
+          "missingCount": 0,
+          "href": "view.html?t=8d5ad3f8f580"
+        },
+        {
+          "title": "生活支援技術（家事・生活管理）",
+          "label": "家事・生活管理",
+          "slug": "ce6905b467b1",
+          "count": 6,
+          "recentCount": 2,
+          "olderCount": 4,
+          "displayCount": 2,
+          "missingCount": 0,
+          "href": "view.html?t=ce6905b467b1"
+        }
+      ]
+    },
+    {
+      "title": "利用者本位・自立支援",
+      "count": 140,
+      "displayCount": 72,
+      "themes": [
+        {
+          "title": "利用者本位・自立支援（原則）",
+          "label": "原則",
+          "slug": "510101d9c4a3",
+          "count": 36,
+          "recentCount": 15,
+          "olderCount": 21,
+          "displayCount": 15,
+          "missingCount": 0,
+          "href": "view.html?t=510101d9c4a3"
+        },
+        {
+          "title": "利用者本位・自立支援（場面）",
+          "label": "場面",
+          "slug": "6a8611151bc5",
+          "count": 104,
+          "recentCount": 57,
+          "olderCount": 47,
+          "displayCount": 57,
+          "missingCount": 0,
+          "href": "view.html?t=6a8611151bc5"
+        }
+      ]
+    },
+    {
+      "title": "人体のしくみ",
+      "count": 90,
+      "displayCount": 50,
+      "themes": [
+        {
+          "title": "人体のしくみ（消化・嚥下・栄養）",
+          "label": "消化・嚥下・栄養",
+          "slug": "827ef84c607b",
+          "count": 18,
+          "recentCount": 9,
+          "olderCount": 9,
+          "displayCount": 9,
+          "missingCount": 0,
+          "href": "view.html?t=827ef84c607b"
+        },
+        {
+          "title": "人体のしくみ（脳・神経）",
+          "label": "脳・神経",
+          "slug": "5f4e6f0f364b",
+          "count": 12,
+          "recentCount": 8,
+          "olderCount": 4,
+          "displayCount": 8,
+          "missingCount": 0,
+          "href": "view.html?t=5f4e6f0f364b"
+        },
+        {
+          "title": "人体のしくみ（感覚器）",
+          "label": "感覚器",
+          "slug": "8394fc237741",
+          "count": 10,
+          "recentCount": 7,
+          "olderCount": 3,
+          "displayCount": 7,
+          "missingCount": 0,
+          "href": "view.html?t=8394fc237741"
+        },
+        {
+          "title": "人体のしくみ（運動器・姿勢）",
+          "label": "運動器・姿勢",
+          "slug": "c859174458c3",
+          "count": 9,
+          "recentCount": 5,
+          "olderCount": 4,
+          "displayCount": 5,
+          "missingCount": 0,
+          "href": "view.html?t=c859174458c3"
+        },
+        {
+          "title": "人体のしくみ（睡眠・体温・リズム）",
+          "label": "睡眠・体温・リズム",
+          "slug": "aa69069f6814",
+          "count": 9,
+          "recentCount": 3,
+          "olderCount": 6,
+          "displayCount": 3,
+          "missingCount": 0,
+          "href": "view.html?t=aa69069f6814"
+        },
+        {
+          "title": "人体のしくみ（呼吸）",
+          "label": "呼吸",
+          "slug": "2e0e39f635f8",
+          "count": 8,
+          "recentCount": 7,
+          "olderCount": 1,
+          "displayCount": 7,
+          "missingCount": 0,
+          "href": "view.html?t=2e0e39f635f8"
+        },
+        {
+          "title": "人体のしくみ（老化・恒常性・知能）",
+          "label": "老化・恒常性・知能",
+          "slug": "1a1edfad7a4e",
+          "count": 8,
+          "recentCount": 4,
+          "olderCount": 4,
+          "displayCount": 4,
+          "missingCount": 0,
+          "href": "view.html?t=1a1edfad7a4e"
+        },
+        {
+          "title": "人体のしくみ（排泄）",
+          "label": "排泄",
+          "slug": "22315c50e151",
+          "count": 5,
+          "recentCount": 2,
+          "olderCount": 3,
+          "displayCount": 2,
+          "missingCount": 0,
+          "href": "view.html?t=22315c50e151"
+        },
+        {
+          "title": "人体のしくみ（皮膚）",
+          "label": "皮膚",
+          "slug": "689d8dbe68ea",
+          "count": 4,
+          "recentCount": 3,
+          "olderCount": 1,
+          "displayCount": 3,
+          "missingCount": 0,
+          "href": "view.html?t=689d8dbe68ea"
+        },
+        {
+          "title": "人体のしくみ（終末期の身体）",
+          "label": "終末期の身体",
+          "slug": "d1842228c242",
+          "count": 4,
+          "recentCount": 1,
+          "olderCount": 3,
+          "displayCount": 1,
+          "missingCount": 0,
+          "href": "view.html?t=d1842228c242"
+        },
+        {
+          "title": "人体のしくみ（循環）",
+          "label": "循環",
+          "slug": "eb5b4a016e8e",
+          "count": 3,
+          "recentCount": 1,
+          "olderCount": 2,
+          "displayCount": 1,
+          "missingCount": 0,
+          "href": "view.html?t=eb5b4a016e8e"
+        }
+      ]
+    },
+    {
       "title": "介護保険法",
-      "count": 53,
-      "displayCount": 27,
+      "count": 62,
+      "displayCount": 33,
       "themes": [
         {
           "title": "介護保険（理念）",
@@ -88,9 +373,9 @@
           "title": "介護保険（訪問・通所・短期入所サービス）",
           "label": "訪問・通所・短期入所サービス",
           "slug": "f75a31870e25",
-          "count": 12,
+          "count": 13,
           "recentCount": 7,
-          "olderCount": 5,
+          "olderCount": 6,
           "displayCount": 7,
           "missingCount": 0,
           "href": "view.html?t=f75a31870e25"
@@ -105,12 +390,23 @@
           "displayCount": 1,
           "missingCount": 0,
           "href": "view.html?t=7964e028755f"
+        },
+        {
+          "title": "介護保険（福祉用具サービス）",
+          "label": "福祉用具サービス",
+          "slug": "06b5d5140abf",
+          "count": 8,
+          "recentCount": 6,
+          "olderCount": 2,
+          "displayCount": 6,
+          "missingCount": 0,
+          "href": "view.html?t=06b5d5140abf"
         }
       ]
     },
     {
       "title": "障害者総合支援法",
-      "count": 36,
+      "count": 37,
       "displayCount": 22,
       "themes": [
         {
@@ -161,50 +457,203 @@
           "title": "障害者総合支援法（相談支援）",
           "label": "相談支援",
           "slug": "62a7290b48fe",
-          "count": 3,
-          "recentCount": 2,
+          "count": 4,
+          "recentCount": 3,
           "olderCount": 1,
-          "displayCount": 2,
+          "displayCount": 3,
           "missingCount": 0,
           "href": "view.html?t=62a7290b48fe"
         },
         {
-          "title": "障害者総合支援法（訪問・移動）",
-          "label": "訪問・移動",
-          "slug": "b0198030ea19",
-          "count": 8,
+          "title": "障害者総合支援法（訪問・移動サービス）",
+          "label": "訪問・移動サービス",
+          "slug": "75b6cd592500",
+          "count": 7,
           "recentCount": 5,
-          "olderCount": 3,
+          "olderCount": 2,
           "displayCount": 5,
           "missingCount": 0,
-          "href": "view.html?t=b0198030ea19"
+          "href": "view.html?t=75b6cd592500"
         },
         {
-          "title": "障害者総合支援法（日中・居住・就労）",
-          "label": "日中・居住・就労",
-          "slug": "be900b82cfda",
-          "count": 6,
-          "recentCount": 4,
-          "olderCount": 2,
-          "displayCount": 4,
+          "title": "障害者総合支援法（通所・居住・就労サービス）",
+          "label": "通所・居住・就労サービス",
+          "slug": "5b50c6f62d7b",
+          "count": 7,
+          "recentCount": 3,
+          "olderCount": 4,
+          "displayCount": 3,
           "missingCount": 0,
-          "href": "view.html?t=be900b82cfda"
+          "href": "view.html?t=5b50c6f62d7b"
         },
         {
-          "title": "障害者総合支援法（補装具）",
-          "label": "補装具",
-          "slug": "8e87b673294b",
+          "title": "障害者総合支援法（補装具サービス）",
+          "label": "補装具サービス",
+          "slug": "9a0130b97f9d",
           "count": 3,
           "recentCount": 1,
           "olderCount": 2,
           "displayCount": 1,
           "missingCount": 0,
-          "href": "view.html?t=8e87b673294b"
+          "href": "view.html?t=9a0130b97f9d"
+        }
+      ]
+    },
+    {
+      "title": "医療的ケア",
+      "count": 39,
+      "displayCount": 17,
+      "themes": [
+        {
+          "title": "喀痰吸引",
+          "label": "喀痰吸引",
+          "slug": "d3514f09eb50",
+          "count": 21,
+          "recentCount": 8,
+          "olderCount": 13,
+          "displayCount": 8,
+          "missingCount": 0,
+          "href": "view.html?t=d3514f09eb50"
+        },
+        {
+          "title": "経管栄養",
+          "label": "経管栄養",
+          "slug": "1b47fa56594b",
+          "count": 18,
+          "recentCount": 9,
+          "olderCount": 9,
+          "displayCount": 9,
+          "missingCount": 0,
+          "href": "view.html?t=1b47fa56594b"
+        }
+      ]
+    },
+    {
+      "title": "法律",
+      "count": 25,
+      "displayCount": 14,
+      "themes": [
+        {
+          "title": "法律（障害者虐待防止法・高齢者虐待防止法）",
+          "label": "障害者虐待防止法・高齢者虐待防止法",
+          "slug": "ea8540263de7",
+          "count": 8,
+          "recentCount": 4,
+          "olderCount": 4,
+          "displayCount": 4,
+          "missingCount": 0,
+          "href": "view.html?t=ea8540263de7"
+        },
+        {
+          "title": "法律（社会福祉士及び介護福祉士法）",
+          "label": "社会福祉士及び介護福祉士法",
+          "slug": "5aa666e6f6fc",
+          "count": 6,
+          "recentCount": 3,
+          "olderCount": 3,
+          "displayCount": 3,
+          "missingCount": 0,
+          "href": "view.html?t=5aa666e6f6fc"
+        },
+        {
+          "title": "法律（社会福祉法）",
+          "label": "社会福祉法",
+          "slug": "26e0fdcc59cb",
+          "count": 3,
+          "recentCount": 3,
+          "olderCount": 0,
+          "displayCount": 3,
+          "missingCount": 0,
+          "href": "view.html?t=26e0fdcc59cb"
+        },
+        {
+          "title": "法律（障害者差別解消法）",
+          "label": "障害者差別解消法",
+          "slug": "7048b44867e5",
+          "count": 5,
+          "recentCount": 2,
+          "olderCount": 3,
+          "displayCount": 2,
+          "missingCount": 0,
+          "href": "view.html?t=7048b44867e5"
+        },
+        {
+          "title": "法律（生活困窮者自立支援法）",
+          "label": "生活困窮者自立支援法",
+          "slug": "857734af6085",
+          "count": 3,
+          "recentCount": 2,
+          "olderCount": 1,
+          "displayCount": 2,
+          "missingCount": 0,
+          "href": "view.html?t=857734af6085"
+        }
+      ]
+    },
+    {
+      "title": "福祉の関連人物",
+      "count": 19,
+      "displayCount": 9,
+      "themes": [
+        {
+          "title": "福祉の関連人物（福祉思想の人物）",
+          "label": "福祉思想の人物",
+          "slug": "d3ef74c00008",
+          "count": 8,
+          "recentCount": 3,
+          "olderCount": 5,
+          "displayCount": 3,
+          "missingCount": 0,
+          "href": "view.html?t=d3ef74c00008"
+        },
+        {
+          "title": "福祉の関連人物（マズロー）",
+          "label": "マズロー",
+          "slug": "6cd0d21a227a",
+          "count": 4,
+          "recentCount": 2,
+          "olderCount": 2,
+          "displayCount": 2,
+          "missingCount": 0,
+          "href": "view.html?t=6cd0d21a227a"
+        },
+        {
+          "title": "福祉の関連人物（キューブラー・ロス）",
+          "label": "キューブラー・ロス",
+          "slug": "71bc14edc655",
+          "count": 4,
+          "recentCount": 2,
+          "olderCount": 2,
+          "displayCount": 2,
+          "missingCount": 0,
+          "href": "view.html?t=71bc14edc655"
+        },
+        {
+          "title": "福祉の関連人物（ライチャード）",
+          "label": "ライチャード",
+          "slug": "fca01e5a4f9f",
+          "count": 3,
+          "recentCount": 2,
+          "olderCount": 1,
+          "displayCount": 2,
+          "missingCount": 0,
+          "href": "view.html?t=fca01e5a4f9f"
         }
       ]
     }
   ],
   "ungrouped": [
+    {
+      "title": "認知症の病態・症状",
+      "label": "認知症の病態・症状",
+      "slug": "06414d1eeaf8",
+      "count": 35,
+      "recentCount": 15,
+      "olderCount": 20,
+      "displayCount": 15,
+      "missingCount": 0,
+      "href": "view.html?t=06414d1eeaf8"
+    },
     {
       "title": "ICF（国際生活機能分類）",
       "label": "ICF（国際生活機能分類）",
@@ -215,61 +664,6 @@
       "displayCount": 5,
       "missingCount": 0,
       "href": "view.html?t=efd0cd941521"
-    },
-    {
-      "title": "テスト",
-      "label": "テスト",
-      "slug": "63b560db8849",
-      "count": 0,
-      "recentCount": 0,
-      "olderCount": 0,
-      "displayCount": 0,
-      "missingCount": 0,
-      "href": "view.html?t=63b560db8849"
-    },
-    {
-      "title": "人体のしくみ",
-      "label": "人体のしくみ",
-      "slug": "75aeba0b7893",
-      "count": 81,
-      "recentCount": 45,
-      "olderCount": 36,
-      "displayCount": 45,
-      "missingCount": 0,
-      "href": "view.html?t=75aeba0b7893"
-    },
-    {
-      "title": "利用者本位・自立支援",
-      "label": "利用者本位・自立支援",
-      "slug": "c8ed34da5faa",
-      "count": 46,
-      "recentCount": 22,
-      "olderCount": 24,
-      "displayCount": 22,
-      "missingCount": 0,
-      "href": "view.html?t=c8ed34da5faa"
-    },
-    {
-      "title": "喀痰吸引",
-      "label": "喀痰吸引",
-      "slug": "d3514f09eb50",
-      "count": 21,
-      "recentCount": 8,
-      "olderCount": 13,
-      "displayCount": 8,
-      "missingCount": 0,
-      "href": "view.html?t=d3514f09eb50"
-    },
-    {
-      "title": "地域包括支援センター・地域支援事業",
-      "label": "地域包括支援センター・地域支援事業",
-      "slug": "b36896f5f1b8",
-      "count": 10,
-      "recentCount": 5,
-      "olderCount": 5,
-      "displayCount": 5,
-      "missingCount": 0,
-      "href": "view.html?t=b36896f5f1b8"
     },
     {
       "title": "有料老人ホーム・老人福祉施設・サービス付き高齢者住宅",
@@ -283,17 +677,6 @@
       "href": "view.html?t=b39aeb55675b"
     },
     {
-      "title": "生活支援技術",
-      "label": "生活支援技術",
-      "slug": "b62111402b81",
-      "count": 260,
-      "recentCount": 130,
-      "olderCount": 130,
-      "displayCount": 130,
-      "missingCount": 0,
-      "href": "view.html?t=b62111402b81"
-    },
-    {
       "title": "社会保険（医療・年金・雇用・労災・介護）",
       "label": "社会保険（医療・年金・雇用・労災・介護）",
       "slug": "fc56ace6c8b5",
@@ -303,50 +686,6 @@
       "displayCount": 2,
       "missingCount": 0,
       "href": "view.html?t=fc56ace6c8b5"
-    },
-    {
-      "title": "福祉に関連する人物",
-      "label": "福祉に関連する人物",
-      "slug": "ef8197ddc729",
-      "count": 27,
-      "recentCount": 13,
-      "olderCount": 14,
-      "displayCount": 13,
-      "missingCount": 0,
-      "href": "view.html?t=ef8197ddc729"
-    },
-    {
-      "title": "経管栄養",
-      "label": "経管栄養",
-      "slug": "1b47fa56594b",
-      "count": 18,
-      "recentCount": 9,
-      "olderCount": 9,
-      "displayCount": 9,
-      "missingCount": 0,
-      "href": "view.html?t=1b47fa56594b"
-    },
-    {
-      "title": "虐待防止",
-      "label": "虐待防止",
-      "slug": "245ae604d9c3",
-      "count": 5,
-      "recentCount": 3,
-      "olderCount": 2,
-      "displayCount": 3,
-      "missingCount": 0,
-      "href": "view.html?t=245ae604d9c3"
-    },
-    {
-      "title": "認知症の病態・症状",
-      "label": "認知症の病態・症状",
-      "slug": "06414d1eeaf8",
-      "count": 35,
-      "recentCount": 15,
-      "olderCount": 20,
-      "displayCount": 15,
-      "missingCount": 0,
-      "href": "view.html?t=06414d1eeaf8"
     }
   ],
   "themes": [
@@ -362,26 +701,125 @@
       "href": "view.html?t=efd0cd941521"
     },
     {
-      "title": "テスト",
-      "label": "テスト",
-      "slug": "63b560db8849",
-      "count": 0,
-      "recentCount": 0,
-      "olderCount": 0,
-      "displayCount": 0,
+      "title": "人体のしくみ（呼吸）",
+      "label": "人体のしくみ（呼吸）",
+      "slug": "2e0e39f635f8",
+      "count": 8,
+      "recentCount": 7,
+      "olderCount": 1,
+      "displayCount": 7,
       "missingCount": 0,
-      "href": "view.html?t=63b560db8849"
+      "href": "view.html?t=2e0e39f635f8"
     },
     {
-      "title": "人体のしくみ",
-      "label": "人体のしくみ",
-      "slug": "75aeba0b7893",
-      "count": 81,
-      "recentCount": 45,
-      "olderCount": 36,
-      "displayCount": 45,
+      "title": "人体のしくみ（循環）",
+      "label": "人体のしくみ（循環）",
+      "slug": "eb5b4a016e8e",
+      "count": 3,
+      "recentCount": 1,
+      "olderCount": 2,
+      "displayCount": 1,
       "missingCount": 0,
-      "href": "view.html?t=75aeba0b7893"
+      "href": "view.html?t=eb5b4a016e8e"
+    },
+    {
+      "title": "人体のしくみ（感覚器）",
+      "label": "人体のしくみ（感覚器）",
+      "slug": "8394fc237741",
+      "count": 10,
+      "recentCount": 7,
+      "olderCount": 3,
+      "displayCount": 7,
+      "missingCount": 0,
+      "href": "view.html?t=8394fc237741"
+    },
+    {
+      "title": "人体のしくみ（排泄）",
+      "label": "人体のしくみ（排泄）",
+      "slug": "22315c50e151",
+      "count": 5,
+      "recentCount": 2,
+      "olderCount": 3,
+      "displayCount": 2,
+      "missingCount": 0,
+      "href": "view.html?t=22315c50e151"
+    },
+    {
+      "title": "人体のしくみ（消化・嚥下・栄養）",
+      "label": "人体のしくみ（消化・嚥下・栄養）",
+      "slug": "827ef84c607b",
+      "count": 18,
+      "recentCount": 9,
+      "olderCount": 9,
+      "displayCount": 9,
+      "missingCount": 0,
+      "href": "view.html?t=827ef84c607b"
+    },
+    {
+      "title": "人体のしくみ（皮膚）",
+      "label": "人体のしくみ（皮膚）",
+      "slug": "689d8dbe68ea",
+      "count": 4,
+      "recentCount": 3,
+      "olderCount": 1,
+      "displayCount": 3,
+      "missingCount": 0,
+      "href": "view.html?t=689d8dbe68ea"
+    },
+    {
+      "title": "人体のしくみ（睡眠・体温・リズム）",
+      "label": "人体のしくみ（睡眠・体温・リズム）",
+      "slug": "aa69069f6814",
+      "count": 9,
+      "recentCount": 3,
+      "olderCount": 6,
+      "displayCount": 3,
+      "missingCount": 0,
+      "href": "view.html?t=aa69069f6814"
+    },
+    {
+      "title": "人体のしくみ（終末期の身体）",
+      "label": "人体のしくみ（終末期の身体）",
+      "slug": "d1842228c242",
+      "count": 4,
+      "recentCount": 1,
+      "olderCount": 3,
+      "displayCount": 1,
+      "missingCount": 0,
+      "href": "view.html?t=d1842228c242"
+    },
+    {
+      "title": "人体のしくみ（老化・恒常性・知能）",
+      "label": "人体のしくみ（老化・恒常性・知能）",
+      "slug": "1a1edfad7a4e",
+      "count": 8,
+      "recentCount": 4,
+      "olderCount": 4,
+      "displayCount": 4,
+      "missingCount": 0,
+      "href": "view.html?t=1a1edfad7a4e"
+    },
+    {
+      "title": "人体のしくみ（脳・神経）",
+      "label": "人体のしくみ（脳・神経）",
+      "slug": "5f4e6f0f364b",
+      "count": 12,
+      "recentCount": 8,
+      "olderCount": 4,
+      "displayCount": 8,
+      "missingCount": 0,
+      "href": "view.html?t=5f4e6f0f364b"
+    },
+    {
+      "title": "人体のしくみ（運動器・姿勢）",
+      "label": "人体のしくみ（運動器・姿勢）",
+      "slug": "c859174458c3",
+      "count": 9,
+      "recentCount": 5,
+      "olderCount": 4,
+      "displayCount": 5,
+      "missingCount": 0,
+      "href": "view.html?t=c859174458c3"
     },
     {
       "title": "介護保険（会議・計画）",
@@ -450,12 +888,23 @@
       "href": "view.html?t=40ebc39ebc64"
     },
     {
+      "title": "介護保険（福祉用具サービス）",
+      "label": "介護保険（福祉用具サービス）",
+      "slug": "06b5d5140abf",
+      "count": 8,
+      "recentCount": 6,
+      "olderCount": 2,
+      "displayCount": 6,
+      "missingCount": 0,
+      "href": "view.html?t=06b5d5140abf"
+    },
+    {
       "title": "介護保険（訪問・通所・短期入所サービス）",
       "label": "介護保険（訪問・通所・短期入所サービス）",
       "slug": "f75a31870e25",
-      "count": 12,
+      "count": 13,
       "recentCount": 7,
-      "olderCount": 5,
+      "olderCount": 6,
       "displayCount": 7,
       "missingCount": 0,
       "href": "view.html?t=f75a31870e25"
@@ -483,15 +932,26 @@
       "href": "view.html?t=bbd60c010026"
     },
     {
-      "title": "利用者本位・自立支援",
-      "label": "利用者本位・自立支援",
-      "slug": "c8ed34da5faa",
-      "count": 46,
-      "recentCount": 22,
-      "olderCount": 24,
-      "displayCount": 22,
+      "title": "利用者本位・自立支援（原則）",
+      "label": "利用者本位・自立支援（原則）",
+      "slug": "510101d9c4a3",
+      "count": 36,
+      "recentCount": 15,
+      "olderCount": 21,
+      "displayCount": 15,
       "missingCount": 0,
-      "href": "view.html?t=c8ed34da5faa"
+      "href": "view.html?t=510101d9c4a3"
+    },
+    {
+      "title": "利用者本位・自立支援（場面）",
+      "label": "利用者本位・自立支援（場面）",
+      "slug": "6a8611151bc5",
+      "count": 104,
+      "recentCount": 57,
+      "olderCount": 47,
+      "displayCount": 57,
+      "missingCount": 0,
+      "href": "view.html?t=6a8611151bc5"
     },
     {
       "title": "喀痰吸引",
@@ -505,17 +965,6 @@
       "href": "view.html?t=d3514f09eb50"
     },
     {
-      "title": "地域包括支援センター・地域支援事業",
-      "label": "地域包括支援センター・地域支援事業",
-      "slug": "b36896f5f1b8",
-      "count": 10,
-      "recentCount": 5,
-      "olderCount": 5,
-      "displayCount": 5,
-      "missingCount": 0,
-      "href": "view.html?t=b36896f5f1b8"
-    },
-    {
       "title": "有料老人ホーム・老人福祉施設・サービス付き高齢者住宅",
       "label": "有料老人ホーム・老人福祉施設・サービス付き高齢者住宅",
       "slug": "b39aeb55675b",
@@ -527,15 +976,180 @@
       "href": "view.html?t=b39aeb55675b"
     },
     {
-      "title": "生活支援技術",
-      "label": "生活支援技術",
-      "slug": "b62111402b81",
-      "count": 260,
-      "recentCount": 130,
-      "olderCount": 130,
-      "displayCount": 130,
+      "title": "法律（生活困窮者自立支援法）",
+      "label": "法律（生活困窮者自立支援法）",
+      "slug": "857734af6085",
+      "count": 3,
+      "recentCount": 2,
+      "olderCount": 1,
+      "displayCount": 2,
       "missingCount": 0,
-      "href": "view.html?t=b62111402b81"
+      "href": "view.html?t=857734af6085"
+    },
+    {
+      "title": "法律（社会福祉士及び介護福祉士法）",
+      "label": "法律（社会福祉士及び介護福祉士法）",
+      "slug": "5aa666e6f6fc",
+      "count": 6,
+      "recentCount": 3,
+      "olderCount": 3,
+      "displayCount": 3,
+      "missingCount": 0,
+      "href": "view.html?t=5aa666e6f6fc"
+    },
+    {
+      "title": "法律（社会福祉法）",
+      "label": "法律（社会福祉法）",
+      "slug": "26e0fdcc59cb",
+      "count": 3,
+      "recentCount": 3,
+      "olderCount": 0,
+      "displayCount": 3,
+      "missingCount": 0,
+      "href": "view.html?t=26e0fdcc59cb"
+    },
+    {
+      "title": "法律（障害者差別解消法）",
+      "label": "法律（障害者差別解消法）",
+      "slug": "7048b44867e5",
+      "count": 5,
+      "recentCount": 2,
+      "olderCount": 3,
+      "displayCount": 2,
+      "missingCount": 0,
+      "href": "view.html?t=7048b44867e5"
+    },
+    {
+      "title": "法律（障害者虐待防止法・高齢者虐待防止法）",
+      "label": "法律（障害者虐待防止法・高齢者虐待防止法）",
+      "slug": "ea8540263de7",
+      "count": 8,
+      "recentCount": 4,
+      "olderCount": 4,
+      "displayCount": 4,
+      "missingCount": 0,
+      "href": "view.html?t=ea8540263de7"
+    },
+    {
+      "title": "生活支援技術（住環境・福祉用具）",
+      "label": "生活支援技術（住環境・福祉用具）",
+      "slug": "8d5ad3f8f580",
+      "count": 11,
+      "recentCount": 5,
+      "olderCount": 6,
+      "displayCount": 5,
+      "missingCount": 0,
+      "href": "view.html?t=8d5ad3f8f580"
+    },
+    {
+      "title": "生活支援技術（入浴・清潔・整容）",
+      "label": "生活支援技術（入浴・清潔・整容）",
+      "slug": "eeaacd30b55f",
+      "count": 27,
+      "recentCount": 16,
+      "olderCount": 11,
+      "displayCount": 16,
+      "missingCount": 0,
+      "href": "view.html?t=eeaacd30b55f"
+    },
+    {
+      "title": "生活支援技術（基本・自立支援）",
+      "label": "生活支援技術（基本・自立支援）",
+      "slug": "ca71d9302b70",
+      "count": 15,
+      "recentCount": 7,
+      "olderCount": 8,
+      "displayCount": 7,
+      "missingCount": 0,
+      "href": "view.html?t=ca71d9302b70"
+    },
+    {
+      "title": "生活支援技術（家事・生活管理）",
+      "label": "生活支援技術（家事・生活管理）",
+      "slug": "ce6905b467b1",
+      "count": 6,
+      "recentCount": 2,
+      "olderCount": 4,
+      "displayCount": 2,
+      "missingCount": 0,
+      "href": "view.html?t=ce6905b467b1"
+    },
+    {
+      "title": "生活支援技術（排泄）",
+      "label": "生活支援技術（排泄）",
+      "slug": "5f6071387f8f",
+      "count": 30,
+      "recentCount": 13,
+      "olderCount": 17,
+      "displayCount": 13,
+      "missingCount": 0,
+      "href": "view.html?t=5f6071387f8f"
+    },
+    {
+      "title": "生活支援技術（着脱・衣類）",
+      "label": "生活支援技術（着脱・衣類）",
+      "slug": "c9756669dcb8",
+      "count": 21,
+      "recentCount": 9,
+      "olderCount": 12,
+      "displayCount": 9,
+      "missingCount": 0,
+      "href": "view.html?t=c9756669dcb8"
+    },
+    {
+      "title": "生活支援技術（睡眠・休息）",
+      "label": "生活支援技術（睡眠・休息）",
+      "slug": "d9766d31e731",
+      "count": 14,
+      "recentCount": 9,
+      "olderCount": 5,
+      "displayCount": 9,
+      "missingCount": 0,
+      "href": "view.html?t=d9766d31e731"
+    },
+    {
+      "title": "生活支援技術（移動・体位）",
+      "label": "生活支援技術（移動・体位）",
+      "slug": "c26f638e12e2",
+      "count": 34,
+      "recentCount": 16,
+      "olderCount": 18,
+      "displayCount": 16,
+      "missingCount": 0,
+      "href": "view.html?t=c26f638e12e2"
+    },
+    {
+      "title": "生活支援技術（終末期・看取り）",
+      "label": "生活支援技術（終末期・看取り）",
+      "slug": "cfeeedbfa430",
+      "count": 22,
+      "recentCount": 11,
+      "olderCount": 11,
+      "displayCount": 11,
+      "missingCount": 0,
+      "href": "view.html?t=cfeeedbfa430"
+    },
+    {
+      "title": "生活支援技術（障害・認知症への配慮）",
+      "label": "生活支援技術（障害・認知症への配慮）",
+      "slug": "1059ffe00d0e",
+      "count": 27,
+      "recentCount": 16,
+      "olderCount": 11,
+      "displayCount": 16,
+      "missingCount": 0,
+      "href": "view.html?t=1059ffe00d0e"
+    },
+    {
+      "title": "生活支援技術（食事）",
+      "label": "生活支援技術（食事）",
+      "slug": "fd4b3f75d204",
+      "count": 53,
+      "recentCount": 26,
+      "olderCount": 27,
+      "displayCount": 26,
+      "missingCount": 0,
+      "href": "view.html?t=fd4b3f75d204"
     },
     {
       "title": "社会保険（医療・年金・雇用・労災・介護）",
@@ -549,15 +1163,48 @@
       "href": "view.html?t=fc56ace6c8b5"
     },
     {
-      "title": "福祉に関連する人物",
-      "label": "福祉に関連する人物",
-      "slug": "ef8197ddc729",
-      "count": 27,
-      "recentCount": 13,
-      "olderCount": 14,
-      "displayCount": 13,
+      "title": "福祉の関連人物（キューブラー・ロス）",
+      "label": "福祉の関連人物（キューブラー・ロス）",
+      "slug": "71bc14edc655",
+      "count": 4,
+      "recentCount": 2,
+      "olderCount": 2,
+      "displayCount": 2,
       "missingCount": 0,
-      "href": "view.html?t=ef8197ddc729"
+      "href": "view.html?t=71bc14edc655"
+    },
+    {
+      "title": "福祉の関連人物（マズロー）",
+      "label": "福祉の関連人物（マズロー）",
+      "slug": "6cd0d21a227a",
+      "count": 4,
+      "recentCount": 2,
+      "olderCount": 2,
+      "displayCount": 2,
+      "missingCount": 0,
+      "href": "view.html?t=6cd0d21a227a"
+    },
+    {
+      "title": "福祉の関連人物（ライチャード）",
+      "label": "福祉の関連人物（ライチャード）",
+      "slug": "fca01e5a4f9f",
+      "count": 3,
+      "recentCount": 2,
+      "olderCount": 1,
+      "displayCount": 2,
+      "missingCount": 0,
+      "href": "view.html?t=fca01e5a4f9f"
+    },
+    {
+      "title": "福祉の関連人物（福祉思想の人物）",
+      "label": "福祉の関連人物（福祉思想の人物）",
+      "slug": "d3ef74c00008",
+      "count": 8,
+      "recentCount": 3,
+      "olderCount": 5,
+      "displayCount": 3,
+      "missingCount": 0,
+      "href": "view.html?t=d3ef74c00008"
     },
     {
       "title": "経管栄養",
@@ -569,17 +1216,6 @@
       "displayCount": 9,
       "missingCount": 0,
       "href": "view.html?t=1b47fa56594b"
-    },
-    {
-      "title": "虐待防止",
-      "label": "虐待防止",
-      "slug": "245ae604d9c3",
-      "count": 5,
-      "recentCount": 3,
-      "olderCount": 2,
-      "displayCount": 3,
-      "missingCount": 0,
-      "href": "view.html?t=245ae604d9c3"
     },
     {
       "title": "認知症の病態・症状",
@@ -604,17 +1240,6 @@
       "href": "view.html?t=0f7795e5df7c"
     },
     {
-      "title": "障害者総合支援法（日中・居住・就労）",
-      "label": "障害者総合支援法（日中・居住・就労）",
-      "slug": "be900b82cfda",
-      "count": 6,
-      "recentCount": 4,
-      "olderCount": 2,
-      "displayCount": 4,
-      "missingCount": 0,
-      "href": "view.html?t=be900b82cfda"
-    },
-    {
       "title": "障害者総合支援法（機関・体制）",
       "label": "障害者総合支援法（機関・体制）",
       "slug": "26a3a8b00d81",
@@ -629,34 +1254,34 @@
       "title": "障害者総合支援法（相談支援）",
       "label": "障害者総合支援法（相談支援）",
       "slug": "62a7290b48fe",
-      "count": 3,
-      "recentCount": 2,
+      "count": 4,
+      "recentCount": 3,
       "olderCount": 1,
-      "displayCount": 2,
+      "displayCount": 3,
       "missingCount": 0,
       "href": "view.html?t=62a7290b48fe"
     },
     {
-      "title": "障害者総合支援法（補装具）",
-      "label": "障害者総合支援法（補装具）",
-      "slug": "8e87b673294b",
+      "title": "障害者総合支援法（補装具サービス）",
+      "label": "障害者総合支援法（補装具サービス）",
+      "slug": "9a0130b97f9d",
       "count": 3,
       "recentCount": 1,
       "olderCount": 2,
       "displayCount": 1,
       "missingCount": 0,
-      "href": "view.html?t=8e87b673294b"
+      "href": "view.html?t=9a0130b97f9d"
     },
     {
-      "title": "障害者総合支援法（訪問・移動）",
-      "label": "障害者総合支援法（訪問・移動）",
-      "slug": "b0198030ea19",
-      "count": 8,
+      "title": "障害者総合支援法（訪問・移動サービス）",
+      "label": "障害者総合支援法（訪問・移動サービス）",
+      "slug": "75b6cd592500",
+      "count": 7,
       "recentCount": 5,
-      "olderCount": 3,
+      "olderCount": 2,
       "displayCount": 5,
       "missingCount": 0,
-      "href": "view.html?t=b0198030ea19"
+      "href": "view.html?t=75b6cd592500"
     },
     {
       "title": "障害者総合支援法（認定・申請）",
@@ -679,6 +1304,17 @@
       "displayCount": 2,
       "missingCount": 0,
       "href": "view.html?t=0f9b0f132f92"
+    },
+    {
+      "title": "障害者総合支援法（通所・居住・就労サービス）",
+      "label": "障害者総合支援法（通所・居住・就労サービス）",
+      "slug": "5b50c6f62d7b",
+      "count": 7,
+      "recentCount": 3,
+      "olderCount": 4,
+      "displayCount": 3,
+      "missingCount": 0,
+      "href": "view.html?t=5b50c6f62d7b"
     }
   ]
 }

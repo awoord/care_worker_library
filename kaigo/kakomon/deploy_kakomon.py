@@ -41,7 +41,7 @@ from keyword_kakomon.extract_by_keyword import (
 BUILD_SESSION_MIN = 29
 BUILD_SESSION_MAX = 38
 # 画面を開いたときの初期選択（データ範囲内）
-DEFAULT_FROM = 38
+DEFAULT_FROM = 29
 DEFAULT_TO = 38
 
 FTP_HOST = "www1165.conoha.ne.jp"

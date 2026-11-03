@@ -1,0 +1,105 @@
+{
+  "title": "Cパート",
+  "count": 4,
+  "groups": [
+    {
+      "title": "介護過程",
+      "count": 80,
+      "displayCount": 40,
+      "themes": [
+        {
+          "title": "介護過程（1　介護過程の意義と基礎的理解）",
+          "label": "1 介護過程の意義と基礎的理解",
+          "slug": "4fc10e3252bf",
+          "count": 35,
+          "recentCount": 15,
+          "olderCount": 20,
+          "displayCount": 15,
+          "missingCount": 0,
+          "href": "view.html?t=4fc10e3252bf"
+        },
+        {
+          "title": "介護過程（2　介護過程とチームアプローチ）",
+          "label": "2 介護過程とチームアプローチ",
+          "slug": "97301c2d6925",
+          "count": 5,
+          "recentCount": 4,
+          "olderCount": 1,
+          "displayCount": 4,
+          "missingCount": 0,
+          "href": "view.html?t=97301c2d6925"
+        },
+        {
+          "title": "介護過程（3　介護過程の展開の理解）",
+          "label": "3 介護過程の展開の理解",
+          "slug": "9ed6f1ac3d87",
+          "count": 40,
+          "recentCount": 21,
+          "olderCount": 19,
+          "displayCount": 21,
+          "missingCount": 0,
+          "href": "view.html?t=9ed6f1ac3d87"
+        }
+      ]
+    }
+  ],
+  "ungrouped": [
+    {
+      "title": "総合問題",
+      "label": "総合問題",
+      "slug": "e836ad18b6d9",
+      "count": 120,
+      "recentCount": 60,
+      "olderCount": 60,
+      "displayCount": 60,
+      "missingCount": 0,
+      "href": "view.html?t=e836ad18b6d9"
+    }
+  ],
+  "themes": [
+    {
+      "title": "介護過程（1　介護過程の意義と基礎的理解）",
+      "label": "介護過程（1　介護過程の意義と基礎的理解）",
+      "slug": "4fc10e3252bf",
+      "count": 35,
+      "recentCount": 15,
+      "olderCount": 20,
+      "displayCount": 15,
+      "missingCount": 0,
+      "href": "view.html?t=4fc10e3252bf"
+    },
+    {
+      "title": "介護過程（2　介護過程とチームアプローチ）",
+      "label": "介護過程（2　介護過程とチームアプローチ）",
+      "slug": "97301c2d6925",
+      "count": 5,
+      "recentCount": 4,
+      "olderCount": 1,
+      "displayCount": 4,
+      "missingCount": 0,
+      "href": "view.html?t=97301c2d6925"
+    },
+    {
+      "title": "介護過程（3　介護過程の展開の理解）",
+      "label": "介護過程（3　介護過程の展開の理解）",
+      "slug": "9ed6f1ac3d87",
+      "count": 40,
+      "recentCount": 21,
+      "olderCount": 19,
+      "displayCount": 21,
+      "missingCount": 0,
+      "href": "view.html?t=9ed6f1ac3d87"
+    },
+    {
+      "title": "総合問題",
+      "label": "総合問題",
+      "slug": "e836ad18b6d9",
+      "count": 120,
+      "recentCount": 60,
+      "olderCount": 60,
+      "displayCount": 60,
+      "missingCount": 0,
+      "href": "view.html?t=e836ad18b6d9"
+    }
+  ]
+}

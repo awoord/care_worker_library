@@ -92,7 +92,11 @@ var UI_RUBY_EXTRA = [
   { word: "押す", ruby: "おす" },
   { word: "見る", ruby: "みる" },
   { word: "本位", ruby: "ほんい" },
-  { word: "人体", ruby: "じんたい" }
+  { word: "人体", ruby: "じんたい" },
+  /* 「等」(とう)。長い「等しい」「等しく」を先に取り、「とうしい」にしない */
+  { word: "等しい", ruby: "ひとしい" },
+  { word: "等しく", ruby: "ひとしく" },
+  { word: "等", ruby: "とう" }
 ];
 
 function isKanaOnlyWord(word) {
@@ -966,6 +970,7 @@ function syncRevealAllButton(card) {
     return;
   }
   var items = card.querySelectorAll(".choice");
+  /* 正解表示ONでも、全選択肢が開いて初めて「−」。正解だけなら「＋」のまま */
   var openCount = 0;
   for (var i = 0; i < items.length; i++) {
     if (items[i].classList.contains("is-open")) {
@@ -984,16 +989,62 @@ function toggleChoice(li, trial, card) {
   syncRevealAllButton(card);
 }
 
-function setAllChoices(card, trial, open) {
+/* 正解表示ON時: 正解だけ ◯・色・解説。誤答は閉じたまま */
+function revealCorrectAnswersOnCard(card, trial, show) {
   var items = card.querySelectorAll(".choice");
   for (var i = 0; i < items.length; i++) {
-    setChoiceOpen(items[i], trial, open);
+    var li = items[i];
+    var n = Number(li.getAttribute("data-choice-n"));
+    var ok = isCorrectChoice(trial, n);
+    if (!ok) {
+      if (show) {
+        setChoiceOpen(li, trial, false);
+      }
+      continue;
+    }
+    setChoiceOpen(li, trial, show);
   }
   syncRevealAllButton(card);
 }
 
+function setAllChoices(card, trial, open) {
+  if (isAnswerShowOn()) {
+    if (open) {
+      /* 正解表示中の「＋」→ 誤答の✕・解説も含めて全部開く */
+      var items = card.querySelectorAll(".choice");
+      for (var i = 0; i < items.length; i++) {
+        setChoiceOpen(items[i], trial, true);
+      }
+      syncRevealAllButton(card);
+    } else {
+      /* 「−」→ 正解表示の状態に戻す（正解だけ残す） */
+      revealCorrectAnswersOnCard(card, trial, true);
+    }
+    return;
+  }
+  var allItems = card.querySelectorAll(".choice");
+  for (var j = 0; j < allItems.length; j++) {
+    setChoiceOpen(allItems[j], trial, open);
+  }
+  syncRevealAllButton(card);
+}
+
+function applyAnswerShowToAllCards() {
+  var cards = document.querySelectorAll(".question-card.is-quiz-trial");
+  var show = isAnswerShowOn();
+  for (var i = 0; i < cards.length; i++) {
+    var card = cards[i];
+    var trial = card.__answerTrial;
+    if (!trial) {
+      continue;
+    }
+    revealCorrectAnswersOnCard(card, trial, show);
+  }
+}
+
 function wireAnswerCheck(card, q, trial) {
   card.classList.add("is-quiz-trial");
+  card.__answerTrial = trial;
 
   var metaRow = card.querySelector(".meta-row");
   if (metaRow) {
@@ -1061,7 +1112,140 @@ function wireAnswerCheck(card, q, trial) {
     })(choices[c]);
   }
 
-  syncRevealAllButton(card);
+  if (isAnswerShowOn()) {
+    revealCorrectAnswersOnCard(card, trial, true);
+  } else {
+    syncRevealAllButton(card);
+  }
+}
+
+function kakomonAssetUrl(src) {
+  var s = String(src || "");
+  if (!s) {
+    return s;
+  }
+  if (/^https?:\/\//i.test(s) || s.charAt(0) === "/") {
+    return s;
+  }
+  if (s.indexOf("figures/") === 0) {
+    return "/kaigo/kakomon/" + s;
+  }
+  return s;
+}
+
+function appendQuestionCard(parent, q) {
+  if (!parent || !q) {
+    return null;
+  }
+  var card = document.createElement("article");
+  card.className = "question-card";
+  card.id = "q-" + q.id;
+
+  var metaRow = document.createElement("div");
+  metaRow.className = "meta-row";
+
+  var idBadge = document.createElement("span");
+  idBadge.className = "badge badge-id";
+  idBadge.textContent = q.round + "-" + q.number;
+  metaRow.appendChild(idBadge);
+
+  if (q.subject) {
+    var subBadge = document.createElement("span");
+    subBadge.className = "badge badge-subject";
+    subBadge.textContent = q.subject;
+    metaRow.appendChild(subBadge);
+  }
+  card.appendChild(metaRow);
+
+  var stem = document.createElement("div");
+  stem.className = "stem";
+  var bodyLines = q.body || [];
+  for (var b = 0; b < bodyLines.length; b++) {
+    var line = bodyLines[b];
+    if (!line || !String(line).trim()) {
+      continue;
+    }
+    var p = document.createElement("p");
+    fillStemWithRuby(p, line);
+    stem.appendChild(p);
+  }
+  card.appendChild(stem);
+
+  var figs = q.figures || [];
+  if (figs.length) {
+    var figWrap = document.createElement("div");
+    figWrap.className = "question-figures";
+    for (var fi = 0; fi < figs.length; fi++) {
+      var fig = document.createElement("figure");
+      fig.className = "question-figure";
+      var img = document.createElement("img");
+      img.className = "question-figure-img";
+      img.src = kakomonAssetUrl(figs[fi] || "");
+      img.alt = "問題" + q.number + "の図";
+      img.loading = "lazy";
+      fig.appendChild(img);
+      figWrap.appendChild(fig);
+    }
+    card.appendChild(figWrap);
+  }
+
+  if (q.note) {
+    var note = document.createElement("p");
+    note.className = "question-note";
+    fillWithRuby(note, q.note);
+    card.appendChild(note);
+  }
+
+  var ul = document.createElement("ol");
+  ul.className = "choices";
+  ul.start = 1;
+  var choices = q.choices || [];
+  for (var c = 0; c < choices.length; c++) {
+    var choice = choices[c];
+    var li = document.createElement("li");
+    li.className = "choice";
+    li.setAttribute("data-choice-n", String(choice.n));
+
+    var body = document.createElement("div");
+    body.className = "choice-body";
+
+    var nWrap = document.createElement("span");
+    nWrap.className = "choice-n-wrap";
+    var n = document.createElement("span");
+    n.className = "choice-n";
+    n.textContent = String(choice.n);
+    nWrap.appendChild(n);
+    body.appendChild(nWrap);
+
+    var text = document.createElement("span");
+    text.className = "choice-text";
+    fillWithRuby(text, choice.text || "");
+    body.appendChild(text);
+
+    li.appendChild(body);
+
+    var choiceFigs = q.choiceFigures || {};
+    var choiceFigSrc = choiceFigs[String(choice.n)];
+    if (choiceFigSrc) {
+      var cfig = document.createElement("img");
+      cfig.className = "choice-figure-img";
+      cfig.src = kakomonAssetUrl(choiceFigSrc);
+      cfig.alt = "選択肢" + choice.n + "の図";
+      cfig.loading = "lazy";
+      li.appendChild(cfig);
+    }
+
+    ul.appendChild(li);
+  }
+  card.appendChild(ul);
+
+  var trial = getAnswerCheck(q);
+  if (trial) {
+    wireAnswerCheck(card, q, trial);
+  }
+
+  parent.appendChild(card);
+  return card;
 }
 
 function renderQuestions(questions) {
@@ -1077,115 +1261,7 @@ function renderQuestions(questions) {
   }
 
   for (var i = 0; i < questions.length; i++) {
-    var q = questions[i];
-    var card = document.createElement("article");
-    card.className = "question-card";
-    card.id = "q-" + q.id;
-
-    var metaRow = document.createElement("div");
-    metaRow.className = "meta-row";
-
-    var idBadge = document.createElement("span");
-    idBadge.className = "badge badge-id";
-    idBadge.textContent = q.round + "-" + q.number;
-    metaRow.appendChild(idBadge);
-
-    if (q.subject) {
-      var subBadge = document.createElement("span");
-      subBadge.className = "badge badge-subject";
-      subBadge.textContent = q.subject;
-      metaRow.appendChild(subBadge);
-    }
-    card.appendChild(metaRow);
-
-    var stem = document.createElement("div");
-    stem.className = "stem";
-    var bodyLines = q.body || [];
-    for (var b = 0; b < bodyLines.length; b++) {
-      var line = bodyLines[b];
-      if (!line || !String(line).trim()) {
-        continue;
-      }
-      var p = document.createElement("p");
-      fillStemWithRuby(p, line);
-      stem.appendChild(p);
-    }
-    card.appendChild(stem);
-
-    var figs = q.figures || [];
-    if (figs.length) {
-      var figWrap = document.createElement("div");
-      figWrap.className = "question-figures";
-      for (var fi = 0; fi < figs.length; fi++) {
-        var fig = document.createElement("figure");
-        fig.className = "question-figure";
-        var img = document.createElement("img");
-        img.className = "question-figure-img";
-        img.src = String(figs[fi] || "");
-        img.alt = "問題" + q.number + "の図";
-        img.loading = "lazy";
-        fig.appendChild(img);
-        figWrap.appendChild(fig);
-      }
-      card.appendChild(figWrap);
-    }
-
-    if (q.note) {
-      var note = document.createElement("p");
-      note.className = "question-note";
-      fillWithRuby(note, q.note);
-      card.appendChild(note);
-    }
-
-    var ul = document.createElement("ol");
-    ul.className = "choices";
-    ul.start = 1;
-    var choices = q.choices || [];
-    for (var c = 0; c < choices.length; c++) {
-      var choice = choices[c];
-      var li = document.createElement("li");
-      li.className = "choice";
-      li.setAttribute("data-choice-n", String(choice.n));
-
-      var body = document.createElement("div");
-      body.className = "choice-body";
-
-      var nWrap = document.createElement("span");
-      nWrap.className = "choice-n-wrap";
-      var n = document.createElement("span");
-      n.className = "choice-n";
-      n.textContent = String(choice.n);
-      nWrap.appendChild(n);
-      body.appendChild(nWrap);
-
-      var text = document.createElement("span");
-      text.className = "choice-text";
-      fillWithRuby(text, choice.text || "");
-      body.appendChild(text);
-
-      li.appendChild(body);
-
-      var choiceFigs = q.choiceFigures || {};
-      var choiceFigSrc = choiceFigs[String(choice.n)];
-      if (choiceFigSrc) {
-        var cfig = document.createElement("img");
-        cfig.className = "choice-figure-img";
-        cfig.src = String(choiceFigSrc);
-        cfig.alt = "選択肢" + choice.n + "の図";
-        cfig.loading = "lazy";
-        li.appendChild(cfig);
-      }
-
-      ul.appendChild(li);
-    }
-    card.appendChild(ul);
-
-    var trial = getAnswerCheck(q);
-    if (trial) {
-      wireAnswerCheck(card, q, trial);
-    }
-
-    root.appendChild(card);
+    appendQuestionCard(root, questions[i]);
   }
 }
 
@@ -1245,28 +1321,100 @@ function setRubyHidden(hidden) {
   if (!btn) {
     return;
   }
-  btn.setAttribute("aria-pressed", hidden ? "true" : "false");
-  btn.textContent = hidden ? "ルビ表示" : "ルビ非表示";
+  btn.setAttribute("aria-pressed", hidden ? "false" : "true");
+  btn.textContent = "ルビ";
   btn.setAttribute(
     "aria-label",
     hidden ? "ルビを表示する" : "ルビを非表示にする"
   );
 }
 
+function wireSiteNav() {
+  var bar = document.querySelector(".site-bar");
+  var toggle = document.querySelector(".nav-toggle");
+  var nav = document.getElementById("siteNav");
+  if (!bar || !toggle || !nav) {
+    return;
+  }
+  function setOpen(open) {
+    bar.classList.toggle("is-open", !!open);
+    toggle.setAttribute("aria-expanded", open ? "true" : "false");
+  }
+  toggle.addEventListener("click", function () {
+    setOpen(!bar.classList.contains("is-open"));
+  });
+  document.addEventListener("click", function (ev) {
+    if (!bar.contains(ev.target)) {
+      setOpen(false);
+    }
+  });
+  document.addEventListener("keydown", function (ev) {
+    if (ev.key === "Escape") {
+      setOpen(false);
+    }
+  });
+}
+
 function wireRubyToggle() {
   setRubyHidden(isRubyHidden());
-  var nav = document.querySelector(".site-nav");
-  if (!nav || document.getElementById("rubyToggle")) {
+  var bar = document.querySelector(".site-bar") || document.querySelector(".site-nav");
+  if (!bar || document.getElementById("rubyToggle")) {
     return;
   }
   var btn = document.createElement("button");
   btn.type = "button";
   btn.id = "rubyToggle";
   btn.className = "ruby-toggle";
-  nav.appendChild(btn);
+  bar.appendChild(btn);
   setRubyHidden(isRubyHidden());
   btn.addEventListener("click", function () {
     setRubyHidden(!isRubyHidden());
+  });
+}
+
+var ANSWER_SHOW_KEY = "kakomon.answerShow.v2";
+
+function isAnswerShowOn() {
+  try {
+    /* 未設定は表示（デフォルトON）。明示的に "0" のときだけ非表示 */
+    return localStorage.getItem(ANSWER_SHOW_KEY) !== "0";
+  } catch (err) {
+    return true;
+  }
+}
+
+function setAnswerShowOn(on) {
+  try {
+    localStorage.setItem(ANSWER_SHOW_KEY, on ? "1" : "0");
+  } catch (err) {
+    /* ignore */
+  }
+  var btn = document.getElementById("answerShowToggle");
+  if (btn) {
+    btn.setAttribute("aria-pressed", on ? "true" : "false");
+    btn.textContent = "正解";
+    btn.setAttribute(
+      "aria-label",
+      on ? "正解の表示をやめる" : "正解を表示する"
+    );
+  }
+  applyAnswerShowToAllCards();
+}
+
+function wireAnswerShowToggle() {
+  var bar = document.querySelector(".site-bar") || document.querySelector(".site-nav");
+  if (!bar || document.getElementById("answerShowToggle")) {
+    setAnswerShowOn(isAnswerShowOn());
+    return;
+  }
+  var btn = document.createElement("button");
+  btn.type = "button";
+  btn.id = "answerShowToggle";
+  btn.className = "ruby-toggle answer-show-toggle";
+  bar.appendChild(btn);
+  setAnswerShowOn(isAnswerShowOn());
+  btn.addEventListener("click", function () {
+    setAnswerShowOn(!isAnswerShowOn());
   });
 }
 
@@ -1313,46 +1461,36 @@ function loadRubyThen(next) {
     });
 }
 
+/* 番号と見出しのあいだの全角スペースを半角にして詰める（1　理念 → 1 理念） */
+function tightenThemeIndexSpacing(text) {
+  return String(text || "").replace(/(\d)\u3000/g, "$1 ");
+}
+
 function appendThemeCard(parent, t) {
   var a = document.createElement("a");
   a.className = "theme-card";
   a.href = t.href || ("view.html?t=" + encodeURIComponent(t.slug));
   var title = document.createElement("h3");
   title.className = "theme-card-title";
-  fillWithRuby(title, t.label || t.title || "");
+  fillWithRuby(title, tightenThemeIndexSpacing(t.label || t.title || ""));
   a.appendChild(title);
   var meta = document.createElement("p");
   meta.className = "theme-card-meta";
-  meta.textContent =
-    (t.displayCount != null ? t.displayCount : t.count || 0) + " 問";
+  var shown = t.displayCount != null ? t.displayCount : t.count || 0;
+  meta.textContent = shown + " 問";
+  var onAppendix = location.pathname.indexOf("/appendix/") !== -1;
+  // 参考テーマなど cardLow 指定のみ灰色（問数不足では灰色にしない）
+  if (!onAppendix && t.cardLow) a.classList.add("theme-card-low");
   a.appendChild(meta);
   parent.appendChild(a);
-}
-
-var THEME_GROUP_OPEN_KEY = "themes.groupOpen.";
-
-function isThemeGroupOpen(groupKey) {
-  try {
-    return localStorage.getItem(THEME_GROUP_OPEN_KEY + groupKey) === "1";
-  } catch (e) {
-    return false;
-  }
-}
-
-function setThemeGroupOpen(groupKey, open) {
-  try {
-    localStorage.setItem(THEME_GROUP_OPEN_KEY + groupKey, open ? "1" : "0");
-  } catch (e) {
-    /* ignore */
-  }
 }
 
 function appendThemeGroup(root, group) {
   var title = group.title || "テーマ";
   var groupKey = group.id || title;
-  var open = isThemeGroupOpen(groupKey);
+  /* リロード・ページ遷移では閉じた状態から（開閉は画面内のみ） */
+  var open = false;
   var children = group.themes || [];
-  var themeN = children.length;
   var qN = group.displayCount != null ? group.displayCount : group.count || 0;
   var panelId = "theme-group-panel-" + String(groupKey).replace(/\s+/g, "-");
 
@@ -1380,7 +1518,7 @@ function appendThemeGroup(root, group) {
   textWrap.appendChild(h2);
   var gmeta = document.createElement("span");
   gmeta.className = "theme-group-meta";
-  gmeta.textContent = themeN + " テーマ · " + qN + " 問";
+  gmeta.textContent = qN + " 問";
   textWrap.appendChild(gmeta);
   toggle.appendChild(textWrap);
   section.appendChild(toggle);
@@ -1399,10 +1537,42 @@ function appendThemeGroup(root, group) {
     section.classList.toggle("is-open", next);
     toggle.setAttribute("aria-expanded", next ? "true" : "false");
     list.hidden = !next;
-    setThemeGroupOpen(groupKey, next);
   });
 
   root.appendChild(section);
+}
+
+function appendKoryakuIndexCard(parent, href, titleText) {
+  var a = document.createElement("a");
+  a.className = "theme-koryaku-card";
+  a.href = href;
+  var title = document.createElement("h3");
+  title.className = "theme-card-title";
+  title.textContent = titleText;
+  a.appendChild(title);
+  var meta = document.createElement("p");
+  meta.className = "theme-card-meta";
+  meta.textContent = "正解マップ · まず正解だけ押さえる";
+  a.appendChild(meta);
+  parent.appendChild(a);
+}
+
+function appendKoryakuIndexCards(parent) {
+  appendKoryakuIndexCard(parent, "koryaku-kaigo-hoken.html", "介護保険法攻略");
+  appendKoryakuIndexCard(parent, "koryaku-shogai-sogo.html", "障害者総合支援法攻略");
+  var hikaku = document.createElement("a");
+  hikaku.className = "theme-koryaku-card";
+  hikaku.href = "hikaku-kaigo-shogai.html";
+  var hikakuTitle = document.createElement("h3");
+  hikakuTitle.className = "theme-card-title";
+  /* 一覧カードはルビなし（短い案内文。ルビ幅で左にはみ出さない） */
+  hikakuTitle.textContent = "介護保険法・障害者総合支援法攻略マップ";
+  hikaku.appendChild(hikakuTitle);
+  var hikakuMeta = document.createElement("p");
+  hikakuMeta.className = "theme-card-meta";
+  hikakuMeta.textContent = "用語の対応 · 過去問で出た対だけ";
+  hikaku.appendChild(hikakuMeta);
+  parent.appendChild(hikaku);
 }
 
 function renderThemeIndex(payload) {
@@ -1413,10 +1583,17 @@ function renderThemeIndex(payload) {
   var ungrouped = (payload && payload.ungrouped) || [];
   if (!themes.length && !groups.length) {
     showHint("テーマがまだありません。work/theme_extract に .txt ファイルを置いてデプロイしてください。");
-    setStatus("0 テーマ");
+    setStatus("");
     return;
   }
-  setStatus(themes.length + " テーマ");
+  setStatus("");
+
+  var onThemes =
+    location.pathname.indexOf("/themes/") !== -1 ||
+    /\/themes\/?$/.test(location.pathname);
+  if (onThemes) {
+    appendKoryakuIndexCards(root);
+  }
 
   if (groups.length || ungrouped.length) {
     for (var g = 0; g < groups.length; g++) {
@@ -1473,115 +1650,7 @@ function appendQuestions(questions) {
     return;
   }
   for (var i = 0; i < questions.length; i++) {
-    var q = questions[i];
-    var card = document.createElement("article");
-    card.className = "question-card";
-    card.id = "q-" + q.id;
-
-    var metaRow = document.createElement("div");
-    metaRow.className = "meta-row";
-
-    var idBadge = document.createElement("span");
-    idBadge.className = "badge badge-id";
-    idBadge.textContent = q.round + "-" + q.number;
-    metaRow.appendChild(idBadge);
-
-    if (q.subject) {
-      var subBadge = document.createElement("span");
-      subBadge.className = "badge badge-subject";
-      subBadge.textContent = q.subject;
-      metaRow.appendChild(subBadge);
-    }
-    card.appendChild(metaRow);
-
-    var stem = document.createElement("div");
-    stem.className = "stem";
-    var bodyLines = q.body || [];
-    for (var b = 0; b < bodyLines.length; b++) {
-      var line = bodyLines[b];
-      if (!line || !String(line).trim()) {
-        continue;
-      }
-      var p = document.createElement("p");
-      fillStemWithRuby(p, line);
-      stem.appendChild(p);
-    }
-    card.appendChild(stem);
-
-    var figs = q.figures || [];
-    if (figs.length) {
-      var figWrap = document.createElement("div");
-      figWrap.className = "question-figures";
-      for (var fi = 0; fi < figs.length; fi++) {
-        var fig = document.createElement("figure");
-        fig.className = "question-figure";
-        var img = document.createElement("img");
-        img.className = "question-figure-img";
-        img.src = String(figs[fi] || "");
-        img.alt = "問題" + q.number + "の図";
-        img.loading = "lazy";
-        fig.appendChild(img);
-        figWrap.appendChild(fig);
-      }
-      card.appendChild(figWrap);
-    }
-
-    if (q.note) {
-      var note = document.createElement("p");
-      note.className = "question-note";
-      fillWithRuby(note, q.note);
-      card.appendChild(note);
-    }
-
-    var ul = document.createElement("ol");
-    ul.className = "choices";
-    ul.start = 1;
-    var choices = q.choices || [];
-    for (var c = 0; c < choices.length; c++) {
-      var choice = choices[c];
-      var li = document.createElement("li");
-      li.className = "choice";
-      li.setAttribute("data-choice-n", String(choice.n));
-
-      var body = document.createElement("div");
-      body.className = "choice-body";
-
-      var nWrap = document.createElement("span");
-      nWrap.className = "choice-n-wrap";
-      var n = document.createElement("span");
-      n.className = "choice-n";
-      n.textContent = String(choice.n);
-      nWrap.appendChild(n);
-      body.appendChild(nWrap);
-
-      var text = document.createElement("span");
-      text.className = "choice-text";
-      fillWithRuby(text, choice.text || "");
-      body.appendChild(text);
-
-      li.appendChild(body);
-
-      var choiceFigs = q.choiceFigures || {};
-      var choiceFigSrc = choiceFigs[String(choice.n)];
-      if (choiceFigSrc) {
-        var cfig = document.createElement("img");
-        cfig.className = "choice-figure-img";
-        cfig.src = String(choiceFigSrc);
-        cfig.alt = "選択肢" + choice.n + "の図";
-        cfig.loading = "lazy";
-        li.appendChild(cfig);
-      }
-
-      ul.appendChild(li);
-    }
-    card.appendChild(ul);
-
-    var trial = getAnswerCheck(q);
-    if (trial) {
-      wireAnswerCheck(card, q, trial);
-    }
-
-    root.appendChild(card);
+    appendQuestionCard(root, questions[i]);
   }
 }
 
@@ -1621,14 +1690,30 @@ function getSiteIndexTitle() {
   if (body && body.getAttribute("data-index-title")) {
     return body.getAttribute("data-index-title");
   }
-  return "介護福祉士国家試験 重要テーマ";
+  var h1 = document.querySelector(".page-header h1");
+  if (h1 && h1.textContent.trim()) {
+    return h1.textContent.trim();
+  }
+  return "重要テーマ";
+}
+
+function applySiteBrandRuby() {
+  var brand = document.querySelector(".site-brand");
+  if (brand) {
+    /* 1行目はルビなし。狭い画面でも省略せず全文を出す */
+    brand.setAttribute("aria-label", "介護福祉士国家試験対策");
+    brand.textContent = "介護福祉士国家試験対策";
+  }
 }
 
 function bootIndex() {
+  wireSiteNav();
   wireRubyToggle();
+  wireAnswerShowToggle();
   wireBackToTop();
   setStatus("読み込み中…");
   loadRubyThen(function () {
+    applySiteBrandRuby();
     var h1 = document.querySelector(".page-header h1");
     if (h1) fillWithRuby(h1, getSiteIndexTitle());
     fetch("index.json?_t=" + Date.now())
@@ -1653,7 +1738,9 @@ function getThemeSlugFromUrl() {
 }
 
 function bootView() {
+  wireSiteNav();
   wireRubyToggle();
+  wireAnswerShowToggle();
   wireBackToTop();
   setStatus("読み込み中…");
   var slug = getThemeSlugFromUrl();
@@ -1662,13 +1749,14 @@ function bootView() {
     return;
   }
   loadRubyThen(function () {
+    applySiteBrandRuby();
     fetch("data/" + encodeURIComponent(slug) + ".json?_t=" + Date.now())
       .then(function (res) {
         if (!res.ok) throw new Error("テーマデータの読み込みに失敗しました");
         return res.json();
       })
       .then(function (payload) {
-        var title = payload.title || "介護福祉士国家試験 重要テーマ";
+        var title = tightenThemeIndexSpacing(payload.title || "重要テーマ");
         document.title = title;
         var h1 = document.getElementById("themeTitle");
         if (h1) {
@@ -1700,7 +1788,528 @@ function bootView() {
   });
 }
 
+function getKoryakuPageConfig() {
+  var body = document.body;
+  return {
+    key: (body && body.getAttribute("data-koryaku-key")) || "kaigo-hoken",
+    title:
+      (body && body.getAttribute("data-koryaku-title")) || "介護保険法攻略",
+    json:
+      (body && body.getAttribute("data-koryaku-json")) ||
+      "data/koryaku-kaigo-hoken.json"
+  };
+}
+
+function appendKoryakuCard(parent, item) {
+  if (item && item.missing) {
+    var missing = document.createElement("article");
+    missing.className = "koryaku-card is-missing";
+    var mid = document.createElement("p");
+    mid.className = "koryaku-id";
+    mid.textContent = "【" + (item.id || "") + "】";
+    missing.appendChild(mid);
+    var mp = document.createElement("p");
+    mp.textContent = "問題データなし";
+    missing.appendChild(mp);
+    parent.appendChild(missing);
+    return;
+  }
+
+  var card = document.createElement("article");
+  card.className = "koryaku-card is-tappable";
+  card.setAttribute("role", "button");
+  card.setAttribute("aria-expanded", "false");
+  card.tabIndex = 0;
+
+  var idRow = document.createElement("p");
+  idRow.className = "koryaku-id";
+  var idLink = document.createElement("a");
+  idLink.className = "koryaku-id-link";
+  idLink.href = item.href || "#";
+  idLink.textContent = "【" + item.id + "｜" + (item.subject || "") + "】";
+  idLink.addEventListener("click", function (ev) {
+    ev.stopPropagation();
+  });
+  idRow.appendChild(idLink);
+  card.appendChild(idRow);
+
+  var bodyWrap = document.createElement("div");
+  bodyWrap.className = "koryaku-problem";
+  var parts = item.body || [];
+  for (var i = 0; i < parts.length; i++) {
+    var p = document.createElement("p");
+    p.className = "koryaku-problem-p";
+    fillWithRuby(p, parts[i]);
+    bodyWrap.appendChild(p);
+  }
+  card.appendChild(bodyWrap);
+
+  // 注釈は問題側（重要テーマと同じ）。◯解説には混ぜない。
+  if (item.note) {
+    var note = document.createElement("p");
+    note.className = "koryaku-note";
+    fillWithRuby(note, item.note);
+    card.appendChild(note);
+  }
+
+  var ans = document.createElement("div");
+  ans.className = "koryaku-answer";
+  var ansMain = document.createElement("div");
+  ansMain.className = "koryaku-answer-main";
+  var ansLabel = document.createElement("span");
+  ansLabel.className = "koryaku-answer-label";
+  ansLabel.textContent = "正解";
+  ansMain.appendChild(ansLabel);
+  var ansText = document.createElement("span");
+  ansText.className = "koryaku-answer-text";
+  fillWithRuby(ansText, item.answer || "");
+  ansMain.appendChild(ansText);
+  ans.appendChild(ansMain);
+  var ansChevron = document.createElement("span");
+  ansChevron.className = "koryaku-answer-chevron";
+  ansChevron.setAttribute("aria-hidden", "true");
+  ansChevron.textContent = "›";
+  ans.appendChild(ansChevron);
+  card.appendChild(ans);
+
+  var explain = document.createElement("div");
+  explain.className = "koryaku-explain";
+  explain.hidden = true;
+  var exHead = document.createElement("p");
+  exHead.className = "koryaku-explain-head";
+  exHead.textContent = "解説";
+  explain.appendChild(exHead);
+  var exBody = document.createElement("p");
+  exBody.className = "koryaku-explain-body";
+  fillWithRuby(exBody, item.explain || "解説がありません。");
+  explain.appendChild(exBody);
+  card.appendChild(explain);
+
+  function toggle() {
+    var open = card.classList.toggle("is-open");
+    card.setAttribute("aria-expanded", open ? "true" : "false");
+    explain.hidden = !open;
+  }
+  card.addEventListener("click", toggle);
+  card.addEventListener("keydown", function (ev) {
+    if (ev.key === "Enter" || ev.key === " ") {
+      ev.preventDefault();
+      toggle();
+    }
+  });
+
+  parent.appendChild(card);
+}
+
+function ensureKoryakuNowBar() {
+  var bar = document.getElementById("koryakuNow");
+  if (bar) return bar;
+  var main = document.querySelector(".koryaku-main");
+  if (!main) return null;
+  bar = document.createElement("div");
+  bar.id = "koryakuNow";
+  bar.className = "koryaku-now";
+  bar.hidden = true;
+  bar.setAttribute("aria-live", "polite");
+  var label = document.createElement("span");
+  label.className = "koryaku-now-label";
+  label.textContent = "いま学習中";
+  bar.appendChild(label);
+  var name = document.createElement("span");
+  name.className = "koryaku-now-name";
+  name.id = "koryakuNowName";
+  bar.appendChild(name);
+  main.insertBefore(bar, main.firstChild);
+  return bar;
+}
+
+function setKoryakuCurrent(sectionEl) {
+  var bar = ensureKoryakuNowBar();
+  var nameEl = document.getElementById("koryakuNowName");
+  var toc = document.getElementById("koryakuToc");
+  var links = toc ? toc.querySelectorAll(".koryaku-toc-link") : [];
+  for (var i = 0; i < links.length; i++) {
+    links[i].classList.remove("is-current");
+  }
+  if (!sectionEl) {
+    if (bar) bar.hidden = true;
+    return;
+  }
+  var theme =
+    sectionEl.getAttribute("data-theme") ||
+    sectionEl.getAttribute("aria-label") ||
+    "";
+  if (bar && nameEl) {
+    bar.hidden = false;
+    fillWithRuby(nameEl, theme);
+  }
+  var idx = sectionEl.id && sectionEl.id.indexOf("sec-") === 0
+    ? sectionEl.id.slice(4)
+    : "";
+  if (toc && idx) {
+    var link = toc.querySelector('.koryaku-toc-link[data-sec="' + idx + '"]');
+    if (link) link.classList.add("is-current");
+  }
+}
+
+function updateKoryakuCurrentFromScroll() {
+  var sections = document.querySelectorAll(".koryaku-section.is-open");
+  if (!sections.length) {
+    setKoryakuCurrent(null);
+    return;
+  }
+  var bar = document.getElementById("koryakuNow");
+  var marker = bar && !bar.hidden ? bar.getBoundingClientRect().bottom + 8 : 72;
+  var current = null;
+  for (var i = 0; i < sections.length; i++) {
+    var rect = sections[i].getBoundingClientRect();
+    if (rect.top <= marker && rect.bottom > marker + 40) {
+      current = sections[i];
+    }
+  }
+  if (!current) {
+    // 画面内でいちばん上にある開いたカテゴリー
+    for (var j = 0; j < sections.length; j++) {
+      var r = sections[j].getBoundingClientRect();
+      if (r.bottom > marker) {
+        current = sections[j];
+        break;
+      }
+    }
+  }
+  if (!current) current = sections[sections.length - 1];
+  setKoryakuCurrent(current);
+}
+
+function wireKoryakuScrollSpy() {
+  if (window.__koryakuScrollWired) return;
+  window.__koryakuScrollWired = true;
+  var ticking = false;
+  window.addEventListener(
+    "scroll",
+    function () {
+      if (ticking) return;
+      ticking = true;
+      window.requestAnimationFrame(function () {
+        ticking = false;
+        updateKoryakuCurrentFromScroll();
+      });
+    },
+    { passive: true }
+  );
+}
+
+function appendKoryakuSection(root, section, index) {
+  var theme = section.theme || "カテゴリー";
+  var items = section.items || [];
+  /* リロード・ページ遷移では閉じた状態から（開閉は画面内のみ） */
+  var open = false;
+  var panelId = "koryaku-panel-" + index;
+
+  var sectionEl = document.createElement("section");
+  sectionEl.className = "koryaku-section theme-group" + (open ? " is-open" : "");
+  sectionEl.id = "sec-" + index;
+  sectionEl.setAttribute("aria-label", theme);
+  sectionEl.setAttribute("data-theme", theme);
+
+  var toggle = document.createElement("button");
+  toggle.type = "button";
+  toggle.className = "theme-group-toggle koryaku-section-toggle";
+  toggle.setAttribute("aria-expanded", open ? "true" : "false");
+  toggle.setAttribute("aria-controls", panelId);
+
+  var chevron = document.createElement("span");
+  chevron.className = "theme-group-chevron";
+  chevron.setAttribute("aria-hidden", "true");
+  chevron.textContent = "›";
+  toggle.appendChild(chevron);
+
+  var textWrap = document.createElement("span");
+  textWrap.className = "theme-group-toggle-text";
+  var h2 = document.createElement("span");
+  h2.className = "theme-group-title";
+  fillWithRuby(h2, theme);
+  textWrap.appendChild(h2);
+  var gmeta = document.createElement("span");
+  gmeta.className = "theme-group-meta";
+  gmeta.textContent = items.length + " 問";
+  textWrap.appendChild(gmeta);
+  toggle.appendChild(textWrap);
+  sectionEl.appendChild(toggle);
+
+  var list = document.createElement("div");
+  list.className = "koryaku-cards";
+  list.id = panelId;
+  list.hidden = !open;
+  for (var i = 0; i < items.length; i++) {
+    appendKoryakuCard(list, items[i]);
+  }
+  sectionEl.appendChild(list);
+
+  toggle.addEventListener("click", function () {
+    var next = !sectionEl.classList.contains("is-open");
+    sectionEl.classList.toggle("is-open", next);
+    toggle.setAttribute("aria-expanded", next ? "true" : "false");
+    list.hidden = !next;
+    if (next) {
+      setKoryakuCurrent(sectionEl);
+    } else {
+      updateKoryakuCurrentFromScroll();
+    }
+  });
+
+  root.appendChild(sectionEl);
+}
+
+function renderKoryaku(payload) {
+  var body = document.getElementById("koryakuBody");
+  if (!body) return;
+  ensureKoryakuNowBar();
+  body.textContent = "";
+  var sections = (payload && payload.sections) || [];
+  var total = payload && payload.count != null ? payload.count : 0;
+  setStatus("正解マップ · 全 " + total + " 問");
+
+  if (!sections.length) {
+    var empty = document.createElement("p");
+    empty.className = "hint";
+    empty.textContent = "データがありません。";
+    body.appendChild(empty);
+    setKoryakuCurrent(null);
+    return;
+  }
+
+  for (var i = 0; i < sections.length; i++) {
+    appendKoryakuSection(body, sections[i], i + 1);
+  }
+
+  wireKoryakuScrollSpy();
+  updateKoryakuCurrentFromScroll();
+}
+
+function bootKoryaku() {
+  wireSiteNav();
+  wireRubyToggle();
+  wireAnswerShowToggle();
+  wireBackToTop();
+  setStatus("読み込み中…");
+  var cfg = getKoryakuPageConfig();
+  loadRubyThen(function () {
+    applySiteBrandRuby();
+    var h1 = document.querySelector(".page-header h1");
+    if (h1) fillWithRuby(h1, cfg.title);
+    fetch(cfg.json + "?_t=" + Date.now())
+      .then(function (res) {
+        if (!res.ok) throw new Error("攻略データの読み込みに失敗しました");
+        return res.json();
+      })
+      .then(renderKoryaku)
+      .catch(function (err) {
+        var body = document.getElementById("koryakuBody");
+        if (body) {
+          body.textContent = "";
+          var p = document.createElement("p");
+          p.className = "error";
+          p.textContent = err && err.message ? err.message : "読み込みに失敗しました";
+          body.appendChild(p);
+        }
+      });
+  });
+}
+
+/* 既存 DOM のテキストノードに語彙ルビを付与（比較表の strong / br を壊さない） */
+function applyRubyToTextNodes(root) {
+  if (!root) {
+    return;
+  }
+  var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+    acceptNode: function (node) {
+      var p = node.parentNode;
+      if (!p || !p.closest) {
+        return NodeFilter.FILTER_REJECT;
+      }
+      if (
+        p.closest("ruby") ||
+        p.closest(".vocab-ruby-run") ||
+        p.closest(".ruby-pair") ||
+        p.closest(".hikaku-qid") ||
+        p.closest("button")
+      ) {
+        return NodeFilter.FILTER_REJECT;
+      }
+      return NodeFilter.FILTER_ACCEPT;
+    }
+  });
+  var nodes = [];
+  while (walker.nextNode()) {
+    nodes.push(walker.currentNode);
+  }
+  for (var i = 0; i < nodes.length; i++) {
+    var node = nodes[i];
+    var text = node.nodeValue;
+    if (!text || !/\S/.test(text)) {
+      continue;
+    }
+    var parent = node.parentNode;
+    if (!parent) {
+      continue;
+    }
+    var wrap = document.createElement("span");
+    appendTextWithVocabularyRuby(wrap, text);
+    while (wrap.firstChild) {
+      parent.insertBefore(wrap.firstChild, node);
+    }
+    parent.removeChild(node);
+  }
+}
+
+var hikakuQuestionIndex = null;
+
+function appendHikakuQuestionCard(parent, item) {
+  if (!item || item.missing) {
+    var missing = document.createElement("article");
+    missing.className = "koryaku-card is-missing";
+    var mid = document.createElement("p");
+    mid.className = "koryaku-id";
+    mid.textContent = "【" + ((item && item.id) || "") + "】";
+    missing.appendChild(mid);
+    var mp = document.createElement("p");
+    mp.textContent = "この比較表用データに問題がありません。";
+    missing.appendChild(mp);
+    parent.appendChild(missing);
+    return null;
+  }
+  var parts = String(item.id || "").split("-");
+  var q = {
+    id: item.id,
+    round: item.round != null ? item.round : parts[0],
+    number: item.number != null ? item.number : parts[1],
+    subject: item.subject || "",
+    body: item.body || [],
+    choices: item.choices || [],
+    answers: item.answers || [],
+    explains: item.explains || {},
+    note: item.note || "",
+    figures: item.figures || [],
+    choiceFigures: item.choiceFigures || {}
+  };
+  return appendQuestionCard(parent, q);
+}
+
+function closeHikakuModal() {
+  var modal = document.getElementById("hikakuModal");
+  if (!modal) {
+    return;
+  }
+  modal.hidden = true;
+  document.body.classList.remove("hikaku-modal-open");
+  var body = document.getElementById("hikakuModalBody");
+  if (body) {
+    body.textContent = "";
+  }
+}
+
+function openHikakuModal(qid) {
+  var modal = document.getElementById("hikakuModal");
+  var body = document.getElementById("hikakuModalBody");
+  var title = document.getElementById("hikakuModalTitle");
+  if (!modal || !body) {
+    return;
+  }
+  body.textContent = "";
+  var item =
+    hikakuQuestionIndex && hikakuQuestionIndex[qid]
+      ? hikakuQuestionIndex[qid]
+      : { id: qid, missing: true };
+  if (title) {
+    fillWithRuby(title, "【" + qid + "】");
+  }
+  appendHikakuQuestionCard(body, item);
+  modal.hidden = false;
+  document.body.classList.add("hikaku-modal-open");
+  body.scrollTop = 0;
+  var closeBtn = modal.querySelector(".hikaku-modal-close");
+  if (closeBtn) {
+    closeBtn.focus();
+  }
+}
+
+function wireHikakuModal() {
+  var modal = document.getElementById("hikakuModal");
+  if (!modal) {
+    return;
+  }
+  modal.addEventListener("click", function (ev) {
+    var t = ev.target;
+    if (t && t.getAttribute && t.getAttribute("data-hikaku-close") != null) {
+      closeHikakuModal();
+    }
+  });
+  document.addEventListener("keydown", function (ev) {
+    if (ev.key === "Escape" && modal && !modal.hidden) {
+      closeHikakuModal();
+    }
+  });
+  var main = document.querySelector(".hikaku-main");
+  if (main) {
+    main.addEventListener("click", function (ev) {
+      var btn = ev.target && ev.target.closest ? ev.target.closest(".hikaku-qid") : null;
+      if (!btn) {
+        return;
+      }
+      ev.preventDefault();
+      var round = btn.getAttribute("data-round");
+      var number = btn.getAttribute("data-number");
+      if (!round || !number) {
+        return;
+      }
+      openHikakuModal(String(round) + "-" + String(number));
+    });
+  }
+}
+
+function bootHikaku() {
+  wireSiteNav();
+  wireRubyToggle();
+  wireAnswerShowToggle();
+  wireBackToTop();
+  wireHikakuModal();
+  loadRubyThen(function () {
+    applySiteBrandRuby();
+    var h1 = document.querySelector(".page-header h1");
+    if (h1) {
+      fillWithRuby(h1, h1.textContent || "");
+    }
+    var status = document.querySelector(".page-header .search-status");
+    if (status) {
+      fillWithRuby(status, status.textContent || "");
+    }
+    applyRubyToTextNodes(document.querySelector(".hikaku-main"));
+    fetch("data/hikaku-kaigo-shogai.json?_t=" + Date.now())
+      .then(function (res) {
+        if (!res.ok) {
+          throw new Error("比較表データの読み込みに失敗しました");
+        }
+        return res.json();
+      })
+      .then(function (payload) {
+        hikakuQuestionIndex = (payload && payload.items) || {};
+      })
+      .catch(function () {
+        hikakuQuestionIndex = {};
+      });
+  });
+}
+
 function boot() {
+  if (document.body.classList.contains("koryaku-page")) {
+    bootKoryaku();
+    return;
+  }
+  if (document.body.classList.contains("hikaku-page")) {
+    bootHikaku();
+    return;
+  }
   if (document.body.classList.contains("themes-index")) {
     bootIndex();
     return;

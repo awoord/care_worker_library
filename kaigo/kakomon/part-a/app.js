@@ -1,0 +1,2323 @@
+/* themes: kakomon 表示ロジック流用 + テーマ一覧/詳細 boot */
+var MIN_VOCAB_RUBY_LENGTH = 2;
+var vocabularyRubyEntries = null;
+var allQuestions = [];
+var questionsReady = false;
+var pendingJump = false;
+var lastView = { mode: null, query: "" };
+var meta = {
+  sessionMin: null,
+  sessionMax: null,
+  defaultFrom: null,
+  defaultTo: null,
+  count: 0
+};
+
+/* 試作: 答え合わせUIは 38-1（第38回・問題1）のみ */
+function getAnswerCheck(q) {
+  if (!q) {
+    return null;
+  }
+  var answers = q.answers;
+  if (!answers || !answers.length) {
+    return null;
+  }
+  return {
+    answers: answers,
+    explains: q.explains || null
+  };
+}
+
+function normalizeWordItem(item) {
+  if (!item || item.word !== undefined) {
+    return item;
+  }
+  return {
+    word: item.w,
+    ruby: item.r
+  };
+}
+
+function getWordKey(item) {
+  return ((item && (item.word || item.w)) || "").trim();
+}
+
+function getVocabularyRubyEntries(allWords) {
+  if (vocabularyRubyEntries) {
+    return vocabularyRubyEntries;
+  }
+
+  var byWord = {};
+  for (var i = 0; i < allWords.length; i++) {
+    var item = allWords[i];
+    var word = getWordKey(item);
+    var ruby = (item.ruby || item.r || "").trim();
+    if (!word || !ruby || word.length < MIN_VOCAB_RUBY_LENGTH) {
+      continue;
+    }
+    if (isKanaOnlyWord(word)) {
+      continue;
+    }
+    if (!byWord[word]) {
+      byWord[word] = ruby;
+    }
+  }
+
+  vocabularyRubyEntries = Object.keys(byWord)
+    .map(function (word) {
+      return { word: word, ruby: byWord[word] };
+    })
+    .sort(function (a, b) {
+      return b.word.length - a.word.length;
+    });
+
+  return vocabularyRubyEntries;
+}
+
+/* 画面文言用の追加ルビ（語彙JSONに無い一般語）。カタカナ語には付けない。 */
+var UI_RUBY_EXTRA = [
+  { word: "介護福祉士", ruby: "かいごふくしし" },
+  { word: "国家試験", ruby: "こっかしけん" },
+  { word: "過去問", ruby: "かこもん" },
+  { word: "問題不成立", ruby: "もんだいふせいりつ" },
+  { word: "正答", ruby: "せいとう" },
+  { word: "全問", ruby: "ぜんもん" },
+  { word: "表示", ruby: "ひょうじ" },
+  { word: "開始", ruby: "かいし" },
+  { word: "終了", ruby: "しゅうりょう" },
+  { word: "科目", ruby: "かもく" },
+  { word: "検索", ruby: "けんさく" },
+  { word: "場合", ruby: "ばあい" },
+  { word: "同じ", ruby: "おなじ" },
+  { word: "押す", ruby: "おす" },
+  { word: "見る", ruby: "みる" },
+  { word: "本位", ruby: "ほんい" },
+  { word: "人体", ruby: "じんたい" },
+  /* 「等」(とう)。長い「等しい」「等しく」を先に取り、「とうしい」にしない */
+  { word: "等しい", ruby: "ひとしい" },
+  { word: "等しく", ruby: "ひとしく" },
+  { word: "等", ruby: "とう" }
+];
+
+function isKanaOnlyWord(word) {
+  /* ひらがな・カタカナのみの語にはルビを付けない */
+  return /^[\u3041-\u3096\u309D-\u309E\u30A1-\u30F6\u30F8-\u30FFァ-ヶー・･]+$/.test(
+    word || ""
+  );
+}
+
+function getEffectiveRubyEntries() {
+  var base = vocabularyRubyEntries || [];
+  if (!base.length) {
+    return UI_RUBY_EXTRA.slice().sort(function (a, b) {
+      return b.word.length - a.word.length;
+    });
+  }
+  var seen = {};
+  var merged = [];
+  for (var i = 0; i < UI_RUBY_EXTRA.length; i++) {
+    var u = UI_RUBY_EXTRA[i];
+    if (!seen[u.word]) {
+      seen[u.word] = true;
+      merged.push(u);
+    }
+  }
+  for (var j = 0; j < base.length; j++) {
+    var b = base[j];
+    if (!seen[b.word]) {
+      seen[b.word] = true;
+      merged.push(b);
+    }
+  }
+  merged.sort(function (a, b) {
+    return b.word.length - a.word.length;
+  });
+  return merged;
+}
+
+function findVocabularyRubyMatches(text, entries) {
+  var matches = [];
+  if (!text || !entries || !entries.length) {
+    return matches;
+  }
+  var used = [];
+  for (var i = 0; i < entries.length; i++) {
+    var entry = entries[i];
+    var word = entry.word;
+    if (!word || isKanaOnlyWord(word)) {
+      continue;
+    }
+    var start = 0;
+    while (start < text.length) {
+      var idx = text.indexOf(word, start);
+      if (idx === -1) {
+        break;
+      }
+      var end = idx + word.length;
+      var overlap = false;
+      for (var u = 0; u < used.length; u++) {
+        if (!(end <= used[u].start || idx >= used[u].end)) {
+          overlap = true;
+          break;
+        }
+      }
+      if (!overlap) {
+        matches.push({ start: idx, end: end, word: word, ruby: entry.ruby });
+        used.push({ start: idx, end: end });
+      }
+      start = idx + 1;
+    }
+  }
+  matches.sort(function (a, b) {
+    return a.start - b.start;
+  });
+  return matches;
+}
+
+function createRubyPairElement(word, reading) {
+  var pair = document.createElement("span");
+  pair.className = "ruby-pair";
+  if (reading) {
+    var rt = document.createElement("span");
+    rt.className = "ruby-text";
+    rt.textContent = reading;
+    pair.appendChild(rt);
+  }
+  var base = document.createElement("span");
+  base.className = "ruby-base";
+  base.textContent = word;
+  pair.appendChild(base);
+  return pair;
+}
+
+/* 長い語を短い nowrap 単位に分割し、単位の間だけで折り返す（ルビ重なり・横はみ出し防止） */
+var RUBY_CHUNK_MAX_BASE_CHARS = 2;
+
+function splitRubyChunks(word, reading) {
+  var bases = Array.from(word || "");
+  var reads = Array.from(reading || "");
+  if (!bases.length) {
+    return [];
+  }
+  if (bases.length <= RUBY_CHUNK_MAX_BASE_CHARS) {
+    return [{ word: word, ruby: reading || "" }];
+  }
+
+  var chunks = [];
+  var readStart = 0;
+  var totalBase = bases.length;
+  var totalRead = reads.length;
+
+  for (var i = 0; i < totalBase; i += RUBY_CHUNK_MAX_BASE_CHARS) {
+    var end = Math.min(i + RUBY_CHUNK_MAX_BASE_CHARS, totalBase);
+    /* 末尾1字だけ残るときは前チャンクに吸収（例: 7字 → 2+2+3） */
+    if (totalBase - end === 1 && end - i === RUBY_CHUNK_MAX_BASE_CHARS) {
+      end = totalBase;
+    }
+    var chunkWord = bases.slice(i, end).join("");
+    var readEnd =
+      end >= totalBase
+        ? totalRead
+        : Math.floor((end * totalRead) / totalBase);
+    if (readEnd < readStart) {
+      readEnd = readStart;
+    }
+    chunks.push({
+      word: chunkWord,
+      ruby: reads.slice(readStart, readEnd).join("")
+    });
+    readStart = readEnd;
+    if (end >= totalBase) {
+      break;
+    }
+  }
+
+  if (readStart < totalRead && chunks.length) {
+    chunks[chunks.length - 1].ruby += reads.slice(readStart).join("");
+  }
+  return chunks;
+}
+
+function appendRubyChunks(fragment, word, reading) {
+  var chunks = splitRubyChunks(word, reading);
+  for (var i = 0; i < chunks.length; i++) {
+    fragment.appendChild(createRubyPairElement(chunks[i].word, chunks[i].ruby));
+  }
+}
+
+function appendTextWithVocabularyRuby(container, text) {
+  if (!text) {
+    return;
+  }
+
+  var run = document.createElement("span");
+  run.className = "vocab-ruby-run";
+
+  var entries = getEffectiveRubyEntries();
+  var matches = findVocabularyRubyMatches(text, entries);
+  if (!matches.length) {
+    run.textContent = text;
+    container.appendChild(run);
+    return;
+  }
+
+  var fragment = document.createDocumentFragment();
+  var cursor = 0;
+  for (var i = 0; i < matches.length; i++) {
+    var m = matches[i];
+    if (m.start > cursor) {
+      fragment.appendChild(document.createTextNode(text.slice(cursor, m.start)));
+    }
+    /* ネイティブ ruby + 短単位分割: 単位内は nowrap（重なり防止）、単位間で折り返し可 */
+    appendRubyChunks(fragment, m.word, m.ruby);
+    cursor = m.end;
+  }
+  if (cursor < text.length) {
+    fragment.appendChild(document.createTextNode(text.slice(cursor)));
+  }
+  run.appendChild(fragment);
+  container.appendChild(run);
+}
+
+function fillWithRuby(el, text) {
+  el.textContent = "";
+  appendHighlightedRuby(el, text, activeHighlightTerms);
+}
+
+/* キーワード検索のハイライト対象（空なら強調なし） */
+var activeHighlightTerms = [];
+
+function setActiveHighlightTerms(terms) {
+  activeHighlightTerms = (terms || [])
+    .map(function (t) {
+      return String(t || "").trim();
+    })
+    .filter(Boolean)
+    .sort(function (a, b) {
+      return b.length - a.length;
+    });
+}
+
+function findNormalizedIndex(haystack, needle, from) {
+  var normNeedle = normalizeForSearch(needle);
+  if (!normNeedle) {
+    return null;
+  }
+  var start = from || 0;
+  for (var i = start; i < haystack.length; i++) {
+    for (var j = i + 1; j <= haystack.length; j++) {
+      var slice = haystack.slice(i, j);
+      var normSlice = normalizeForSearch(slice);
+      if (normSlice === normNeedle) {
+        return { start: i, end: j };
+      }
+      if (normSlice.length > normNeedle.length) {
+        break;
+      }
+    }
+  }
+  return null;
+}
+
+function findNextHighlightMatch(text, from, terms) {
+  if (!terms || !terms.length) {
+    return null;
+  }
+  var best = null;
+  for (var t = 0; t < terms.length; t++) {
+    var hit = findNormalizedIndex(text, terms[t], from);
+    if (!hit) {
+      continue;
+    }
+    if (
+      !best ||
+      hit.start < best.start ||
+      (hit.start === best.start && hit.end - hit.start > best.end - best.start)
+    ) {
+      best = hit;
+    }
+  }
+  return best;
+}
+
+function appendHighlightedRuby(container, text, terms) {
+  if (!text) {
+    return;
+  }
+  if (!terms || !terms.length) {
+    appendTextWithVocabularyRuby(container, text);
+    return;
+  }
+  var cursor = 0;
+  while (cursor < text.length) {
+    var hit = findNextHighlightMatch(text, cursor, terms);
+    if (!hit) {
+      appendTextWithVocabularyRuby(container, text.slice(cursor));
+      break;
+    }
+    if (hit.start > cursor) {
+      appendTextWithVocabularyRuby(container, text.slice(cursor, hit.start));
+    }
+    var mark = document.createElement("mark");
+    mark.className = "search-hit";
+    appendTextWithVocabularyRuby(mark, text.slice(hit.start, hit.end));
+    container.appendChild(mark);
+    cursor = hit.end;
+  }
+}
+
+/* 国試どおり問題文の定型句を太字にする（長い語句から優先） */
+var STEM_BOLD_PHRASES = [
+  "最も注意しなければならないもの",
+  "主観的に記録したもの",
+  "最も配慮すべき構成要素",
+  "最も緊急度の高いもの",
+  "最も優先度の高いもの",
+  "最も可能性の高いもの",
+  "最も可能性が高いもの",
+  "最も割合が高いもの",
+  "最も起こりやすいもの",
+  "最も優先されるもの",
+  "最も優先すべきもの",
+  "最もふさわしいもの",
+  "最も多かったもの",
+  "最も適切なもの",
+  "最も近い数値",
+  "最も多いもの",
+  "適切なもの",
+  "正しいもの",
+  "そのほか"
+];
+
+/* 「1つ選びなさい」等の直前の「1つ／１つ」だけ太字（本文中の別用途は除外） */
+var STEM_BOLD_ONE_RE = /[1１]\s*つ(?=\s*選び)/g;
+
+function findNextStemBoldMatch(text, from) {
+  var best = null;
+  for (var i = 0; i < STEM_BOLD_PHRASES.length; i++) {
+    var phrase = STEM_BOLD_PHRASES[i];
+    var idx = text.indexOf(phrase, from);
+    if (idx === -1) {
+      continue;
+    }
+    if (
+      !best ||
+      idx < best.start ||
+      (idx === best.start && phrase.length > best.end - best.start)
+    ) {
+      best = { start: idx, end: idx + phrase.length, phrase: phrase };
+    }
+  }
+  STEM_BOLD_ONE_RE.lastIndex = from;
+  var one = STEM_BOLD_ONE_RE.exec(text);
+  if (one) {
+    var oneStart = one.index;
+    var oneEnd = oneStart + one[0].length;
+    if (
+      !best ||
+      oneStart < best.start ||
+      (oneStart === best.start && oneEnd - oneStart > best.end - best.start)
+    ) {
+      best = { start: oneStart, end: oneEnd, phrase: one[0] };
+    }
+  }
+  return best;
+}
+
+function fillStemWithRuby(el, text) {
+  if (!text) {
+    return;
+  }
+  var cursor = 0;
+  while (cursor < text.length) {
+    var match = findNextStemBoldMatch(text, cursor);
+    if (!match) {
+      appendHighlightedRuby(el, text.slice(cursor), activeHighlightTerms);
+      break;
+    }
+    if (match.start > cursor) {
+      appendHighlightedRuby(
+        el,
+        text.slice(cursor, match.start),
+        activeHighlightTerms
+      );
+    }
+    var strong = document.createElement("strong");
+    strong.className = "stem-emphasis";
+    appendHighlightedRuby(strong, match.phrase, activeHighlightTerms);
+    el.appendChild(strong);
+    cursor = match.end;
+  }
+}
+
+function normalizeForSearch(text) {
+  try {
+    return String(text || "")
+      .normalize("NFKC")
+      .toLowerCase();
+  } catch (err) {
+    return String(text || "").toLowerCase();
+  }
+}
+
+function parseTerms(raw) {
+  return String(raw || "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+}
+
+function questionSearchText(q) {
+  var parts = [q.id || "", q.subject || ""];
+  var body = q.body || [];
+  for (var i = 0; i < body.length; i++) {
+    parts.push(body[i]);
+  }
+  var choices = q.choices || [];
+  for (var c = 0; c < choices.length; c++) {
+    parts.push(choices[c].text || "");
+  }
+  return normalizeForSearch(parts.join("\n"));
+}
+
+function normalizeRange(sessionFrom, sessionTo) {
+  var from = Number(sessionFrom);
+  var to = Number(sessionTo);
+  if (!(from <= to)) {
+    var tmp = from;
+    from = to;
+    to = tmp;
+  }
+  return { from: from, to: to };
+}
+
+function findByRoundAndNumber(questions, round, number) {
+  var r = Number(round);
+  var n = Number(number);
+  for (var i = 0; i < questions.length; i++) {
+    var q = questions[i];
+    if (Number(q.round) === r && Number(q.number) === n) {
+      return q;
+    }
+  }
+  return null;
+}
+
+function questionBodyText(q) {
+  var body = q.body || [];
+  var parts = [];
+  for (var i = 0; i < body.length; i++) {
+    parts.push(body[i] || "");
+  }
+  return parts.join("\n");
+}
+
+function questionType(q) {
+  var text = questionBodyText(q);
+  if (text.indexOf("最も適切なもの") !== -1) {
+    return "最も適切なもの";
+  }
+  if (text.indexOf("適切なもの") !== -1) {
+    return "適切なもの";
+  }
+  if (text.indexOf("正しいもの") !== -1) {
+    return "正しいもの";
+  }
+  return "そのほか";
+}
+
+
+function searchQuestions(questions, terms, sessionFrom, sessionTo, subject, type) {
+  var range = normalizeRange(sessionFrom, sessionTo);
+  var from = range.from;
+  var to = range.to;
+  var subjectFilter = String(subject || "").trim();
+  var typeFilter = String(type || "").trim();
+  var norms = terms.map(normalizeForSearch).filter(Boolean);
+  var hits = [];
+  for (var i = 0; i < questions.length; i++) {
+    var q = questions[i];
+    var round = Number(q.round);
+    if (round < from || round > to) {
+      continue;
+    }
+    if (subjectFilter && String(q.subject || "") !== subjectFilter) {
+      continue;
+    }
+    if (typeFilter && questionType(q) !== typeFilter) {
+      continue;
+    }
+    if (norms.length) {
+      var hay = questionSearchText(q);
+      var ok = true;
+      for (var t = 0; t < norms.length; t++) {
+        if (hay.indexOf(norms[t]) === -1) {
+          ok = false;
+          break;
+        }
+      }
+      if (!ok) {
+        continue;
+      }
+    }
+    hits.push(q);
+  }
+  return hits;
+}
+
+function countInRange(questions, sessionFrom, sessionTo, subject, type) {
+  return searchQuestions(
+    questions,
+    [],
+    sessionFrom,
+    sessionTo,
+    subject,
+    type
+  ).length;
+}
+
+function getSelectedRange() {
+  var fromEl = document.getElementById("sessionFrom");
+  var toEl = document.getElementById("sessionTo");
+  var from = fromEl ? Number(fromEl.value) : meta.sessionMin;
+  var to = toEl ? Number(toEl.value) : meta.sessionMax;
+  if (from > to) {
+    var swap = from;
+    from = to;
+    to = swap;
+    if (fromEl) fromEl.value = String(from);
+    if (toEl) toEl.value = String(to);
+  }
+  return { from: from, to: to };
+}
+
+function getSelectedSubject() {
+  var el = document.getElementById("subjectSelect");
+  return el ? String(el.value || "").trim() : "";
+}
+
+function getSelectedType() {
+  var el = document.getElementById("typeSelect");
+  return el ? String(el.value || "").trim() : "";
+}
+
+
+function getJumpInputs() {
+  var roundEl = document.getElementById("jumpRound");
+  var numEl = document.getElementById("jumpNumber");
+  var roundRaw = roundEl ? String(roundEl.value || "").trim() : "";
+  var numRaw = numEl ? String(numEl.value || "").trim() : "";
+  var round = roundRaw === "" ? null : Number(roundRaw);
+  var number = numRaw === "" ? null : Number(numRaw);
+  if (round !== null && (isNaN(round) || round < 1)) {
+    round = null;
+  }
+  if (number !== null && (isNaN(number) || number < 1)) {
+    number = null;
+  }
+  return { round: round, number: number, partial: (round !== null) !== (number !== null) };
+}
+
+var SUBJECT_ORDER = [
+  "人間の尊厳と自立",
+  "介護の基本",
+  "社会の理解",
+  "人間関係とコミュニケーション",
+  "コミュニケーション技術",
+  "生活支援技術",
+  "こころとからだのしくみ",
+  "発達と老化の理解",
+  "認知症の理解",
+  "障害の理解",
+  "医療的ケア",
+  "介護過程",
+  "総合問題"
+];
+
+function collectSubjects(questions) {
+  var seen = {};
+  for (var i = 0; i < questions.length; i++) {
+    var s = String(questions[i].subject || "").trim();
+    if (s) {
+      seen[s] = true;
+    }
+  }
+  var list = [];
+  for (var o = 0; o < SUBJECT_ORDER.length; o++) {
+    var name = SUBJECT_ORDER[o];
+    if (seen[name]) {
+      list.push(name);
+      delete seen[name];
+    }
+  }
+  var rest = Object.keys(seen).sort(function (a, b) {
+    return a.localeCompare(b, "ja");
+  });
+  return list.concat(rest);
+}
+
+function fillSessionSelects() {
+  var fromEl = document.getElementById("sessionFrom");
+  var toEl = document.getElementById("sessionTo");
+  if (!fromEl || !toEl) {
+    return;
+  }
+  var prevFrom = fromEl.value;
+  var prevTo = toEl.value;
+  var fragFrom = document.createDocumentFragment();
+  var fragTo = document.createDocumentFragment();
+  for (var s = meta.sessionMin; s <= meta.sessionMax; s++) {
+    var optFrom = document.createElement("option");
+    optFrom.value = String(s);
+    optFrom.textContent = sessionYearLabel(s);
+    fragFrom.appendChild(optFrom);
+    var optTo = document.createElement("option");
+    optTo.value = String(s);
+    optTo.textContent = sessionYearLabel(s);
+    fragTo.appendChild(optTo);
+  }
+  fromEl.replaceChildren(fragFrom);
+  toEl.replaceChildren(fragTo);
+  if (prevFrom) fromEl.value = prevFrom;
+  if (prevTo) toEl.value = prevTo;
+  expandSessionYearOptions(fromEl);
+  expandSessionYearOptions(toEl);
+}
+
+/* 第N回の実施年（例: 38 → 2026） */
+function sessionYear(session) {
+  return Number(session) + 1988;
+}
+
+function sessionYearLabel(session) {
+  return String(session) + " （" + sessionYear(session) + "）";
+}
+
+function roundLabelWithYear(session) {
+  return "第" + Number(session) + "回（" + sessionYear(session) + "）";
+}
+
+function expandSessionYearOptions(selectEl) {
+  if (!selectEl) {
+    return;
+  }
+  for (var i = 0; i < selectEl.options.length; i++) {
+    var opt = selectEl.options[i];
+    if (!opt.value) {
+      continue;
+    }
+    opt.textContent = sessionYearLabel(opt.value);
+  }
+}
+
+function wireSessionYearSelect(selectEl) {
+  if (!selectEl || selectEl.dataset.yearWired === "1") {
+    return;
+  }
+  selectEl.dataset.yearWired = "1";
+  expandSessionYearOptions(selectEl);
+}
+
+function wireAllSessionYearSelects() {
+  wireSessionYearSelect(document.getElementById("sessionFrom"));
+  wireSessionYearSelect(document.getElementById("sessionTo"));
+  wireSessionYearSelect(document.getElementById("jumpRound"));
+}
+
+function countSubjectsForFilters(questions, sessionFrom, sessionTo, type, terms) {
+  var range = normalizeRange(sessionFrom, sessionTo);
+  var typeFilter = String(type || "").trim();
+  var norms = (terms || []).map(normalizeForSearch).filter(Boolean);
+  var counts = {};
+  var total = 0;
+  for (var i = 0; i < questions.length; i++) {
+    var q = questions[i];
+    var round = Number(q.round);
+    if (round < range.from || round > range.to) {
+      continue;
+    }
+    if (typeFilter && questionType(q) !== typeFilter) {
+      continue;
+    }
+    if (norms.length) {
+      var hay = questionSearchText(q);
+      var ok = true;
+      for (var t = 0; t < norms.length; t++) {
+        if (hay.indexOf(norms[t]) === -1) {
+          ok = false;
+          break;
+        }
+      }
+      if (!ok) {
+        continue;
+      }
+    }
+    var s = String(q.subject || "").trim();
+    if (!s) {
+      continue;
+    }
+    counts[s] = (counts[s] || 0) + 1;
+    total++;
+  }
+  return { counts: counts, total: total };
+}
+
+function countTypesForFilters(questions, sessionFrom, sessionTo, subject, terms) {
+  var range = normalizeRange(sessionFrom, sessionTo);
+  var subjectFilter = String(subject || "").trim();
+  var norms = (terms || []).map(normalizeForSearch).filter(Boolean);
+  var counts = {};
+  var total = 0;
+  for (var i = 0; i < questions.length; i++) {
+    var q = questions[i];
+    var round = Number(q.round);
+    if (round < range.from || round > range.to) {
+      continue;
+    }
+    if (subjectFilter && String(q.subject || "") !== subjectFilter) {
+      continue;
+    }
+    if (norms.length) {
+      var hay = questionSearchText(q);
+      var ok = true;
+      for (var t = 0; t < norms.length; t++) {
+        if (hay.indexOf(norms[t]) === -1) {
+          ok = false;
+          break;
+        }
+      }
+      if (!ok) {
+        continue;
+      }
+    }
+    var typ = questionType(q);
+    counts[typ] = (counts[typ] || 0) + 1;
+    total++;
+  }
+  return { counts: counts, total: total };
+}
+
+function getFilterKeywordTerms() {
+  var input = document.getElementById("searchInput");
+  return parseTerms(input ? input.value : "");
+}
+
+function updateSubjectOptionCounts() {
+  var el = document.getElementById("subjectSelect");
+  if (!el || !questionsReady) {
+    return;
+  }
+  var range = getSelectedRange();
+  var type = getSelectedType();
+  var terms = getFilterKeywordTerms();
+  var result = countSubjectsForFilters(
+    allQuestions,
+    range.from,
+    range.to,
+    type,
+    terms
+  );
+  for (var i = 0; i < el.options.length; i++) {
+    var opt = el.options[i];
+    if (!opt.value) {
+      opt.textContent = "すべての科目（" + result.total + "）";
+      continue;
+    }
+    var n = result.counts[opt.value] || 0;
+    opt.textContent = opt.value + "（" + n + "）";
+  }
+}
+
+function updateTypeOptionCounts() {
+  var el = document.getElementById("typeSelect");
+  if (!el || !questionsReady) {
+    return;
+  }
+  var range = getSelectedRange();
+  var subject = getSelectedSubject();
+  var terms = getFilterKeywordTerms();
+  var result = countTypesForFilters(
+    allQuestions,
+    range.from,
+    range.to,
+    subject,
+    terms
+  );
+  for (var i = 0; i < el.options.length; i++) {
+    var opt = el.options[i];
+    if (!opt.value) {
+      opt.textContent = "すべてのタイプ（" + result.total + "）";
+      continue;
+    }
+    var n = result.counts[opt.value] || 0;
+    opt.textContent = opt.value + "（" + n + "）";
+  }
+}
+
+
+function updateFilterOptionCounts() {
+  updateSubjectOptionCounts();
+  updateTypeOptionCounts();
+}
+
+function fillSubjectSelect(subjects, selected) {
+  var el = document.getElementById("subjectSelect");
+  if (!el) {
+    return;
+  }
+  // HTML に科目を埋め込済みなら再構築しない（表示ラグ防止）
+  if (el.options.length > 1) {
+    if (selected) {
+      el.value = selected;
+      if (el.value !== selected) {
+        el.value = "";
+      }
+    }
+    updateFilterOptionCounts();
+    return;
+  }
+  var frag = document.createDocumentFragment();
+  var allOpt = document.createElement("option");
+  allOpt.value = "";
+  allOpt.textContent = "すべての科目";
+  frag.appendChild(allOpt);
+  for (var i = 0; i < subjects.length; i++) {
+    var opt = document.createElement("option");
+    opt.value = subjects[i];
+    opt.textContent = subjects[i];
+    frag.appendChild(opt);
+  }
+  el.replaceChildren(frag);
+  if (selected && subjects.indexOf(selected) !== -1) {
+    el.value = selected;
+  } else {
+    el.value = "";
+  }
+  updateFilterOptionCounts();
+}
+
+function setStatus(text, mode) {
+  var el = document.getElementById("searchStatus");
+  if (!el) {
+    return;
+  }
+  el.textContent = "";
+  if (!text) {
+    return;
+  }
+  fillWithRuby(el, text);
+}
+
+function showHint(message) {
+  var root = document.getElementById("questionList");
+  root.textContent = "";
+  var p = document.createElement("p");
+  p.className = "hint";
+  fillWithRuby(p, message);
+  root.appendChild(p);
+}
+
+function showError(message) {
+  var root = document.getElementById("questionList");
+  root.textContent = "";
+  var p = document.createElement("p");
+  p.className = "error";
+  fillWithRuby(p, message);
+  root.appendChild(p);
+}
+
+function isCorrectChoice(trial, choiceN) {
+  var answers = trial.answers || [];
+  for (var i = 0; i < answers.length; i++) {
+    if (Number(answers[i]) === Number(choiceN)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function getChoiceExplain(trial, choiceN) {
+  var map = trial.explains || {};
+  return map[choiceN] || map[String(choiceN)] || "";
+}
+
+function setChoiceOpen(li, trial, open) {
+  var n = Number(li.getAttribute("data-choice-n"));
+  var ok = isCorrectChoice(trial, n);
+  var mark = li.querySelector(".choice-mark");
+  var explain = li.querySelector(".choice-explain");
+
+  li.classList.toggle("is-open", open);
+  li.classList.toggle("is-correct", open && ok);
+  li.classList.toggle("is-wrong", open && !ok);
+  li.setAttribute("aria-expanded", open ? "true" : "false");
+
+  if (mark) {
+    mark.hidden = !open;
+    if (open) {
+      mark.textContent = ok ? "◯" : "✕";
+      mark.className = "choice-mark " + (ok ? "is-ok" : "is-ng");
+    }
+  }
+  if (explain) {
+    explain.hidden = !open;
+  }
+}
+
+function syncRevealAllButton(card) {
+  var btn = card.querySelector(".quiz-reveal-all");
+  if (!btn) {
+    return;
+  }
+  var items = card.querySelectorAll(".choice");
+  /* 正解表示ONでも、全選択肢が開いて初めて「−」。正解だけなら「＋」のまま */
+  var openCount = 0;
+  for (var i = 0; i < items.length; i++) {
+    if (items[i].classList.contains("is-open")) {
+      openCount++;
+    }
+  }
+  var allOpen = items.length > 0 && openCount === items.length;
+  btn.setAttribute("aria-pressed", allOpen ? "true" : "false");
+  btn.dataset.allOpen = allOpen ? "1" : "0";
+  btn.setAttribute("aria-label", allOpen ? "全て閉じる" : "全て表示");
+}
+
+function toggleChoice(li, trial, card) {
+  var open = !li.classList.contains("is-open");
+  setChoiceOpen(li, trial, open);
+  syncRevealAllButton(card);
+}
+
+/* 正解表示ON時: 正解だけ ◯・色・解説。誤答は閉じたまま */
+function revealCorrectAnswersOnCard(card, trial, show) {
+  var items = card.querySelectorAll(".choice");
+  for (var i = 0; i < items.length; i++) {
+    var li = items[i];
+    var n = Number(li.getAttribute("data-choice-n"));
+    var ok = isCorrectChoice(trial, n);
+    if (!ok) {
+      if (show) {
+        setChoiceOpen(li, trial, false);
+      }
+      continue;
+    }
+    setChoiceOpen(li, trial, show);
+  }
+  syncRevealAllButton(card);
+}
+
+function setAllChoices(card, trial, open) {
+  if (isAnswerShowOn()) {
+    if (open) {
+      /* 正解表示中の「＋」→ 誤答の✕・解説も含めて全部開く */
+      var items = card.querySelectorAll(".choice");
+      for (var i = 0; i < items.length; i++) {
+        setChoiceOpen(items[i], trial, true);
+      }
+      syncRevealAllButton(card);
+    } else {
+      /* 「−」→ 正解表示の状態に戻す（正解だけ残す） */
+      revealCorrectAnswersOnCard(card, trial, true);
+    }
+    return;
+  }
+  var allItems = card.querySelectorAll(".choice");
+  for (var j = 0; j < allItems.length; j++) {
+    setChoiceOpen(allItems[j], trial, open);
+  }
+  syncRevealAllButton(card);
+}
+
+function applyAnswerShowToAllCards() {
+  var cards = document.querySelectorAll(".question-card.is-quiz-trial");
+  var show = isAnswerShowOn();
+  for (var i = 0; i < cards.length; i++) {
+    var card = cards[i];
+    var trial = card.__answerTrial;
+    if (!trial) {
+      continue;
+    }
+    revealCorrectAnswersOnCard(card, trial, show);
+  }
+}
+
+function wireAnswerCheck(card, q, trial) {
+  card.classList.add("is-quiz-trial");
+  card.__answerTrial = trial;
+
+  var metaRow = card.querySelector(".meta-row");
+  if (metaRow) {
+    var revealAll = document.createElement("button");
+    revealAll.type = "button";
+    revealAll.className = "quiz-reveal-all";
+    revealAll.setAttribute("aria-pressed", "false");
+    revealAll.setAttribute("aria-label", "全て表示");
+    var labelOpen = document.createElement("span");
+    labelOpen.className = "label-open";
+    labelOpen.textContent = "＋";
+    var labelClose = document.createElement("span");
+    labelClose.className = "label-close";
+    labelClose.textContent = "−";
+    labelClose.setAttribute("aria-hidden", "true");
+    revealAll.appendChild(labelOpen);
+    revealAll.appendChild(labelClose);
+    revealAll.addEventListener("click", function (ev) {
+      ev.preventDefault();
+      ev.stopPropagation();
+      var allOpen = revealAll.dataset.allOpen === "1";
+      setAllChoices(card, trial, !allOpen);
+    });
+    metaRow.appendChild(revealAll);
+  }
+
+  var choices = card.querySelectorAll(".choice");
+  for (var c = 0; c < choices.length; c++) {
+    (function (li) {
+      var n = Number(li.getAttribute("data-choice-n"));
+      var explainText = getChoiceExplain(trial, n);
+      if (explainText) {
+        var explain = document.createElement("div");
+        explain.className = "choice-explain";
+        explain.hidden = true;
+        fillWithRuby(explain, explainText);
+        li.appendChild(explain);
+      }
+
+      var mark = document.createElement("span");
+      mark.className = "choice-mark";
+      mark.setAttribute("aria-hidden", "true");
+      mark.hidden = true;
+      var nWrap = li.querySelector(".choice-n-wrap");
+      (nWrap || li.querySelector(".choice-body") || li).appendChild(mark);
+
+      li.classList.add("is-tappable");
+      li.setAttribute("role", "button");
+      li.setAttribute("aria-expanded", "false");
+      li.tabIndex = 0;
+
+      function onPick(ev) {
+        if (ev.target && ev.target.closest && ev.target.closest(".quiz-reveal-all")) {
+          return;
+        }
+        toggleChoice(li, trial, card);
+      }
+      li.addEventListener("click", onPick);
+      li.addEventListener("keydown", function (ev) {
+        if (ev.key === "Enter" || ev.key === " ") {
+          ev.preventDefault();
+          onPick(ev);
+        }
+      });
+    })(choices[c]);
+  }
+
+  if (isAnswerShowOn()) {
+    revealCorrectAnswersOnCard(card, trial, true);
+  } else {
+    syncRevealAllButton(card);
+  }
+}
+
+function kakomonAssetUrl(src) {
+  var s = String(src || "");
+  if (!s) {
+    return s;
+  }
+  if (/^https?:\/\//i.test(s) || s.charAt(0) === "/") {
+    return s;
+  }
+  if (s.indexOf("figures/") === 0) {
+    return "/kaigo/kakomon/" + s;
+  }
+  return s;
+}
+
+function appendQuestionCard(parent, q) {
+  if (!parent || !q) {
+    return null;
+  }
+  var card = document.createElement("article");
+  card.className = "question-card";
+  card.id = "q-" + q.id;
+
+  var metaRow = document.createElement("div");
+  metaRow.className = "meta-row";
+
+  var idBadge = document.createElement("span");
+  idBadge.className = "badge badge-id";
+  idBadge.textContent = q.round + "-" + q.number;
+  metaRow.appendChild(idBadge);
+
+  if (q.subject) {
+    var subBadge = document.createElement("span");
+    subBadge.className = "badge badge-subject";
+    subBadge.textContent = q.subject;
+    metaRow.appendChild(subBadge);
+  }
+  card.appendChild(metaRow);
+
+  var stem = document.createElement("div");
+  stem.className = "stem";
+  var bodyLines = q.body || [];
+  for (var b = 0; b < bodyLines.length; b++) {
+    var line = bodyLines[b];
+    if (!line || !String(line).trim()) {
+      continue;
+    }
+    var p = document.createElement("p");
+    fillStemWithRuby(p, line);
+    stem.appendChild(p);
+  }
+  card.appendChild(stem);
+
+  var figs = q.figures || [];
+  if (figs.length) {
+    var figWrap = document.createElement("div");
+    figWrap.className = "question-figures";
+    for (var fi = 0; fi < figs.length; fi++) {
+      var fig = document.createElement("figure");
+      fig.className = "question-figure";
+      var img = document.createElement("img");
+      img.className = "question-figure-img";
+      img.src = kakomonAssetUrl(figs[fi] || "");
+      img.alt = "問題" + q.number + "の図";
+      img.loading = "lazy";
+      fig.appendChild(img);
+      figWrap.appendChild(fig);
+    }
+    card.appendChild(figWrap);
+  }
+
+  if (q.note) {
+    var note = document.createElement("p");
+    note.className = "question-note";
+    fillWithRuby(note, q.note);
+    card.appendChild(note);
+  }
+
+  var ul = document.createElement("ol");
+  ul.className = "choices";
+  ul.start = 1;
+  var choices = q.choices || [];
+  for (var c = 0; c < choices.length; c++) {
+    var choice = choices[c];
+    var li = document.createElement("li");
+    li.className = "choice";
+    li.setAttribute("data-choice-n", String(choice.n));
+
+    var body = document.createElement("div");
+    body.className = "choice-body";
+
+    var nWrap = document.createElement("span");
+    nWrap.className = "choice-n-wrap";
+    var n = document.createElement("span");
+    n.className = "choice-n";
+    n.textContent = String(choice.n);
+    nWrap.appendChild(n);
+    body.appendChild(nWrap);
+
+    var text = document.createElement("span");
+    text.className = "choice-text";
+    fillWithRuby(text, choice.text || "");
+    body.appendChild(text);
+
+    li.appendChild(body);
+
+    var choiceFigs = q.choiceFigures || {};
+    var choiceFigSrc = choiceFigs[String(choice.n)];
+    if (choiceFigSrc) {
+      var cfig = document.createElement("img");
+      cfig.className = "choice-figure-img";
+      cfig.src = kakomonAssetUrl(choiceFigSrc);
+      cfig.alt = "選択肢" + choice.n + "の図";
+      cfig.loading = "lazy";
+      li.appendChild(cfig);
+    }
+
+    ul.appendChild(li);
+  }
+  card.appendChild(ul);
+
+  var trial = getAnswerCheck(q);
+  if (trial) {
+    wireAnswerCheck(card, q, trial);
+  }
+
+  parent.appendChild(card);
+  return card;
+}
+
+function renderQuestions(questions) {
+  var root = document.getElementById("questionList");
+  root.textContent = "";
+
+  if (!questions.length) {
+    var empty = document.createElement("p");
+    empty.className = "hint";
+    empty.textContent = "該当する問題がありません。条件を変えて試してください。";
+    root.appendChild(empty);
+    return;
+  }
+
+  for (var i = 0; i < questions.length; i++) {
+    appendQuestionCard(root, questions[i]);
+  }
+}
+
+function applyVocabularyWords(words) {
+  vocabularyRubyEntries = null;
+  getVocabularyRubyEntries(words || []);
+}
+
+function setStatus(text) {
+  var el = document.getElementById("searchStatus");
+  if (!el) return;
+  el.textContent = "";
+  if (!text) return;
+  fillWithRuby(el, text);
+}
+
+function showHint(message) {
+  var root = document.getElementById("questionList") || document.getElementById("themeList");
+  if (!root) return;
+  root.textContent = "";
+  var p = document.createElement("p");
+  p.className = "hint";
+  fillWithRuby(p, message);
+  root.appendChild(p);
+}
+
+function showError(message) {
+  var root = document.getElementById("questionList") || document.getElementById("themeList");
+  if (!root) return;
+  root.textContent = "";
+  var p = document.createElement("p");
+  p.className = "error";
+  fillWithRuby(p, message);
+  root.appendChild(p);
+}
+
+var RUBY_HIDDEN_KEY = "kakomon.rubyHidden";
+
+function isRubyHidden() {
+  try {
+    return localStorage.getItem(RUBY_HIDDEN_KEY) === "1";
+  } catch (err) {
+    return false;
+  }
+}
+
+function setRubyHidden(hidden) {
+  try {
+    localStorage.setItem(RUBY_HIDDEN_KEY, hidden ? "1" : "0");
+  } catch (err) {
+    /* ignore */
+  }
+  if (document.body) {
+    document.body.classList.toggle("ruby-off", !!hidden);
+  }
+  var btn = document.getElementById("rubyToggle");
+  if (!btn) {
+    return;
+  }
+  btn.setAttribute("aria-pressed", hidden ? "false" : "true");
+  btn.textContent = "ルビ";
+  btn.setAttribute(
+    "aria-label",
+    hidden ? "ルビを表示する" : "ルビを非表示にする"
+  );
+}
+
+function wireSiteNav() {
+  var bar = document.querySelector(".site-bar");
+  var toggle = document.querySelector(".nav-toggle");
+  var nav = document.getElementById("siteNav");
+  if (!bar || !toggle || !nav) {
+    return;
+  }
+  function setOpen(open) {
+    bar.classList.toggle("is-open", !!open);
+    toggle.setAttribute("aria-expanded", open ? "true" : "false");
+  }
+  toggle.addEventListener("click", function () {
+    setOpen(!bar.classList.contains("is-open"));
+  });
+  document.addEventListener("click", function (ev) {
+    if (!bar.contains(ev.target)) {
+      setOpen(false);
+    }
+  });
+  document.addEventListener("keydown", function (ev) {
+    if (ev.key === "Escape") {
+      setOpen(false);
+    }
+  });
+}
+
+function wireRubyToggle() {
+  setRubyHidden(isRubyHidden());
+  var bar = document.querySelector(".site-bar") || document.querySelector(".site-nav");
+  if (!bar || document.getElementById("rubyToggle")) {
+    return;
+  }
+  var btn = document.createElement("button");
+  btn.type = "button";
+  btn.id = "rubyToggle";
+  btn.className = "ruby-toggle";
+  bar.appendChild(btn);
+  setRubyHidden(isRubyHidden());
+  btn.addEventListener("click", function () {
+    setRubyHidden(!isRubyHidden());
+  });
+}
+
+var ANSWER_SHOW_KEY = "kakomon.answerShow.v2";
+
+function isAnswerShowOn() {
+  try {
+    /* 未設定は表示（デフォルトON）。明示的に "0" のときだけ非表示 */
+    return localStorage.getItem(ANSWER_SHOW_KEY) !== "0";
+  } catch (err) {
+    return true;
+  }
+}
+
+function setAnswerShowOn(on) {
+  try {
+    localStorage.setItem(ANSWER_SHOW_KEY, on ? "1" : "0");
+  } catch (err) {
+    /* ignore */
+  }
+  var btn = document.getElementById("answerShowToggle");
+  if (btn) {
+    btn.setAttribute("aria-pressed", on ? "true" : "false");
+    btn.textContent = "正解";
+    btn.setAttribute(
+      "aria-label",
+      on ? "正解の表示をやめる" : "正解を表示する"
+    );
+  }
+  applyAnswerShowToAllCards();
+}
+
+function wireAnswerShowToggle() {
+  var bar = document.querySelector(".site-bar") || document.querySelector(".site-nav");
+  if (!bar || document.getElementById("answerShowToggle")) {
+    setAnswerShowOn(isAnswerShowOn());
+    return;
+  }
+  var btn = document.createElement("button");
+  btn.type = "button";
+  btn.id = "answerShowToggle";
+  btn.className = "ruby-toggle answer-show-toggle";
+  bar.appendChild(btn);
+  setAnswerShowOn(isAnswerShowOn());
+  btn.addEventListener("click", function () {
+    setAnswerShowOn(!isAnswerShowOn());
+  });
+}
+
+function wireBackToTop() {
+  var btn = document.getElementById("backToTop");
+  if (!btn) return;
+  var threshold = 320;
+  var ticking = false;
+  function update() {
+    ticking = false;
+    var y = window.pageYOffset || document.documentElement.scrollTop || 0;
+    if (y > threshold) {
+      btn.hidden = false;
+      btn.classList.add("is-visible");
+    } else {
+      btn.classList.remove("is-visible");
+      window.setTimeout(function () {
+        if (!btn.classList.contains("is-visible")) btn.hidden = true;
+      }, 200);
+    }
+  }
+  window.addEventListener("scroll", function () {
+    if (!ticking) {
+      ticking = true;
+      window.requestAnimationFrame(update);
+    }
+  }, { passive: true });
+  btn.addEventListener("click", function () {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+  update();
+}
+
+function loadRubyThen(next) {
+  var bust = "_t=" + Date.now();
+  fetch("ruby.json?" + bust)
+    .then(function (res) { return res.ok ? res.json() : []; })
+    .catch(function () { return []; })
+    .then(function (rubyWords) {
+      if (Array.isArray(rubyWords) && rubyWords.length) {
+        applyVocabularyWords(rubyWords.map(normalizeWordItem));
+      }
+      next();
+    });
+}
+
+/* 番号と見出しのあいだの全角スペースを半角にして詰める（1　理念 → 1 理念） */
+function tightenThemeIndexSpacing(text) {
+  return String(text || "").replace(/(\d)\u3000/g, "$1 ");
+}
+
+function appendThemeCard(parent, t) {
+  var a = document.createElement("a");
+  a.className = "theme-card";
+  a.href = t.href || ("view.html?t=" + encodeURIComponent(t.slug));
+  var title = document.createElement("h3");
+  title.className = "theme-card-title";
+  fillWithRuby(title, tightenThemeIndexSpacing(t.label || t.title || ""));
+  a.appendChild(title);
+  var meta = document.createElement("p");
+  meta.className = "theme-card-meta";
+  var shown = t.displayCount != null ? t.displayCount : t.count || 0;
+  meta.textContent = shown + " 問";
+  var onAppendix = location.pathname.indexOf("/appendix/") !== -1;
+  // 参考テーマなど cardLow 指定のみ灰色（問数不足では灰色にしない）
+  if (!onAppendix && t.cardLow) a.classList.add("theme-card-low");
+  a.appendChild(meta);
+  parent.appendChild(a);
+}
+
+function appendThemeGroup(root, group) {
+  var title = group.title || "テーマ";
+  var groupKey = group.id || title;
+  /* リロード・ページ遷移では閉じた状態から（開閉は画面内のみ） */
+  var open = false;
+  var children = group.themes || [];
+  var qN = group.displayCount != null ? group.displayCount : group.count || 0;
+  var panelId = "theme-group-panel-" + String(groupKey).replace(/\s+/g, "-");
+
+  var section = document.createElement("section");
+  section.className = "theme-group" + (open ? " is-open" : "");
+  section.setAttribute("aria-label", title);
+
+  var toggle = document.createElement("button");
+  toggle.type = "button";
+  toggle.className = "theme-group-toggle";
+  toggle.setAttribute("aria-expanded", open ? "true" : "false");
+  toggle.setAttribute("aria-controls", panelId);
+
+  var chevron = document.createElement("span");
+  chevron.className = "theme-group-chevron";
+  chevron.setAttribute("aria-hidden", "true");
+  chevron.textContent = "›";
+  toggle.appendChild(chevron);
+
+  var textWrap = document.createElement("span");
+  textWrap.className = "theme-group-toggle-text";
+  var h2 = document.createElement("span");
+  h2.className = "theme-group-title";
+  h2.textContent = title;
+  textWrap.appendChild(h2);
+  var gmeta = document.createElement("span");
+  gmeta.className = "theme-group-meta";
+  gmeta.textContent = qN + " 問";
+  textWrap.appendChild(gmeta);
+  toggle.appendChild(textWrap);
+  section.appendChild(toggle);
+
+  var list = document.createElement("div");
+  list.className = "theme-group-list";
+  list.id = panelId;
+  list.hidden = !open;
+  for (var i = 0; i < children.length; i++) {
+    appendThemeCard(list, children[i]);
+  }
+  section.appendChild(list);
+
+  toggle.addEventListener("click", function () {
+    var next = !section.classList.contains("is-open");
+    section.classList.toggle("is-open", next);
+    toggle.setAttribute("aria-expanded", next ? "true" : "false");
+    list.hidden = !next;
+  });
+
+  root.appendChild(section);
+}
+
+function appendKoryakuIndexCard(parent, href, titleText) {
+  var a = document.createElement("a");
+  a.className = "theme-koryaku-card";
+  a.href = href;
+  var title = document.createElement("h3");
+  title.className = "theme-card-title";
+  title.textContent = titleText;
+  a.appendChild(title);
+  var meta = document.createElement("p");
+  meta.className = "theme-card-meta";
+  meta.textContent = "正解マップ · まず正解だけ押さえる";
+  a.appendChild(meta);
+  parent.appendChild(a);
+}
+
+function appendKoryakuIndexCards(parent) {
+  appendKoryakuIndexCard(parent, "koryaku-kaigo-hoken.html", "介護保険法攻略");
+  appendKoryakuIndexCard(parent, "koryaku-shogai-sogo.html", "障害者総合支援法攻略");
+  var hikaku = document.createElement("a");
+  hikaku.className = "theme-koryaku-card";
+  hikaku.href = "hikaku-kaigo-shogai.html";
+  var hikakuTitle = document.createElement("h3");
+  hikakuTitle.className = "theme-card-title";
+  /* 一覧カードはルビなし（短い案内文。ルビ幅で左にはみ出さない） */
+  hikakuTitle.textContent = "介護保険法・障害者総合支援法攻略マップ";
+  hikaku.appendChild(hikakuTitle);
+  var hikakuMeta = document.createElement("p");
+  hikakuMeta.className = "theme-card-meta";
+  hikakuMeta.textContent = "用語の対応 · 過去問で出た対だけ";
+  hikaku.appendChild(hikakuMeta);
+  parent.appendChild(hikaku);
+}
+
+function renderThemeIndex(payload) {
+  var root = document.getElementById("themeList");
+  root.textContent = "";
+  var themes = (payload && payload.themes) || [];
+  var groups = (payload && payload.groups) || [];
+  var ungrouped = (payload && payload.ungrouped) || [];
+  if (!themes.length && !groups.length) {
+    showHint("テーマがまだありません。work/theme_extract に .txt ファイルを置いてデプロイしてください。");
+    setStatus("");
+    return;
+  }
+  setStatus("");
+
+  var onThemes =
+    location.pathname.indexOf("/themes/") !== -1 ||
+    /\/themes\/?$/.test(location.pathname);
+  if (onThemes) {
+    appendKoryakuIndexCards(root);
+  }
+
+  if (groups.length || ungrouped.length) {
+    for (var g = 0; g < groups.length; g++) {
+      appendThemeGroup(root, groups[g]);
+    }
+    if (ungrouped.length) {
+      var flat = document.createElement("div");
+      flat.className = "theme-ungrouped";
+      flat.setAttribute("aria-label", "その他のテーマ");
+      for (var u = 0; u < ungrouped.length; u++) {
+        appendThemeCard(flat, ungrouped[u]);
+      }
+      root.appendChild(flat);
+    }
+    return;
+  }
+
+  for (var j = 0; j < themes.length; j++) {
+    appendThemeCard(root, themes[j]);
+  }
+}
+
+var THEME_RECENT_SESSION_MIN = 34;
+var THEME_RECENT_SESSION_MAX = 38;
+
+function partitionThemeQuestions(questions, recentMin, recentMax, showAllInOrder) {
+  var list = questions || [];
+  /* 同じ問題など: txt の並びのまま全件表示 */
+  if (showAllInOrder) {
+    return { initial: list.slice(), older: [] };
+  }
+  var min = recentMin != null ? Number(recentMin) : THEME_RECENT_SESSION_MIN;
+  var max = recentMax != null ? Number(recentMax) : THEME_RECENT_SESSION_MAX;
+  var recent = [];
+  var older = [];
+  for (var i = 0; i < list.length; i++) {
+    var q = list[i];
+    var round = Number(q && q.round);
+    if (!isNaN(round) && round >= min && round <= max) {
+      recent.push(q);
+    } else {
+      older.push(q);
+    }
+  }
+  if (!recent.length) {
+    return { initial: list.slice(), older: [] };
+  }
+  return { initial: recent, older: older };
+}
+
+function appendQuestions(questions) {
+  var root = document.getElementById("questionList");
+  if (!root || !questions || !questions.length) {
+    return;
+  }
+  for (var i = 0; i < questions.length; i++) {
+    appendQuestionCard(root, questions[i]);
+  }
+}
+
+function renderThemeMoreButton(olderQuestions, displayCount) {
+  var existing = document.getElementById("themeMoreWrap");
+  if (existing) {
+    existing.remove();
+  }
+  if (!olderQuestions || !olderQuestions.length) {
+    return;
+  }
+
+  var main = document.getElementById("questionList");
+  if (!main || !main.parentNode) {
+    return;
+  }
+
+  var wrap = document.createElement("div");
+  wrap.id = "themeMoreWrap";
+  wrap.className = "theme-more-wrap";
+
+  var btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "theme-more-btn";
+  btn.textContent = "もっと見る（あと" + olderQuestions.length + "問）";
+  btn.addEventListener("click", function () {
+    appendQuestions(olderQuestions);
+    wrap.remove();
+    setStatus(displayCount + " 問");
+  });
+  wrap.appendChild(btn);
+  main.parentNode.insertBefore(wrap, main.nextSibling);
+}
+
+function getSiteIndexTitle() {
+  var body = document.body;
+  if (body && body.getAttribute("data-index-title")) {
+    return body.getAttribute("data-index-title");
+  }
+  var h1 = document.querySelector(".page-header h1");
+  if (h1 && h1.textContent.trim()) {
+    return h1.textContent.trim();
+  }
+  return "重要テーマ";
+}
+
+function applySiteBrandRuby() {
+  var brand = document.querySelector(".site-brand");
+  if (brand) {
+    /* 1行目はルビなし。狭い画面でも省略せず全文を出す */
+    brand.setAttribute("aria-label", "介護福祉士国家試験対策");
+    brand.textContent = "介護福祉士国家試験対策";
+  }
+}
+
+function bootIndex() {
+  wireSiteNav();
+  wireRubyToggle();
+  wireAnswerShowToggle();
+  wireBackToTop();
+  setStatus("読み込み中…");
+  loadRubyThen(function () {
+    applySiteBrandRuby();
+    var h1 = document.querySelector(".page-header h1");
+    if (h1) fillWithRuby(h1, getSiteIndexTitle());
+    fetch("index.json?_t=" + Date.now())
+      .then(function (res) {
+        if (!res.ok) throw new Error("index.json の読み込みに失敗しました");
+        return res.json();
+      })
+      .then(renderThemeIndex)
+      .catch(function (err) {
+        showError(err && err.message ? err.message : "読み込みに失敗しました");
+      });
+  });
+}
+
+function getThemeSlugFromUrl() {
+  try {
+    var params = new URLSearchParams(window.location.search);
+    return String(params.get("t") || "").trim();
+  } catch (e) {
+    return "";
+  }
+}
+
+function bootView() {
+  wireSiteNav();
+  wireRubyToggle();
+  wireAnswerShowToggle();
+  wireBackToTop();
+  setStatus("読み込み中…");
+  var slug = getThemeSlugFromUrl();
+  if (!slug) {
+    showError("テーマが指定されていません。一覧から選んでください。");
+    return;
+  }
+  loadRubyThen(function () {
+    applySiteBrandRuby();
+    fetch("data/" + encodeURIComponent(slug) + ".json?_t=" + Date.now())
+      .then(function (res) {
+        if (!res.ok) throw new Error("テーマデータの読み込みに失敗しました");
+        return res.json();
+      })
+      .then(function (payload) {
+        var title = tightenThemeIndexSpacing(payload.title || "重要テーマ");
+        document.title = title;
+        var h1 = document.getElementById("themeTitle");
+        if (h1) {
+          h1.textContent = "";
+          fillWithRuby(h1, title);
+        }
+        var questions = payload.questions || [];
+        var parts = partitionThemeQuestions(
+          questions,
+          payload.recentSessionMin,
+          payload.recentSessionMax,
+          !!payload.showAllInOrder
+        );
+        var displayCount =
+          payload.displayCount != null
+            ? payload.displayCount
+            : parts.initial.length;
+        setStatus(displayCount + " 問");
+        setActiveHighlightTerms([]);
+        renderQuestions(parts.initial);
+        renderThemeMoreButton(parts.older, displayCount);
+        if (payload.missing && payload.missing.length) {
+          console.warn("欠番", payload.missing);
+        }
+      })
+      .catch(function (err) {
+        showError(err && err.message ? err.message : "読み込みに失敗しました");
+      });
+  });
+}
+
+function getKoryakuPageConfig() {
+  var body = document.body;
+  return {
+    key: (body && body.getAttribute("data-koryaku-key")) || "kaigo-hoken",
+    title:
+      (body && body.getAttribute("data-koryaku-title")) || "介護保険法攻略",
+    json:
+      (body && body.getAttribute("data-koryaku-json")) ||
+      "data/koryaku-kaigo-hoken.json"
+  };
+}
+
+function appendKoryakuCard(parent, item) {
+  if (item && item.missing) {
+    var missing = document.createElement("article");
+    missing.className = "koryaku-card is-missing";
+    var mid = document.createElement("p");
+    mid.className = "koryaku-id";
+    mid.textContent = "【" + (item.id || "") + "】";
+    missing.appendChild(mid);
+    var mp = document.createElement("p");
+    mp.textContent = "問題データなし";
+    missing.appendChild(mp);
+    parent.appendChild(missing);
+    return;
+  }
+
+  var card = document.createElement("article");
+  card.className = "koryaku-card is-tappable";
+  card.setAttribute("role", "button");
+  card.setAttribute("aria-expanded", "false");
+  card.tabIndex = 0;
+
+  var idRow = document.createElement("p");
+  idRow.className = "koryaku-id";
+  var idLink = document.createElement("a");
+  idLink.className = "koryaku-id-link";
+  idLink.href = item.href || "#";
+  idLink.textContent = "【" + item.id + "｜" + (item.subject || "") + "】";
+  idLink.addEventListener("click", function (ev) {
+    ev.stopPropagation();
+  });
+  idRow.appendChild(idLink);
+  card.appendChild(idRow);
+
+  var bodyWrap = document.createElement("div");
+  bodyWrap.className = "koryaku-problem";
+  var parts = item.body || [];
+  for (var i = 0; i < parts.length; i++) {
+    var p = document.createElement("p");
+    p.className = "koryaku-problem-p";
+    fillWithRuby(p, parts[i]);
+    bodyWrap.appendChild(p);
+  }
+  card.appendChild(bodyWrap);
+
+  // 注釈は問題側（重要テーマと同じ）。◯解説には混ぜない。
+  if (item.note) {
+    var note = document.createElement("p");
+    note.className = "koryaku-note";
+    fillWithRuby(note, item.note);
+    card.appendChild(note);
+  }
+
+  var ans = document.createElement("div");
+  ans.className = "koryaku-answer";
+  var ansMain = document.createElement("div");
+  ansMain.className = "koryaku-answer-main";
+  var ansLabel = document.createElement("span");
+  ansLabel.className = "koryaku-answer-label";
+  ansLabel.textContent = "正解";
+  ansMain.appendChild(ansLabel);
+  var ansText = document.createElement("span");
+  ansText.className = "koryaku-answer-text";
+  fillWithRuby(ansText, item.answer || "");
+  ansMain.appendChild(ansText);
+  ans.appendChild(ansMain);
+  var ansChevron = document.createElement("span");
+  ansChevron.className = "koryaku-answer-chevron";
+  ansChevron.setAttribute("aria-hidden", "true");
+  ansChevron.textContent = "›";
+  ans.appendChild(ansChevron);
+  card.appendChild(ans);
+
+  var explain = document.createElement("div");
+  explain.className = "koryaku-explain";
+  explain.hidden = true;
+  var exHead = document.createElement("p");
+  exHead.className = "koryaku-explain-head";
+  exHead.textContent = "解説";
+  explain.appendChild(exHead);
+  var exBody = document.createElement("p");
+  exBody.className = "koryaku-explain-body";
+  fillWithRuby(exBody, item.explain || "解説がありません。");
+  explain.appendChild(exBody);
+  card.appendChild(explain);
+
+  function toggle() {
+    var open = card.classList.toggle("is-open");
+    card.setAttribute("aria-expanded", open ? "true" : "false");
+    explain.hidden = !open;
+  }
+  card.addEventListener("click", toggle);
+  card.addEventListener("keydown", function (ev) {
+    if (ev.key === "Enter" || ev.key === " ") {
+      ev.preventDefault();
+      toggle();
+    }
+  });
+
+  parent.appendChild(card);
+}
+
+function ensureKoryakuNowBar() {
+  var bar = document.getElementById("koryakuNow");
+  if (bar) return bar;
+  var main = document.querySelector(".koryaku-main");
+  if (!main) return null;
+  bar = document.createElement("div");
+  bar.id = "koryakuNow";
+  bar.className = "koryaku-now";
+  bar.hidden = true;
+  bar.setAttribute("aria-live", "polite");
+  var label = document.createElement("span");
+  label.className = "koryaku-now-label";
+  label.textContent = "いま学習中";
+  bar.appendChild(label);
+  var name = document.createElement("span");
+  name.className = "koryaku-now-name";
+  name.id = "koryakuNowName";
+  bar.appendChild(name);
+  main.insertBefore(bar, main.firstChild);
+  return bar;
+}
+
+function setKoryakuCurrent(sectionEl) {
+  var bar = ensureKoryakuNowBar();
+  var nameEl = document.getElementById("koryakuNowName");
+  var toc = document.getElementById("koryakuToc");
+  var links = toc ? toc.querySelectorAll(".koryaku-toc-link") : [];
+  for (var i = 0; i < links.length; i++) {
+    links[i].classList.remove("is-current");
+  }
+  if (!sectionEl) {
+    if (bar) bar.hidden = true;
+    return;
+  }
+  var theme =
+    sectionEl.getAttribute("data-theme") ||
+    sectionEl.getAttribute("aria-label") ||
+    "";
+  if (bar && nameEl) {
+    bar.hidden = false;
+    fillWithRuby(nameEl, theme);
+  }
+  var idx = sectionEl.id && sectionEl.id.indexOf("sec-") === 0
+    ? sectionEl.id.slice(4)
+    : "";
+  if (toc && idx) {
+    var link = toc.querySelector('.koryaku-toc-link[data-sec="' + idx + '"]');
+    if (link) link.classList.add("is-current");
+  }
+}
+
+function updateKoryakuCurrentFromScroll() {
+  var sections = document.querySelectorAll(".koryaku-section.is-open");
+  if (!sections.length) {
+    setKoryakuCurrent(null);
+    return;
+  }
+  var bar = document.getElementById("koryakuNow");
+  var marker = bar && !bar.hidden ? bar.getBoundingClientRect().bottom + 8 : 72;
+  var current = null;
+  for (var i = 0; i < sections.length; i++) {
+    var rect = sections[i].getBoundingClientRect();
+    if (rect.top <= marker && rect.bottom > marker + 40) {
+      current = sections[i];
+    }
+  }
+  if (!current) {
+    // 画面内でいちばん上にある開いたカテゴリー
+    for (var j = 0; j < sections.length; j++) {
+      var r = sections[j].getBoundingClientRect();
+      if (r.bottom > marker) {
+        current = sections[j];
+        break;
+      }
+    }
+  }
+  if (!current) current = sections[sections.length - 1];
+  setKoryakuCurrent(current);
+}
+
+function wireKoryakuScrollSpy() {
+  if (window.__koryakuScrollWired) return;
+  window.__koryakuScrollWired = true;
+  var ticking = false;
+  window.addEventListener(
+    "scroll",
+    function () {
+      if (ticking) return;
+      ticking = true;
+      window.requestAnimationFrame(function () {
+        ticking = false;
+        updateKoryakuCurrentFromScroll();
+      });
+    },
+    { passive: true }
+  );
+}
+
+function appendKoryakuSection(root, section, index) {
+  var theme = section.theme || "カテゴリー";
+  var items = section.items || [];
+  /* リロード・ページ遷移では閉じた状態から（開閉は画面内のみ） */
+  var open = false;
+  var panelId = "koryaku-panel-" + index;
+
+  var sectionEl = document.createElement("section");
+  sectionEl.className = "koryaku-section theme-group" + (open ? " is-open" : "");
+  sectionEl.id = "sec-" + index;
+  sectionEl.setAttribute("aria-label", theme);
+  sectionEl.setAttribute("data-theme", theme);
+
+  var toggle = document.createElement("button");
+  toggle.type = "button";
+  toggle.className = "theme-group-toggle koryaku-section-toggle";
+  toggle.setAttribute("aria-expanded", open ? "true" : "false");
+  toggle.setAttribute("aria-controls", panelId);
+
+  var chevron = document.createElement("span");
+  chevron.className = "theme-group-chevron";
+  chevron.setAttribute("aria-hidden", "true");
+  chevron.textContent = "›";
+  toggle.appendChild(chevron);
+
+  var textWrap = document.createElement("span");
+  textWrap.className = "theme-group-toggle-text";
+  var h2 = document.createElement("span");
+  h2.className = "theme-group-title";
+  fillWithRuby(h2, theme);
+  textWrap.appendChild(h2);
+  var gmeta = document.createElement("span");
+  gmeta.className = "theme-group-meta";
+  gmeta.textContent = items.length + " 問";
+  textWrap.appendChild(gmeta);
+  toggle.appendChild(textWrap);
+  sectionEl.appendChild(toggle);
+
+  var list = document.createElement("div");
+  list.className = "koryaku-cards";
+  list.id = panelId;
+  list.hidden = !open;
+  for (var i = 0; i < items.length; i++) {
+    appendKoryakuCard(list, items[i]);
+  }
+  sectionEl.appendChild(list);
+
+  toggle.addEventListener("click", function () {
+    var next = !sectionEl.classList.contains("is-open");
+    sectionEl.classList.toggle("is-open", next);
+    toggle.setAttribute("aria-expanded", next ? "true" : "false");
+    list.hidden = !next;
+    if (next) {
+      setKoryakuCurrent(sectionEl);
+    } else {
+      updateKoryakuCurrentFromScroll();
+    }
+  });
+
+  root.appendChild(sectionEl);
+}
+
+function renderKoryaku(payload) {
+  var body = document.getElementById("koryakuBody");
+  if (!body) return;
+  ensureKoryakuNowBar();
+  body.textContent = "";
+  var sections = (payload && payload.sections) || [];
+  var total = payload && payload.count != null ? payload.count : 0;
+  setStatus("正解マップ · 全 " + total + " 問");
+
+  if (!sections.length) {
+    var empty = document.createElement("p");
+    empty.className = "hint";
+    empty.textContent = "データがありません。";
+    body.appendChild(empty);
+    setKoryakuCurrent(null);
+    return;
+  }
+
+  for (var i = 0; i < sections.length; i++) {
+    appendKoryakuSection(body, sections[i], i + 1);
+  }
+
+  wireKoryakuScrollSpy();
+  updateKoryakuCurrentFromScroll();
+}
+
+function bootKoryaku() {
+  wireSiteNav();
+  wireRubyToggle();
+  wireAnswerShowToggle();
+  wireBackToTop();
+  setStatus("読み込み中…");
+  var cfg = getKoryakuPageConfig();
+  loadRubyThen(function () {
+    applySiteBrandRuby();
+    var h1 = document.querySelector(".page-header h1");
+    if (h1) fillWithRuby(h1, cfg.title);
+    fetch(cfg.json + "?_t=" + Date.now())
+      .then(function (res) {
+        if (!res.ok) throw new Error("攻略データの読み込みに失敗しました");
+        return res.json();
+      })
+      .then(renderKoryaku)
+      .catch(function (err) {
+        var body = document.getElementById("koryakuBody");
+        if (body) {
+          body.textContent = "";
+          var p = document.createElement("p");
+          p.className = "error";
+          p.textContent = err && err.message ? err.message : "読み込みに失敗しました";
+          body.appendChild(p);
+        }
+      });
+  });
+}
+
+/* 既存 DOM のテキストノードに語彙ルビを付与（比較表の strong / br を壊さない） */
+function applyRubyToTextNodes(root) {
+  if (!root) {
+    return;
+  }
+  var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+    acceptNode: function (node) {
+      var p = node.parentNode;
+      if (!p || !p.closest) {
+        return NodeFilter.FILTER_REJECT;
+      }
+      if (
+        p.closest("ruby") ||
+        p.closest(".vocab-ruby-run") ||
+        p.closest(".ruby-pair") ||
+        p.closest(".hikaku-qid") ||
+        p.closest("button")
+      ) {
+        return NodeFilter.FILTER_REJECT;
+      }
+      return NodeFilter.FILTER_ACCEPT;
+    }
+  });
+  var nodes = [];
+  while (walker.nextNode()) {
+    nodes.push(walker.currentNode);
+  }
+  for (var i = 0; i < nodes.length; i++) {
+    var node = nodes[i];
+    var text = node.nodeValue;
+    if (!text || !/\S/.test(text)) {
+      continue;
+    }
+    var parent = node.parentNode;
+    if (!parent) {
+      continue;
+    }
+    var wrap = document.createElement("span");
+    appendTextWithVocabularyRuby(wrap, text);
+    while (wrap.firstChild) {
+      parent.insertBefore(wrap.firstChild, node);
+    }
+    parent.removeChild(node);
+  }
+}
+
+var hikakuQuestionIndex = null;
+
+function appendHikakuQuestionCard(parent, item) {
+  if (!item || item.missing) {
+    var missing = document.createElement("article");
+    missing.className = "koryaku-card is-missing";
+    var mid = document.createElement("p");
+    mid.className = "koryaku-id";
+    mid.textContent = "【" + ((item && item.id) || "") + "】";
+    missing.appendChild(mid);
+    var mp = document.createElement("p");
+    mp.textContent = "この比較表用データに問題がありません。";
+    missing.appendChild(mp);
+    parent.appendChild(missing);
+    return null;
+  }
+  var parts = String(item.id || "").split("-");
+  var q = {
+    id: item.id,
+    round: item.round != null ? item.round : parts[0],
+    number: item.number != null ? item.number : parts[1],
+    subject: item.subject || "",
+    body: item.body || [],
+    choices: item.choices || [],
+    answers: item.answers || [],
+    explains: item.explains || {},
+    note: item.note || "",
+    figures: item.figures || [],
+    choiceFigures: item.choiceFigures || {}
+  };
+  return appendQuestionCard(parent, q);
+}
+
+function closeHikakuModal() {
+  var modal = document.getElementById("hikakuModal");
+  if (!modal) {
+    return;
+  }
+  modal.hidden = true;
+  document.body.classList.remove("hikaku-modal-open");
+  var body = document.getElementById("hikakuModalBody");
+  if (body) {
+    body.textContent = "";
+  }
+}
+
+function openHikakuModal(qid) {
+  var modal = document.getElementById("hikakuModal");
+  var body = document.getElementById("hikakuModalBody");
+  var title = document.getElementById("hikakuModalTitle");
+  if (!modal || !body) {
+    return;
+  }
+  body.textContent = "";
+  var item =
+    hikakuQuestionIndex && hikakuQuestionIndex[qid]
+      ? hikakuQuestionIndex[qid]
+      : { id: qid, missing: true };
+  if (title) {
+    fillWithRuby(title, "【" + qid + "】");
+  }
+  appendHikakuQuestionCard(body, item);
+  modal.hidden = false;
+  document.body.classList.add("hikaku-modal-open");
+  body.scrollTop = 0;
+  var closeBtn = modal.querySelector(".hikaku-modal-close");
+  if (closeBtn) {
+    closeBtn.focus();
+  }
+}
+
+function wireHikakuModal() {
+  var modal = document.getElementById("hikakuModal");
+  if (!modal) {
+    return;
+  }
+  modal.addEventListener("click", function (ev) {
+    var t = ev.target;
+    if (t && t.getAttribute && t.getAttribute("data-hikaku-close") != null) {
+      closeHikakuModal();
+    }
+  });
+  document.addEventListener("keydown", function (ev) {
+    if (ev.key === "Escape" && modal && !modal.hidden) {
+      closeHikakuModal();
+    }
+  });
+  var main = document.querySelector(".hikaku-main");
+  if (main) {
+    main.addEventListener("click", function (ev) {
+      var btn = ev.target && ev.target.closest ? ev.target.closest(".hikaku-qid") : null;
+      if (!btn) {
+        return;
+      }
+      ev.preventDefault();
+      var round = btn.getAttribute("data-round");
+      var number = btn.getAttribute("data-number");
+      if (!round || !number) {
+        return;
+      }
+      openHikakuModal(String(round) + "-" + String(number));
+    });
+  }
+}
+
+function bootHikaku() {
+  wireSiteNav();
+  wireRubyToggle();
+  wireAnswerShowToggle();
+  wireBackToTop();
+  wireHikakuModal();
+  loadRubyThen(function () {
+    applySiteBrandRuby();
+    var h1 = document.querySelector(".page-header h1");
+    if (h1) {
+      fillWithRuby(h1, h1.textContent || "");
+    }
+    var status = document.querySelector(".page-header .search-status");
+    if (status) {
+      fillWithRuby(status, status.textContent || "");
+    }
+    applyRubyToTextNodes(document.querySelector(".hikaku-main"));
+    fetch("data/hikaku-kaigo-shogai.json?_t=" + Date.now())
+      .then(function (res) {
+        if (!res.ok) {
+          throw new Error("比較表データの読み込みに失敗しました");
+        }
+        return res.json();
+      })
+      .then(function (payload) {
+        hikakuQuestionIndex = (payload && payload.items) || {};
+      })
+      .catch(function () {
+        hikakuQuestionIndex = {};
+      });
+  });
+}
+
+function boot() {
+  if (document.body.classList.contains("koryaku-page")) {
+    bootKoryaku();
+    return;
+  }
+  if (document.body.classList.contains("hikaku-page")) {
+    bootHikaku();
+    return;
+  }
+  if (document.body.classList.contains("themes-index")) {
+    bootIndex();
+    return;
+  }
+  if (document.body.classList.contains("themes-view")) {
+    bootView();
+    return;
+  }
+}
+
+boot();

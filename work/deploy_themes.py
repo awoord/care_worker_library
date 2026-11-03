@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""重要テーマ・付録過去問を /kaigo/kakomon/themes/ と /appendix/ に公開する。
+"""重要テーマ・参考テーマ・付録過去問を公開する。
 
-- 入力: work/theme_extract/（重要テーマ）、work/appendix_extract/（付録）
+- 入力: work/theme_extract/（重要テーマ）、work/part_extract/{A,B,C}/（各パート）、work/reference_extract/（参考テーマ）、work/appendix_extract/（付録）
 - ファイル名（拡張子除く）→ ページ見出し
 - 本文の 【回-番号｜…】 → questions.json から問題を抽出
 - 表示は kakomon と同じカード形式（style / ルビ / 正誤UI）
 
 使い方:
-  python3 kaigo/kakomon/themes/deploy_themes.py           # 生成＋FTP
-  python3 kaigo/kakomon/themes/deploy_themes.py --build-only
+  python3 work/deploy_themes.py           # 生成＋FTP
+  python3 work/deploy_themes.py --build-only
 """
 
 from __future__ import annotations
@@ -25,11 +25,14 @@ from copy import deepcopy
 from ftplib import FTP_TLS
 from pathlib import Path
 
-THEMES_DIR = Path(__file__).resolve().parent
-KAKOMON_DIR = THEMES_DIR.parent
+ROOT = Path(__file__).resolve().parent.parent
+KAKOMON_DIR = ROOT / "kaigo" / "kakomon"
+THEMES_DIR = KAKOMON_DIR / "themes"
 APPENDIX_DIR = KAKOMON_DIR / "appendix"
-ROOT = KAKOMON_DIR.parent.parent
+REFERENCE_DIR = KAKOMON_DIR / "reference"
 THEME_SRC_DIR = ROOT / "work" / "theme_extract"
+PART_SRC_DIR = ROOT / "work" / "part_extract"
+REFERENCE_SRC_DIR = ROOT / "work" / "reference_extract"
 APPENDIX_SRC_DIR = ROOT / "work" / "appendix_extract"
 QUESTIONS_JSON = KAKOMON_DIR / "questions.json"
 
@@ -39,8 +42,47 @@ FTP_PASS = "highway#61"
 REMOTE_BASE_DIR = "/public_html/nihongo.site"
 REMOTE_THEMES_DIR = f"{REMOTE_BASE_DIR}/kaigo/kakomon/themes"
 REMOTE_APPENDIX_DIR = f"{REMOTE_BASE_DIR}/kaigo/kakomon/appendix"
+REMOTE_REFERENCE_DIR = f"{REMOTE_BASE_DIR}/kaigo/kakomon/reference"
 PUBLIC_THEMES_URL = "https://nihongo.site/kaigo/kakomon/themes/"
 PUBLIC_APPENDIX_URL = "https://nihongo.site/kaigo/kakomon/appendix/"
+PUBLIC_REFERENCE_URL = "https://nihongo.site/kaigo/kakomon/reference/"
+# 国家試験のパート（出題順）。元ファイルは work/part_extract/{A,B,C}/。
+PART_SITES = [
+    {
+        "key": "a",
+        "folder": "A",
+        "label": "Aパート",
+        "groups": [
+            "人間の尊厳と自立",
+            "介護の基本",
+            "社会の理解",
+            "人間関係とコミュニケーション",
+            "コミュニケーション技術",
+            "生活支援技術",
+        ],
+        "ungrouped": [],
+    },
+    {
+        "key": "b",
+        "folder": "B",
+        "label": "Bパート",
+        "groups": [
+            "こころとからだのしくみ",
+            "発達と老化の理解",
+            "認知症の理解",
+            "障害の理解",
+            "医療的ケア",
+        ],
+        "ungrouped": [],
+    },
+    {
+        "key": "c",
+        "folder": "C",
+        "label": "Cパート",
+        "groups": ["介護過程"],
+        "ungrouped": ["総合問題"],
+    },
+]
 
 # 初期表示する直近回（見出しの問題数もこの範囲）
 RECENT_SESSION_MIN = 34
@@ -53,22 +95,24 @@ SHOW_ALL_IN_ORDER_TITLES = frozenset({"過去問の再利用", "同じ問題"})
 # 一覧の親グループ（見出し）→ 子テーマ（.txt の stem）。
 # 空ならすべてフラット。括弧短縮ラベルはグループ内の子だけに使う。
 # 親グループの並びは build_grouped_index で問数（count）降順に並べ替える。
-# 子テーマの並びは各グループ内の定義順（頻出順を推奨）。
+# 子テーマの並びは各グループ内の定義順。
+# 介護保険法・障害者総合支援法以外は、直近5年（第34〜38回）の多い順。
+# 同数は全問数の多い順。それも同じなら前の並び。
 THEME_GROUPS: list[tuple[str, list[str]]] = [
     (
         "生活支援技術",
         [
-            "生活支援技術（食事）",
-            "生活支援技術（移動・体位）",
-            "生活支援技術（排泄）",
-            "生活支援技術（入浴・清潔・整容）",
-            "生活支援技術（障害・認知症への配慮）",
-            "生活支援技術（終末期・看取り）",
-            "生活支援技術（着脱・衣類）",
-            "生活支援技術（基本・自立支援）",
-            "生活支援技術（睡眠・休息）",
-            "生活支援技術（住環境・福祉用具）",
-            "生活支援技術（家事・生活管理）",
+            "生活支援技術（1　生活支援の理解）",
+            "生活支援技術（2　自立に向けた居住環境の整備）",
+            "生活支援技術（3　自立に向けた移動の介護）",
+            "生活支援技術（4　自立に向けた身じたくの介護）",
+            "生活支援技術（5　自立に向けた食事の介護）",
+            "生活支援技術（6　自立に向けた入浴・清潔保持の介護）",
+            "生活支援技術（7　自立に向けた排泄の介護）",
+            "生活支援技術（8　自立に向けた家事の介護）",
+            "生活支援技術（9　休息・睡眠の介護）",
+            "生活支援技術（10　人生の最終段階における介護）",
+            "生活支援技術（11　福祉用具の意義と活用）",
         ],
     ),
     (
@@ -77,12 +121,12 @@ THEME_GROUPS: list[tuple[str, list[str]]] = [
             "人体のしくみ（消化・嚥下・栄養）",
             "人体のしくみ（脳・神経）",
             "人体のしくみ（感覚器）",
-            "人体のしくみ（運動器・姿勢）",
-            "人体のしくみ（睡眠・体温・リズム）",
             "人体のしくみ（呼吸）",
+            "人体のしくみ（運動器・姿勢）",
             "人体のしくみ（老化・恒常性・知能）",
-            "人体のしくみ（排泄）",
+            "人体のしくみ（睡眠・体温・リズム）",
             "人体のしくみ（皮膚）",
+            "人体のしくみ（排泄）",
             "人体のしくみ（終末期の身体）",
             "人体のしくみ（循環）",
         ],
@@ -90,54 +134,69 @@ THEME_GROUPS: list[tuple[str, list[str]]] = [
     (
         "介護保険法",
         [
-            "介護保険（理念）",
-            "介護保険（保険者・被保険者）",
-            "介護保険（財源・負担）",
-            "介護保険（認定・利用）",
-            "介護保険（地域包括）",
-            "介護保険（指定・人員）",
-            "介護保険（会議・計画）",
-            "介護保険（訪問・通所・短期入所サービス）",
-            "介護保険（共同生活・施設サービス）",
-            "介護保険（福祉用具サービス）",
+            "介護保険（1　理念）",
+            "介護保険（2　保険者・被保険者）",
+            "介護保険（3　財源・負担）",
+            "介護保険（4　認定・利用）",
+            "介護保険（5　地域包括）",
+            "介護保険（6　指定・人員）",
+            "介護保険（7　会議・計画）",
+            "介護保険（8　訪問・通所・短期入所サービス）",
+            "介護保険（9　共同生活・施設サービス）",
+            "介護保険（10　福祉用具サービス）",
         ],
     ),
     (
         "医療的ケア",
         [
-            "喀痰吸引",
-            "経管栄養",
+            "医療的ケア（1　医療的ケア実施の基礎）",
+            "医療的ケア（2　喀痰吸引（基礎的知識・実施手順））",
+            "医療的ケア（3　経管栄養（基礎的知識・実施手順））",
         ],
     ),
     (
         "障害者総合支援法",
         [
-            "障害者総合支援法（定義・改正）",
-            "障害者総合支援法（機関・体制）",
-            "障害者総合支援法（認定・申請）",
-            "障害者総合支援法（負担・給付）",
-            "障害者総合支援法（相談支援）",
-            "障害者総合支援法（訪問・移動サービス）",
-            "障害者総合支援法（通所・居住・就労サービス）",
-            "障害者総合支援法（補装具サービス）",
+            "障害者総合支援法（1　定義・改正）",
+            "障害者総合支援法（2　機関・体制）",
+            "障害者総合支援法（3　認定・申請）",
+            "障害者総合支援法（4　負担・給付）",
+            "障害者総合支援法（5　相談支援）",
+            "障害者総合支援法（6　訪問・移動サービス）",
+            "障害者総合支援法（7　通所・居住・就労サービス）",
+            "障害者総合支援法（8　補装具サービス）",
         ],
     ),
     (
         "法律",
         [
-            # 直近5年（第34〜38回）の多い順。同数は前の並び
             "法律（障害者虐待防止法・高齢者虐待防止法）",
+            "法律（成年後見制度）",
             "法律（社会福祉士及び介護福祉士法）",
             "法律（社会福祉法）",
             "法律（障害者差別解消法）",
+            "法律（生活保護法）",
             "法律（生活困窮者自立支援法）",
+        ],
+    ),
+    (
+        "コミュニケーション",
+        [
+            "コミュニケーション（技術）",
+            "コミュニケーション（人間関係）",
+        ],
+    ),
+    (
+        "介護過程",
+        [
+            "介護過程（1　介護過程の意義と基礎的理解）",
+            "介護過程（2　介護過程とチームアプローチ）",
+            "介護過程（3　介護過程の展開の理解）",
         ],
     ),
     (
         "福祉の関連人物",
         [
-            # 直近5年（第34〜38回）の多い順。同数は提案順
-            "福祉の関連人物（その他）",
             "福祉の関連人物（福祉思想の人物）",
             "福祉の関連人物（マズロー）",
             "福祉の関連人物（キューブラー・ロス）",
@@ -147,28 +206,142 @@ THEME_GROUPS: list[tuple[str, list[str]]] = [
     (
         "利用者本位・自立支援",
         [
-            # 先に原則、そのあと場面
-            "利用者本位・自立支援（原則）",
             "利用者本位・自立支援（場面）",
+            "利用者本位・自立支援（原則）",
+        ],
+    ),
+    (
+        "認知症",
+        [
+            "中核症状・行動心理症状",
+            "アルツハイマー型認知症",
+            "レビー小体型認知症",
+            "若年性認知症",
+            "慢性硬膜下血腫・正常圧水頭症",
+            "認知症のリスク",
+        ],
+    ),
+    (
+        "疾患・障害",
+        [
+            "パーキンソン病",
+            "筋萎縮性側索硬化症（ALS）",
+            "脳性麻痺",
+            "自閉症スペクトラム障害",
+            "脊髄損傷（頸髄損傷・腰髄損傷）",
+            "糖尿病・糖尿病性合併症",
+            "統合失調症",
+            "うつ病・抑うつ状態",
+            "学習障害・注意欠如多動症",
+            "強度行動障害",
+        ],
+    ),
+    (
+        "人間の尊厳と自立",
+        [
+            "人間の尊厳と自立（1　人間の尊厳と人権・福祉理念）",
+            "人間の尊厳と自立（2　自立の概念）",
+        ],
+    ),
+    (
+        "介護の基本",
+        [
+            "介護の基本（1　介護福祉の基本となる理念）",
+            "介護の基本（2　介護福祉士の役割と機能）",
+            "介護の基本（3　介護福祉士の倫理）",
+            "介護の基本（4　自立に向けた介護）",
+            "介護の基本（5　介護を必要とする人の理解）",
+            "介護の基本（6　介護を必要とする人の生活を支えるしくみ）",
+            "介護の基本（7　協働する多職種の役割と機能）",
+            "介護の基本（8　介護における安全の確保とリスクマネジメント）",
+            "介護の基本（9　介護従事者の安全）",
+        ],
+    ),
+    (
+        "社会の理解",
+        [
+            "社会の理解（1　社会と生活のしくみ）",
+            "社会の理解（2　地域共生社会の実現に向けた制度や施策）",
+            "社会の理解（3　社会保障制度）",
+            "社会の理解（4　高齢者福祉と介護保険制度）",
+            "社会の理解（5　障害者福祉と障害者保健福祉制度）",
+            "社会の理解（6　介護実践に関連する諸制度）",
+        ],
+    ),
+    (
+        "人間関係とコミュニケーション",
+        [
+            "人間関係とコミュニケーション（1　人間関係の形成とコミュニケーションの基礎）",
+            "人間関係とコミュニケーション（2　チームマネジメント）",
+        ],
+    ),
+    (
+        "コミュニケーション技術",
+        [
+            "コミュニケーション技術（1　介護を必要とする人とのコミュニケーション）",
+            "コミュニケーション技術（2　介護場面における家族とのコミュニケーション）",
+            "コミュニケーション技術（3　障害の特性に応じたコミュニケーション）",
+            "コミュニケーション技術（4　介護におけるチームのコミュニケーション）",
+        ],
+    ),
+    (
+        "発達と老化の理解",
+        [
+            "発達と老化の理解（1　人間の成長と発達の基礎的理解）",
+            "発達と老化の理解（2　老化に伴うこころとからだの変化と生活）",
+        ],
+    ),
+    (
+        "認知症の理解",
+        [
+            "認知症の理解（1　認知症を取り巻く状況）",
+            "認知症の理解（2　認知症の医学的・心理的側面の基礎的理解）",
+            "認知症の理解（3　認知症に伴う生活への影響と認知症ケア）",
+            "認知症の理解（4　連携と協働）",
+            "認知症の理解（5　家族への支援）",
+        ],
+    ),
+    (
+        "障害の理解",
+        [
+            "障害の理解（1　障害の基礎的理解）",
+            "障害の理解（2　障害の医学的・心理的側面の基礎的理解）",
+            "障害の理解（3　障害のある人の生活と障害の特性に応じた支援）",
+            "障害の理解（4　連携と協働）",
+            "障害の理解（5　家族への支援）",
+        ],
+    ),
+    (
+        "こころとからだのしくみ",
+        [
+            "こころとからだのしくみ（1　こころのしくみの理解）",
+            "こころとからだのしくみ（2　からだのしくみの理解）",
+            "こころとからだのしくみ（3　移動に関連したこころとからだのしくみ）",
+            "こころとからだのしくみ（4　身じたくに関連したこころとからだのしくみ）",
+            "こころとからだのしくみ（5　食事に関連したこころとからだのしくみ）",
+            "こころとからだのしくみ（6　入浴・清潔保持に関連したこころとからだのしくみ）",
+            "こころとからだのしくみ（7　排泄に関連したこころとからだのしくみ）",
+            "こころとからだのしくみ（8　休息・睡眠に関連したこころとからだのしくみ）",
+            "こころとからだのしくみ（9　人生の最終段階のケアに関連したこころとからだのしくみ）",
         ],
     ),
 ]
 
 RE_QID = re.compile(r"【\s*(\d+)\s*-\s*(\d+)")
 RE_GROUP_CHILD_PAREN = re.compile(
-    r"^(?:介護保険|障害者総合支援法|人体のしくみ|生活支援技術|法律|福祉の関連人物|利用者本位・自立支援)（(.+)）$"
+    r"^(?:介護保険|障害者総合支援法|人体のしくみ|生活支援技術|医療的ケア|人間の尊厳と自立|介護の基本|社会の理解|人間関係とコミュニケーション|コミュニケーション技術|発達と老化の理解|認知症の理解|障害の理解|こころとからだのしくみ|法律|福祉の関連人物|利用者本位・自立支援|コミュニケーション|介護過程)（(.+)）$"
 )
 
 # 公開しない作業用テーマ（stem に含まれる文字列）
-THEME_SRC_SKIP_SUBSTRINGS = ("削除問題", "削除検討", "全ての問題", "すべての問題")
+THEME_SRC_SKIP_SUBSTRINGS = ("削除問題", "削除検討", "全ての問題", "すべての問題", "除外", "確認")
 
 
 def short_theme_label(title: str) -> str:
     """グループ内の子用の短い表示名（介護保険（理念）→ 理念）。"""
     m = RE_GROUP_CHILD_PAREN.match(title)
-    if m:
-        return m.group(1)
-    return title
+    text = m.group(1) if m else title
+    # 番号と見出しのあいだの全角スペースを半角に（1　理念 → 1 理念）
+    return re.sub(r"(\d)\u3000", r"\1 ", text)
 
 
 def build_grouped_index(themes: list[dict]) -> tuple[list[dict], list[dict]]:
@@ -229,7 +402,20 @@ HTACCESS_CONTENT = """
 FileETag None
 """
 
-DEPLOY_STATIC = ("index.html", "view.html", "app.js", "style.css", "ruby.json", "themes.css")
+KORYAKU_HTML_FILES = (
+    "koryaku-kaigo-hoken.html",
+    "koryaku-shogai-sogo.html",
+    "hikaku-kaigo-shogai.html",
+)
+DEPLOY_STATIC = (
+    "index.html",
+    "view.html",
+    "app.js",
+    "style.css",
+    "ruby.json",
+    "themes.css",
+    *KORYAKU_HTML_FILES,
+)
 
 
 def make_cache_bust_version() -> str:
@@ -257,12 +443,11 @@ def make_slug(title: str) -> str:
     return digest
 
 
-def list_theme_source_files(*, appendix: bool) -> list[Path]:
-    base = APPENDIX_SRC_DIR if appendix else THEME_SRC_DIR
+def list_theme_source_files(base: Path, *, required: bool) -> list[Path]:
     if not base.is_dir():
-        if appendix:
-            return []
-        raise FileNotFoundError(f"テーマ元フォルダがありません: {THEME_SRC_DIR}")
+        if required:
+            raise FileNotFoundError(f"テーマ元フォルダがありません: {base}")
+        return []
     files = []
     for path in sorted(base.iterdir(), key=lambda p: p.name):
         if not path.is_file():
@@ -400,7 +585,36 @@ def sync_shared_assets(site_dir: Path) -> None:
         shutil.copy2(THEMES_DIR / "app.js", site_dir / "app.js")
 
 
-def build_site(*, site_dir: Path, index_title: str, appendix: bool) -> list[dict]:
+def part_titles(part: dict) -> set[str]:
+    wanted_groups = set(part["groups"])
+    titles = set(part["ungrouped"])
+    for group_title, child_titles in THEME_GROUPS:
+        if group_title in wanted_groups:
+            titles.update(child_titles)
+    return titles
+
+
+def all_part_titles() -> set[str]:
+    """A・B・Cパートに出す科目。重要テーマの一覧からは除く。"""
+    titles: set[str] = set()
+    for part in PART_SITES:
+        titles.update(part_titles(part))
+    return titles
+
+
+def build_site(
+    *,
+    site_dir: Path,
+    index_title: str,
+    src_dir: Path,
+    site_label: str,
+    flat: bool = False,
+    card_low: bool = False,
+    only_titles: set[str] | None = None,
+    exclude_titles: set[str] | None = None,
+    group_order: list[str] | None = None,
+    ungrouped_order: list[str] | None = None,
+) -> list[dict]:
     sync_shared_assets(site_dir)
     data_dir = site_dir / "data"
     data_dir.mkdir(parents=True, exist_ok=True)
@@ -408,12 +622,15 @@ def build_site(*, site_dir: Path, index_title: str, appendix: bool) -> list[dict
         old.unlink()
 
     by_id = load_questions_by_id()
-    if not appendix:
+    if src_dir == THEME_SRC_DIR and only_titles is None:
         regenerate_illustration_theme_txt(by_id)
-    sources = list_theme_source_files(appendix=appendix)
+    sources = list_theme_source_files(src_dir, required=src_dir == THEME_SRC_DIR)
+    if only_titles is not None:
+        sources = [path for path in sources if path.stem in only_titles]
+    if exclude_titles:
+        sources = [path for path in sources if path.stem not in exclude_titles]
     if not sources:
-        label = "付録" if appendix else "重要テーマ"
-        print(f"警告: {label}用 .txt がありません → {THEME_SRC_DIR}")
+        print(f"警告: {site_label}用 .txt がありません → {src_dir}")
 
     themes: list[dict] = []
     for path in sources:
@@ -471,6 +688,7 @@ def build_site(*, site_dir: Path, index_title: str, appendix: bool) -> list[dict
                 "displayCount": display_count,
                 "missingCount": len(missing),
                 "href": f"view.html?t={slug}",
+                **({"cardLow": True} if card_low else {}),
             }
         )
         if show_all:
@@ -484,7 +702,30 @@ def build_site(*, site_dir: Path, index_title: str, appendix: bool) -> list[dict
             msg += f"（欠番 {len(missing)}: {', '.join(missing[:8])}{'…' if len(missing) > 8 else ''}）"
         print(msg)
 
-    groups, ungrouped = build_grouped_index(themes)
+    if group_order is not None:
+        groups, ungrouped = build_grouped_index(themes)
+        by_group = {group["title"]: group for group in groups}
+        missing_groups = [name for name in group_order if name not in by_group]
+        if missing_groups:
+            raise RuntimeError(f"{site_label} に無いグループ: {', '.join(missing_groups)}")
+        groups = [by_group[name] for name in group_order]
+        by_flat = {theme["title"]: theme for theme in ungrouped}
+        wanted_flat = ungrouped_order or []
+        missing_flat = [name for name in wanted_flat if name not in by_flat]
+        if missing_flat:
+            raise RuntimeError(f"{site_label} に無い項目: {', '.join(missing_flat)}")
+        ungrouped = [by_flat[name] for name in wanted_flat]
+    elif flat:
+        themes.sort(
+            key=lambda t: (
+                -int(t.get("displayCount") or 0),
+                -int(t.get("count") or 0),
+                str(t.get("title") or ""),
+            )
+        )
+        groups, ungrouped = [], themes
+    else:
+        groups, ungrouped = build_grouped_index(themes)
     index_payload = {
         "title": index_title,
         "count": len(themes),
@@ -496,7 +737,6 @@ def build_site(*, site_dir: Path, index_title: str, appendix: bool) -> list[dict
         json.dumps(index_payload, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
-    site_label = "付録" if appendix else "重要テーマ"
     print(
         f"[{site_label}] 一覧: {len(themes)} テーマ / グループ {len(groups)} / "
         f"フラット {len(ungrouped)} → {site_dir / 'index.json'}"
@@ -536,7 +776,12 @@ def upload_one_site(
             local_path = html_dir / name
         else:
             local_path = site_dir / name
+        # 攻略ページは重要テーマのみ
+        if name in KORYAKU_HTML_FILES and label != "重要テーマ":
+            continue
         if not local_path.is_file():
+            if name in KORYAKU_HTML_FILES:
+                continue
             raise FileNotFoundError(f"不足: {local_path}")
         if name.endswith(".html"):
             content = prepare_html(local_path.read_text(encoding="utf-8"), version)
@@ -580,6 +825,15 @@ def upload_sites() -> None:
     )
     upload_one_site(
         ftps,
+        site_dir=REFERENCE_DIR,
+        remote_dir=REMOTE_REFERENCE_DIR,
+        public_url=PUBLIC_REFERENCE_URL,
+        html_dir=REFERENCE_DIR,
+        version=version,
+        label="参考テーマ",
+    )
+    upload_one_site(
+        ftps,
         site_dir=APPENDIX_DIR,
         remote_dir=REMOTE_APPENDIX_DIR,
         public_url=PUBLIC_APPENDIX_URL,
@@ -587,7 +841,78 @@ def upload_sites() -> None:
         version=version,
         label="付録",
     )
+    for part in PART_SITES:
+        key = part["key"]
+        upload_one_site(
+            ftps,
+            site_dir=KAKOMON_DIR / f"part-{key}",
+            remote_dir=f"{REMOTE_BASE_DIR}/kaigo/kakomon/part-{key}",
+            public_url=f"https://nihongo.site/kaigo/kakomon/part-{key}/",
+            html_dir=KAKOMON_DIR / f"part-{key}",
+            version=version,
+            label=part["label"],
+        )
     ftps.quit()
+
+
+def build_kaigo_koryaku() -> None:
+    """攻略（正解マップ）HTML/MD/JSON を生成（介護保険・障害者総合支援法）。"""
+    script = ROOT / "work" / "study" / "build_kaigo_koryaku.py"
+    if not script.is_file():
+        print("警告: 攻略の生成スクリプトがありません")
+        return
+    import subprocess
+
+    subprocess.run([sys.executable, str(script)], check=True)
+
+
+def build_hikaku() -> None:
+    """介護保険×障害総合の対応比較表 HTML（比較表セクションのみ）。"""
+    script = ROOT / "work" / "study" / "build_hikaku.py"
+    if not script.is_file():
+        print("警告: 比較表の生成スクリプトがありません")
+        return
+    import subprocess
+
+    subprocess.run([sys.executable, str(script)], check=True)
+
+
+def upload_hikaku_only() -> None:
+    """比較表ページと、一覧導線に必要な themes 静的ファイルだけ FTP。"""
+    version = make_cache_bust_version()
+    ftps = FTP_TLS()
+    ftps.connect(FTP_HOST, 21, timeout=30)
+    ftps.login(FTP_USER, FTP_PASS)
+    ftps.prot_p()
+    ftps.set_pasv(True)
+    ensure_remote_dir(ftps, REMOTE_THEMES_DIR)
+    names = (
+        "hikaku-kaigo-shogai.html",
+        "app.js",
+        "themes.css",
+        "style.css",
+        "ruby.json",
+    )
+    for name in names:
+        local_path = THEMES_DIR / name
+        if not local_path.is_file():
+            raise FileNotFoundError(f"不足: {local_path}")
+        if name.endswith(".html"):
+            content = prepare_html(local_path.read_text(encoding="utf-8"), version)
+            ftps.storbinary(f"STOR {name}", io.BytesIO(content.encode("utf-8")))
+        else:
+            with local_path.open("rb") as f:
+                ftps.storbinary(f"STOR {name}", f)
+        print(f"[比較表] アップロード完了: {name}")
+    ensure_remote_dir(ftps, f"{REMOTE_THEMES_DIR}/data")
+    hikaku_json = THEMES_DIR / "data" / "hikaku-kaigo-shogai.json"
+    if not hikaku_json.is_file():
+        raise FileNotFoundError(f"不足: {hikaku_json}")
+    with hikaku_json.open("rb") as f:
+        ftps.storbinary("STOR hikaku-kaigo-shogai.json", f)
+    print("[比較表] アップロード完了: data/hikaku-kaigo-shogai.json")
+    ftps.quit()
+    print(f"[比較表] 公開URL: {PUBLIC_THEMES_URL}hikaku-kaigo-shogai.html?_cb={version}")
 
 
 def main() -> int:
@@ -597,18 +922,60 @@ def main() -> int:
         action="store_true",
         help="FTPせず JSON と共有アセットだけ生成",
     )
+    parser.add_argument(
+        "--hikaku-only",
+        action="store_true",
+        help="対応比較表だけ生成して FTP（他サイトは触らない）",
+    )
     args = parser.parse_args()
     try:
+        if args.hikaku_only:
+            # 問題カード用に攻略 JSON が必要（なければ生成）
+            need_koryaku = not (THEMES_DIR / "data" / "koryaku-kaigo-hoken.json").is_file() or not (
+                THEMES_DIR / "data" / "koryaku-shogai-sogo.json"
+            ).is_file()
+            if need_koryaku:
+                build_kaigo_koryaku()
+            build_hikaku()
+            if not args.build_only:
+                upload_hikaku_only()
+            return 0
+
         build_site(
             site_dir=THEMES_DIR,
-            index_title="介護福祉士国家試験 重要テーマ",
-            appendix=False,
+            index_title="重要テーマ",
+            src_dir=THEME_SRC_DIR,
+            site_label="重要テーマ",
+            exclude_titles=all_part_titles(),
+        )
+        # data/ 再生成の後に置く（build_site が data/*.json を消すため）
+        build_kaigo_koryaku()
+        build_hikaku()
+        build_site(
+            site_dir=REFERENCE_DIR,
+            index_title="参考テーマ",
+            src_dir=REFERENCE_SRC_DIR,
+            site_label="参考テーマ",
+            flat=True,
+            card_low=True,
         )
         build_site(
             site_dir=APPENDIX_DIR,
-            index_title="介護福祉士国家試験 付録",
-            appendix=True,
+            index_title="付録",
+            src_dir=APPENDIX_SRC_DIR,
+            site_label="付録",
         )
+        for part in PART_SITES:
+            key = part["key"]
+            build_site(
+                site_dir=KAKOMON_DIR / f"part-{key}",
+                index_title=f"{part['label']}",
+                src_dir=PART_SRC_DIR / part["folder"],
+                site_label=part["label"],
+                only_titles=part_titles(part),
+                group_order=part["groups"],
+                ungrouped_order=part["ungrouped"],
+            )
         if not args.build_only:
             upload_sites()
     except Exception as err:

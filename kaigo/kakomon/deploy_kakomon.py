@@ -286,7 +286,7 @@ def build_payload(
     choice_figures_map: dict[str, dict[str, str]] | None = None,
 ) -> dict:
     return {
-        "title": "介護福祉士国家試験 過去問検索",
+        "title": "過去問検索",
         "sessionMin": BUILD_SESSION_MIN,
         "sessionMax": BUILD_SESSION_MAX,
         "defaultFrom": DEFAULT_FROM,

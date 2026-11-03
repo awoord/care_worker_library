@@ -22,7 +22,7 @@
 | やりたいこと | コマンド |
 |--------------|----------|
 | 過去問検索を公開 | `python3 kaigo/kakomon/deploy_kakomon.py` |
-| テーマ過去問を公開 | `python3 kaigo/kakomon/themes/deploy_themes.py` |
+| テーマ過去問を公開 | `python3 work/deploy_themes.py` |
 | ことばテスト版を上げる | `python3 auto_upload.py`（中身は `deploy/auto_upload.py`） |
 | ことば秘密URL | `python3 kaigo/p/deploy_private.py` |
 | ルート本番（J） | `python3 deploy_prod.py` |
@@ -35,11 +35,11 @@ data/kakomon_v2/（全文・現行）
   → kaigo/kakomon/（公開）
 
 work/theme_extract/*.txt
-  → themes/deploy_themes.py
+  → work/deploy_themes.py
   → kaigo/kakomon/themes/（重要テーマ）
 
 work/appendix_extract/*.txt
-  → themes/deploy_themes.py
+  → work/deploy_themes.py
   → kaigo/kakomon/appendix/（付録）
 ```
 

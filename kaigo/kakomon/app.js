@@ -91,7 +91,11 @@ var UI_RUBY_EXTRA = [
   { word: "押す", ruby: "おす" },
   { word: "見る", ruby: "みる" },
   { word: "本位", ruby: "ほんい" },
-  { word: "人体", ruby: "じんたい" }
+  { word: "人体", ruby: "じんたい" },
+  /* 「等」(とう)。長い「等しい」「等しく」を先に取り、「とうしい」にしない */
+  { word: "等しい", ruby: "ひとしい" },
+  { word: "等しく", ruby: "ひとしく" },
+  { word: "等", ruby: "とう" }
 ];
 
 function isKanaOnlyWord(word) {
@@ -965,6 +969,7 @@ function syncRevealAllButton(card) {
     return;
   }
   var items = card.querySelectorAll(".choice");
+  /* 正解表示ONでも、全選択肢が開いて初めて「−」。正解だけなら「＋」のまま */
   var openCount = 0;
   for (var i = 0; i < items.length; i++) {
     if (items[i].classList.contains("is-open")) {
@@ -983,16 +988,62 @@ function toggleChoice(li, trial, card) {
   syncRevealAllButton(card);
 }
 
-function setAllChoices(card, trial, open) {
+/* 正解表示ON時: 正解だけ ◯・色・解説。誤答は閉じたまま */
+function revealCorrectAnswersOnCard(card, trial, show) {
   var items = card.querySelectorAll(".choice");
   for (var i = 0; i < items.length; i++) {
-    setChoiceOpen(items[i], trial, open);
+    var li = items[i];
+    var n = Number(li.getAttribute("data-choice-n"));
+    var ok = isCorrectChoice(trial, n);
+    if (!ok) {
+      if (show) {
+        setChoiceOpen(li, trial, false);
+      }
+      continue;
+    }
+    setChoiceOpen(li, trial, show);
   }
   syncRevealAllButton(card);
 }
 
+function setAllChoices(card, trial, open) {
+  if (isAnswerShowOn()) {
+    if (open) {
+      /* 正解表示中の「＋」→ 誤答の✕・解説も含めて全部開く */
+      var items = card.querySelectorAll(".choice");
+      for (var i = 0; i < items.length; i++) {
+        setChoiceOpen(items[i], trial, true);
+      }
+      syncRevealAllButton(card);
+    } else {
+      /* 「−」→ 正解表示の状態に戻す（正解だけ残す） */
+      revealCorrectAnswersOnCard(card, trial, true);
+    }
+    return;
+  }
+  var allItems = card.querySelectorAll(".choice");
+  for (var j = 0; j < allItems.length; j++) {
+    setChoiceOpen(allItems[j], trial, open);
+  }
+  syncRevealAllButton(card);
+}
+
+function applyAnswerShowToAllCards() {
+  var cards = document.querySelectorAll(".question-card.is-quiz-trial");
+  var show = isAnswerShowOn();
+  for (var i = 0; i < cards.length; i++) {
+    var card = cards[i];
+    var trial = card.__answerTrial;
+    if (!trial) {
+      continue;
+    }
+    revealCorrectAnswersOnCard(card, trial, show);
+  }
+}
+
 function wireAnswerCheck(card, q, trial) {
   card.classList.add("is-quiz-trial");
+  card.__answerTrial = trial;
 
   var metaRow = card.querySelector(".meta-row");
   if (metaRow) {
@@ -1060,7 +1111,11 @@ function wireAnswerCheck(card, q, trial) {
     })(choices[c]);
   }
 
-  syncRevealAllButton(card);
+  if (isAnswerShowOn()) {
+    revealCorrectAnswersOnCard(card, trial, true);
+  } else {
+    syncRevealAllButton(card);
+  }
 }
 
 function renderQuestions(questions) {
@@ -1274,6 +1329,18 @@ function runFilterSearch(rawQuery) {
   renderQuestions(hits);
 }
 
+function scrollToShownQuestion() {
+  var root = document.getElementById("questionList");
+  if (!root) return;
+  var card = root.querySelector(".question-card");
+  var target = card || root;
+  // 描画直後にレイアウトが確定してから寄せる
+  window.requestAnimationFrame(function () {
+    var top = target.getBoundingClientRect().top + window.pageYOffset - 12;
+    window.scrollTo({ top: Math.max(0, top), behavior: "auto" });
+  });
+}
+
 function runJumpSearch() {
   var jump = getJumpInputs();
   if (jump.round === null || jump.number === null) {
@@ -1300,6 +1367,7 @@ function runJumpSearch() {
       "jump"
     );
     renderQuestions([hit]);
+    scrollToShownQuestion();
   } else {
     setStatus(
       roundLabelWithYear(jump.round) +
@@ -1463,11 +1531,17 @@ function showIdleState() {
 }
 
 function applyTitleRuby() {
+  var brand = document.querySelector(".site-brand");
+  if (brand) {
+    /* 1行目はルビなし。狭い画面でも省略せず全文を出す */
+    brand.setAttribute("aria-label", "介護福祉士国家試験対策");
+    brand.textContent = "介護福祉士国家試験対策";
+  }
   var h1 = document.querySelector(".page-header h1");
   if (!h1) {
     return;
   }
-  fillWithRuby(h1, "介護福祉士国家試験 過去問検索");
+  fillWithRuby(h1, "過去問検索");
 }
 
 var RUBY_HIDDEN_KEY = "kakomon.rubyHidden";
@@ -1493,28 +1567,100 @@ function setRubyHidden(hidden) {
   if (!btn) {
     return;
   }
-  btn.setAttribute("aria-pressed", hidden ? "true" : "false");
-  btn.textContent = hidden ? "ルビ表示" : "ルビ非表示";
+  btn.setAttribute("aria-pressed", hidden ? "false" : "true");
+  btn.textContent = "ルビ";
   btn.setAttribute(
     "aria-label",
     hidden ? "ルビを表示する" : "ルビを非表示にする"
   );
 }
 
+function wireSiteNav() {
+  var bar = document.querySelector(".site-bar");
+  var toggle = document.querySelector(".nav-toggle");
+  var nav = document.getElementById("siteNav");
+  if (!bar || !toggle || !nav) {
+    return;
+  }
+  function setOpen(open) {
+    bar.classList.toggle("is-open", !!open);
+    toggle.setAttribute("aria-expanded", open ? "true" : "false");
+  }
+  toggle.addEventListener("click", function () {
+    setOpen(!bar.classList.contains("is-open"));
+  });
+  document.addEventListener("click", function (ev) {
+    if (!bar.contains(ev.target)) {
+      setOpen(false);
+    }
+  });
+  document.addEventListener("keydown", function (ev) {
+    if (ev.key === "Escape") {
+      setOpen(false);
+    }
+  });
+}
+
 function wireRubyToggle() {
   setRubyHidden(isRubyHidden());
-  var nav = document.querySelector(".site-nav");
-  if (!nav || document.getElementById("rubyToggle")) {
+  var bar = document.querySelector(".site-bar") || document.querySelector(".site-nav");
+  if (!bar || document.getElementById("rubyToggle")) {
     return;
   }
   var btn = document.createElement("button");
   btn.type = "button";
   btn.id = "rubyToggle";
   btn.className = "ruby-toggle";
-  nav.appendChild(btn);
+  bar.appendChild(btn);
   setRubyHidden(isRubyHidden());
   btn.addEventListener("click", function () {
     setRubyHidden(!isRubyHidden());
+  });
+}
+
+var ANSWER_SHOW_KEY = "kakomon.answerShow.v2";
+
+function isAnswerShowOn() {
+  try {
+    /* 未設定は表示（デフォルトON）。明示的に "0" のときだけ非表示 */
+    return localStorage.getItem(ANSWER_SHOW_KEY) !== "0";
+  } catch (err) {
+    return true;
+  }
+}
+
+function setAnswerShowOn(on) {
+  try {
+    localStorage.setItem(ANSWER_SHOW_KEY, on ? "1" : "0");
+  } catch (err) {
+    /* ignore */
+  }
+  var btn = document.getElementById("answerShowToggle");
+  if (btn) {
+    btn.setAttribute("aria-pressed", on ? "true" : "false");
+    btn.textContent = "正解";
+    btn.setAttribute(
+      "aria-label",
+      on ? "正解の表示をやめる" : "正解を表示する"
+    );
+  }
+  applyAnswerShowToAllCards();
+}
+
+function wireAnswerShowToggle() {
+  var bar = document.querySelector(".site-bar") || document.querySelector(".site-nav");
+  if (!bar || document.getElementById("answerShowToggle")) {
+    setAnswerShowOn(isAnswerShowOn());
+    return;
+  }
+  var btn = document.createElement("button");
+  btn.type = "button";
+  btn.id = "answerShowToggle";
+  btn.className = "ruby-toggle answer-show-toggle";
+  bar.appendChild(btn);
+  setAnswerShowOn(isAnswerShowOn());
+  btn.addEventListener("click", function () {
+    setAnswerShowOn(!isAnswerShowOn());
   });
 }
 
@@ -1576,7 +1722,9 @@ function boot() {
   fillJumpNumberSelect();
   wireAllSessionYearSelects();
   applyTitleRuby();
+  wireSiteNav();
   wireRubyToggle();
+  wireAnswerShowToggle();
   wireBackToTop();
   setStatus("問題データを読み込み中…");
   showHint("少々お待ちください。");

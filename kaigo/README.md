@@ -3,7 +3,7 @@
 | フォルダ | URL 目安 | デプロイ |
 |----------|----------|----------|
 | `kakomon/` | `/kaigo/kakomon/` | `deploy_kakomon.py` |
-| `kakomon/themes/` | `/kaigo/kakomon/themes/` | `themes/deploy_themes.py` |
+| `kakomon/themes/` | `/kaigo/kakomon/themes/` | `work/deploy_themes.py` |
 | `words/` | `/kaigo/words/` | `deploy_kaigo_words.py` |
 | `p/` | `/kaigo/p/<token>/` | `deploy_private.py`（中身は test/ から） |
 | `offer/` | offer 用 | `deploy_offer.py` |

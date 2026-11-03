@@ -1,6 +1,6 @@
 {
-  "title": "介護福祉士国家試験 付録",
-  "count": 10,
+  "title": "付録",
+  "count": 9,
   "groups": [],
   "ungrouped": [
     {
@@ -68,17 +68,6 @@
       "displayCount": 9,
       "missingCount": 0,
       "href": "view.html?t=03477c45d913"
-    },
-    {
-      "title": "地域包括支援センター・地域支援事業",
-      "label": "地域包括支援センター・地域支援事業",
-      "slug": "b36896f5f1b8",
-      "count": 10,
-      "recentCount": 5,
-      "olderCount": 5,
-      "displayCount": 5,
-      "missingCount": 0,
-      "href": "view.html?t=b36896f5f1b8"
     },
     {
       "title": "例外ワード（控える・避ける）",
@@ -169,17 +158,6 @@
       "displayCount": 3,
       "missingCount": 0,
       "href": "view.html?t=aeec12485625"
-    },
-    {
-      "title": "地域包括支援センター・地域支援事業",
-      "label": "地域包括支援センター・地域支援事業",
-      "slug": "b36896f5f1b8",
-      "count": 10,
-      "recentCount": 5,
-      "olderCount": 5,
-      "displayCount": 5,
-      "missingCount": 0,
-      "href": "view.html?t=b36896f5f1b8"
     },
     {
       "title": "理論と実践の違い",

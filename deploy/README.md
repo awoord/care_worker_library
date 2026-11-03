@@ -11,6 +11,6 @@
 サイト別デプロイは各所にあります:
 
 - `kaigo/kakomon/deploy_kakomon.py`
-- `kaigo/kakomon/themes/deploy_themes.py`
+- `work/deploy_themes.py`
 - `kaigo/p/deploy_private.py`
 - `kaigo/words/deploy_kaigo_words.py`

@@ -17,6 +17,10 @@ JSON_NAME = "hikaku-kaigo-shogai.json"
 TITLE = "介護保険法・障害者総合支援法攻略マップ"
 
 RE_QID = re.compile(r"【\s*(\d+)\s*-\s*(\d+)\s*】")
+RE_QB_PAGE = re.compile(r"【\s*(\d+)\s*-\s*(\d+)(?:｜[^】]*)?】\s*(\d+)\s*$")
+QUESTION_BANK_TXT = ROOT / "work" / "question_bank" / "question_bank_2027.txt"
+# クエスチョン・バンク第38回はページ未記載のため、まとめてこの表記
+QB_ROUND_38_LABEL = "528〜"
 KORYAKU_KAIGO = DATA_DIR / "koryaku-kaigo-hoken.json"
 KORYAKU_SHOGAI = DATA_DIR / "koryaku-shogai-sogo.json"
 KORYAKU_JSONS = (KORYAKU_KAIGO, KORYAKU_SHOGAI)
@@ -69,14 +73,24 @@ def build_qid_side_map() -> dict[str, str]:
 
 
 def qids_cell_to_html(text: str, side_map: dict[str, str] | None = None) -> str:
-    """過去問番号セルを、新しい順のボタン列にする。"""
+    """過去問番号セルを、青（介護）→赤（障害）の順・同色内は新しい順にする。"""
     matches = list(RE_QID.finditer(text))
     if not matches:
         return md_inline_to_html(text)
     side_map = side_map or {}
     seen: set[tuple[str, str]] = set()
     ordered: list[re.Match[str]] = []
-    for m in sorted(matches, key=qid_sort_key):
+
+    def side_rank(m: re.Match[str]) -> int:
+        qid = f"{m.group(1)}-{m.group(2)}"
+        side = side_map.get(qid, "both")
+        if side == "kaigo":
+            return 0
+        if side == "shogai":
+            return 2
+        return 1  # both / 未分類は青と赤のあいだ
+
+    for m in sorted(matches, key=lambda m: (side_rank(m),) + qid_sort_key(m)):
         key = (m.group(1), m.group(2))
         if key in seen:
             continue
@@ -229,12 +243,31 @@ def fallback_item_from_questions(qid: str, qmap: dict[str, dict]) -> dict | None
     }
 
 
-def full_question_item(qid: str, q: dict) -> dict:
+def load_qb_page_labels() -> dict[str, int | str]:
+    """id → QB教科書ページ（数値）または第38回用の「528〜」。"""
+    mapping: dict[str, int | str] = {}
+    if QUESTION_BANK_TXT.is_file():
+        for raw in QUESTION_BANK_TXT.read_text(encoding="utf-8").splitlines():
+            line = raw.strip()
+            if not line or line.startswith("#"):
+                continue
+            m = RE_QB_PAGE.match(line)
+            if not m:
+                continue
+            mapping[f"{int(m.group(1))}-{int(m.group(2))}"] = int(m.group(3))
+    for n in range(1, 126):
+        mapping[f"38-{n}"] = QB_ROUND_38_LABEL
+    return mapping
+
+
+def full_question_item(
+    qid: str, q: dict, qb_pages: dict[str, int | str] | None = None
+) -> dict:
     """モーダルで通常の問題表示（全選択肢・＋・正解表示）ができる形。"""
     body = q.get("body") or []
     if isinstance(body, str):
         body = [body]
-    return {
+    item = {
         "id": qid,
         "round": q.get("round"),
         "number": q.get("number"),
@@ -248,16 +281,22 @@ def full_question_item(qid: str, q: dict) -> dict:
         "choiceFigures": q.get("choiceFigures") or {},
         "missing": False,
     }
+    if qb_pages and qid in qb_pages:
+        item["qb"] = qb_pages[qid]
+    elif qb_pages is None and q.get("qb") is not None:
+        item["qb"] = q["qb"]
+    return item
 
 
 def build_questions_json(qids: list[str]) -> dict:
     qmap = load_questions_by_id()
+    qb_pages = load_qb_page_labels()
     items: dict[str, dict] = {}
     missing: list[str] = []
     for qid in qids:
         q = qmap.get(qid)
         if q:
-            items[qid] = full_question_item(qid, q)
+            items[qid] = full_question_item(qid, q, qb_pages)
             continue
         missing.append(qid)
         items[qid] = {"id": qid, "missing": True}
@@ -332,13 +371,12 @@ def build_html(table_html: str) -> str:
       </button>
       <p class="site-brand" aria-label="介護福祉士国家試験対策">介護福祉士国家試験対策</p>
       <nav id="siteNav" class="site-nav" aria-label="サイト内移動">
-        <a class="site-nav-link" href="/kaigo/kakomon/">過去問検索</a>
-        <a class="site-nav-link is-current" href="/kaigo/kakomon/themes/" aria-current="page">重要テーマ</a>
-        <a class="site-nav-link" href="/kaigo/kakomon/reference/">参考テーマ</a>
+        <a class="site-nav-link" href="/kaigo/kakomon/themes/view.html?t=b146eeffd742">テキスト</a>
+        <a class="site-nav-link" href="/kaigo/kakomon/bank/">カコモン・バンク</a>
+        <a class="site-nav-link is-current" href="/kaigo/kakomon/themes/" aria-current="page">テーマ</a>
+        <a class="site-nav-link" href="/kaigo/kakomon/type/">出題タイプ</a>
+        <a class="site-nav-link" href="/kaigo/kakomon/challenge/">年度タイプ</a>
         <a class="site-nav-link" href="/kaigo/kakomon/appendix/">付録</a>
-        <a class="site-nav-link" href="/kaigo/kakomon/part-a/">Aパート</a>
-        <a class="site-nav-link" href="/kaigo/kakomon/part-b/">Bパート</a>
-        <a class="site-nav-link" href="/kaigo/kakomon/part-c/">Cパート</a>
       </nav>
     </div>
     <h1>{TITLE}</h1>

@@ -21,8 +21,9 @@
 
 | やりたいこと | コマンド |
 |--------------|----------|
-| 過去問検索を公開 | `python3 kaigo/kakomon/deploy_kakomon.py` |
-| テーマ過去問を公開 | `python3 work/deploy_themes.py` |
+| **過去問まわりを全部公開** | `python3 deploy_all_kakomon.py` |
+| 過去問検索だけ公開 | `python3 kaigo/kakomon/deploy_kakomon.py` |
+| テーマ過去問だけ公開 | `python3 work/deploy_themes.py` |
 | ことばテスト版を上げる | `python3 auto_upload.py`（中身は `deploy/auto_upload.py`） |
 | ことば秘密URL | `python3 kaigo/p/deploy_private.py` |
 | ルート本番（J） | `python3 deploy_prod.py` |

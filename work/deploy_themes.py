@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
-"""重要テーマ・参考テーマ・付録過去問を公開する。
+"""テーマ・参考テーマ・付録・カコモン・バンクを公開する。
 
-- 入力: work/theme_extract/（重要テーマ）、work/part_extract/{A,B,C}/（各パート）、work/reference_extract/（参考テーマ）、work/appendix_extract/（付録）
+- 入力: work/theme_extract/（重要テーマ）、work/part_extract/{A,B,C}/（各パート／バンク）、work/reference_extract/（参考テーマ）、work/appendix_extract/（付録）
 - ファイル名（拡張子除く）→ ページ見出し
 - 本文の 【回-番号｜…】 → questions.json から問題を抽出
 - 表示は kakomon と同じカード形式（style / ルビ / 正誤UI）
+- カコモン・バンク: 全科目を指導順で1ページにまとめる（/kaigo/kakomon/bank/）
 
 使い方:
-  python3 work/deploy_themes.py           # 生成＋FTP
+  python3 work/deploy_themes.py           # 全サイト生成＋FTP
   python3 work/deploy_themes.py --build-only
+  python3 work/deploy_themes_site.py      # テーマだけ
+  python3 work/deploy_appendix_site.py    # 付録だけ
+  python3 work/deploy_themes_appendix.py  # テーマ＋付録を並列デプロイ
 """
 
 from __future__ import annotations
@@ -35,6 +39,9 @@ PART_SRC_DIR = ROOT / "work" / "part_extract"
 REFERENCE_SRC_DIR = ROOT / "work" / "reference_extract"
 APPENDIX_SRC_DIR = ROOT / "work" / "appendix_extract"
 QUESTIONS_JSON = KAKOMON_DIR / "questions.json"
+QUESTION_BANK_TXT = ROOT / "work" / "question_bank" / "question_bank_2027.txt"
+BANK_DIR = KAKOMON_DIR / "bank"
+RE_QB_PAGE = re.compile(r"【\s*(\d+)\s*-\s*(\d+)(?:｜[^】]*)?】\s*(\d+)\s*$")
 
 FTP_HOST = "www1165.conoha.ne.jp"
 FTP_USER = "ao@nihongo.site"
@@ -43,15 +50,17 @@ REMOTE_BASE_DIR = "/public_html/nihongo.site"
 REMOTE_THEMES_DIR = f"{REMOTE_BASE_DIR}/kaigo/kakomon/themes"
 REMOTE_APPENDIX_DIR = f"{REMOTE_BASE_DIR}/kaigo/kakomon/appendix"
 REMOTE_REFERENCE_DIR = f"{REMOTE_BASE_DIR}/kaigo/kakomon/reference"
+REMOTE_BANK_DIR = f"{REMOTE_BASE_DIR}/kaigo/kakomon/bank"
 PUBLIC_THEMES_URL = "https://nihongo.site/kaigo/kakomon/themes/"
 PUBLIC_APPENDIX_URL = "https://nihongo.site/kaigo/kakomon/appendix/"
 PUBLIC_REFERENCE_URL = "https://nihongo.site/kaigo/kakomon/reference/"
+PUBLIC_BANK_URL = "https://nihongo.site/kaigo/kakomon/bank/"
 # 国家試験のパート（出題順）。元ファイルは work/part_extract/{A,B,C}/。
 PART_SITES = [
     {
         "key": "a",
         "folder": "A",
-        "label": "Aパート",
+        "label": "Aパート（5年分）",
         "groups": [
             "人間の尊厳と自立",
             "介護の基本",
@@ -65,7 +74,7 @@ PART_SITES = [
     {
         "key": "b",
         "folder": "B",
-        "label": "Bパート",
+        "label": "Bパート（5年分）",
         "groups": [
             "こころとからだのしくみ",
             "発達と老化の理解",
@@ -78,19 +87,107 @@ PART_SITES = [
     {
         "key": "c",
         "folder": "C",
-        "label": "Cパート",
+        "label": "Cパート（5年分）",
         "groups": ["介護過程"],
         "ungrouped": ["総合問題"],
     },
 ]
+
+# カコモン・バンク（全科目1ページ）。指導用の科目順。
+BANK_LABEL = "カコモン・バンク"
+BANK_GROUP_ORDER = [
+    # 介護
+    "生活支援技術",
+    "人間の尊厳と自立",
+    "介護の基本",
+    "介護過程",
+    "人間関係とコミュニケーション",
+    "コミュニケーション技術",
+    # 医療
+    "こころとからだのしくみ",
+    "発達と老化の理解",
+    "認知症の理解",
+    "障害の理解",
+    "医療的ケア",
+    # 社会
+    "社会の理解",
+]
+BANK_UNGROUPED_ORDER = ["総合問題"]
+# 科目名先頭のパート記号（A/B/C）
+SUBJECT_PART_LETTER: dict[str, str] = {
+    "生活支援技術": "A",
+    "人間の尊厳と自立": "A",
+    "介護の基本": "A",
+    "人間関係とコミュニケーション": "A",
+    "コミュニケーション技術": "A",
+    "社会の理解": "A",
+    "こころとからだのしくみ": "B",
+    "発達と老化の理解": "B",
+    "認知症の理解": "B",
+    "障害の理解": "B",
+    "医療的ケア": "B",
+    "介護過程": "C",
+    "総合問題": "C",
+}
+
+# 国試1回あたりの科目配点（問題数）。カテゴリー名の末尾表示用。
+SUBJECT_POINTS: dict[str, int] = {
+    "人間の尊厳と自立": 2,
+    "人間関係とコミュニケーション": 4,
+    "社会の理解": 12,
+    "介護の基本": 10,
+    "コミュニケーション技術": 6,
+    "生活支援技術": 26,
+    "介護過程": 8,
+    "発達と老化の理解": 8,
+    "認知症の理解": 10,
+    "障害の理解": 10,
+    "こころとからだのしくみ": 12,
+    "医療的ケア": 5,
+    "総合問題": 12,
+}
 
 # 初期表示する直近回（見出しの問題数もこの範囲）
 RECENT_SESSION_MIN = 34
 RECENT_SESSION_MAX = 38
 # 図あり問題を questions.json から自動生成するテーマ名
 ILLUST_THEME_TITLE = "イラスト問題"
-# 全件・ファイル順で出すテーマ（もっと見るなし）
-SHOW_ALL_IN_ORDER_TITLES = frozenset({"過去問の再利用", "同じ問題"})
+# 正答なし・複数正答の不適切問題を questions.json から自動生成するテーマ名
+INAPPROPRIATE_THEME_TITLE = "不適切問題"
+# カコモン・バンクでも全件・ファイル順で出す例外テーマ（通常のバンクは直近5年＋もっと見る）
+SHOW_ALL_IN_ORDER_TITLES = frozenset(
+    {
+        "過去問の再利用",
+        "同じ問題",
+        "不適切問題",
+        "テキスト",
+        "優先して理解する問題",
+        "利用者主体・自立支援（原則）",
+        # 原則カテゴリー: 直近5年以外も全部表示（もっと見るなし）
+        "利用者主体・自立支援の原則",
+        "家族対応の原則",
+        "職業倫理の前提",
+        "チームアプローチの原則",
+        "人の見方の原則",
+        "コンプライアンスの原則",
+        "コミュニケーションの原則",
+        # 付録: 選択肢の分類（3問ずつ・全部表示）
+        "選択肢の分類（語列挙）",
+        "選択肢の分類（定義説明）",
+        "選択肢の分類（全部適切に見える）",
+        "選択肢の分類（1適切・他不適切）",
+    }
+)
+# 旧「テキスト問題」「テキストピックアップ」と同じ公開URLを維持する
+THEME_SLUG_OVERRIDES = {
+    "テキスト": "b146eeffd742",
+    "優先して理解する問題": "6086c77f15e0",
+    # 旧「利用者本位・自立支援」／「（原則）」からの改名でも URL を維持
+    "利用者主体・自立支援の原則": "510101d9c4a3",
+    "利用者主体・自立支援（場面）": "6a8611151bc5",
+}
+TEXT_LEAD_THEME_TITLE = "優先して理解する問題"
+TEXT_THEME_TITLE = "テキスト"
 
 # 一覧の親グループ（見出し）→ 子テーマ（.txt の stem）。
 # 空ならすべてフラット。括弧短縮ラベルはグループ内の子だけに使う。
@@ -99,6 +196,30 @@ SHOW_ALL_IN_ORDER_TITLES = frozenset({"過去問の再利用", "同じ問題"})
 # 介護保険法・障害者総合支援法以外は、直近5年（第34〜38回）の多い順。
 # 同数は全問数の多い順。それも同じなら前の並び。
 THEME_GROUPS: list[tuple[str, list[str]]] = [
+    (
+        "選択肢の分類",
+        [
+            "選択肢の分類（語列挙）",
+            "選択肢の分類（定義説明）",
+            "選択肢の分類（全部適切に見える）",
+            "選択肢の分類（1適切・他不適切）",
+        ],
+    ),
+    (
+        "NGワード",
+        [
+            "NGワード（説得）",
+            "NGワード（画一的）",
+            "NGワード（一律）",
+            "NGワード（介護福祉職の判断で）",
+            "NGワード（励ます）",
+            "NGワード（限定）",
+            "NGワード（控える（※例外あり））",
+            "NGワード（避ける（※例外あり））",
+            "NGワード（強く（※例外あり））",
+            "NGワード（元気を出す）",
+        ],
+    ),
     (
         "生活支援技術",
         [
@@ -195,19 +316,21 @@ THEME_GROUPS: list[tuple[str, list[str]]] = [
         ],
     ),
     (
-        "福祉の関連人物",
+        "原則",
         [
-            "福祉の関連人物（福祉思想の人物）",
-            "福祉の関連人物（マズロー）",
-            "福祉の関連人物（キューブラー・ロス）",
-            "福祉の関連人物（ライチャード）",
+            "利用者主体・自立支援の原則",
+            "家族対応の原則",
+            "職業倫理の前提",
+            "チームアプローチの原則",
+            "人の見方の原則",
+            "コンプライアンスの原則",
+            "コミュニケーションの原則",
         ],
     ),
     (
-        "利用者本位・自立支援",
+        "利用者主体・自立支援",
         [
-            "利用者本位・自立支援（場面）",
-            "利用者本位・自立支援（原則）",
+            "利用者主体・自立支援（場面）",
         ],
     ),
     (
@@ -329,11 +452,11 @@ THEME_GROUPS: list[tuple[str, list[str]]] = [
 
 RE_QID = re.compile(r"【\s*(\d+)\s*-\s*(\d+)")
 RE_GROUP_CHILD_PAREN = re.compile(
-    r"^(?:介護保険|障害者総合支援法|人体のしくみ|生活支援技術|医療的ケア|人間の尊厳と自立|介護の基本|社会の理解|人間関係とコミュニケーション|コミュニケーション技術|発達と老化の理解|認知症の理解|障害の理解|こころとからだのしくみ|法律|福祉の関連人物|利用者本位・自立支援|コミュニケーション|介護過程)（(.+)）$"
+    r"^(?:介護保険|障害者総合支援法|人体のしくみ|生活支援技術|医療的ケア|人間の尊厳と自立|介護の基本|社会の理解|人間関係とコミュニケーション|コミュニケーション技術|発達と老化の理解|認知症の理解|障害の理解|こころとからだのしくみ|法律|福祉の関連人物|利用者主体・自立支援|利用者本位・自立支援|コミュニケーション|介護過程|NGワード|ラッキーワード|選択肢の分類)（(.+)）$"
 )
 
-# 公開しない作業用テーマ（stem に含まれる文字列）
-THEME_SRC_SKIP_SUBSTRINGS = ("削除問題", "削除検討", "全ての問題", "すべての問題", "除外", "確認")
+# theme_extract の .txt はすべて公開対象（作業用ファイルもファイル名で判別して落とさない）
+THEME_SRC_SKIP_SUBSTRINGS: tuple[str, ...] = ()
 
 
 def short_theme_label(title: str) -> str:
@@ -342,6 +465,49 @@ def short_theme_label(title: str) -> str:
     text = m.group(1) if m else title
     # 番号と見出しのあいだの全角スペースを半角に（1　理念 → 1 理念）
     return re.sub(r"(\d)\u3000", r"\1 ", text)
+
+
+def format_subject_label(
+    title: str,
+    *,
+    points: int | None = None,
+    letter_map: dict[str, str] | None = None,
+) -> str:
+    """科目表示名。letter_map があれば先頭に A/B/C を付ける。"""
+    letter = (letter_map or {}).get(title, "")
+    prefix = f"{letter} " if letter else ""
+    if points is None:
+        return f"{prefix}{title}" if prefix else title
+    return f"{prefix}{title}（{points}）"
+
+
+def apply_subject_points(
+    groups: list[dict],
+    ungrouped: list[dict],
+    *,
+    letter_map: dict[str, str] | None = None,
+) -> None:
+    """科目カテゴリーに国試配点を付け、表示ラベルへ反映する。"""
+    for group in groups:
+        title = str(group.get("title") or "")
+        points = SUBJECT_POINTS.get(title)
+        if points is not None:
+            group["points"] = points
+        elif not letter_map or title not in letter_map:
+            continue
+        group["label"] = format_subject_label(
+            title, points=points, letter_map=letter_map
+        )
+    for theme in ungrouped:
+        title = str(theme.get("title") or "")
+        points = SUBJECT_POINTS.get(title)
+        if points is not None:
+            theme["points"] = points
+        elif not letter_map or title not in letter_map:
+            continue
+        theme["label"] = format_subject_label(
+            title, points=points, letter_map=letter_map
+        )
 
 
 def build_grouped_index(themes: list[dict]) -> tuple[list[dict], list[dict]]:
@@ -390,6 +556,7 @@ def build_grouped_index(themes: list[dict]) -> tuple[list[dict], list[dict]]:
     ungrouped.sort(key=_freq_key)
     return groups, ungrouped
 
+
 HTACCESS_CONTENT = """
 <IfModule mod_headers.c>
     <FilesMatch "\\.(html|css|js|json)$">
@@ -406,6 +573,13 @@ KORYAKU_HTML_FILES = (
     "koryaku-kaigo-hoken.html",
     "koryaku-shogai-sogo.html",
     "hikaku-kaigo-shogai.html",
+    "hikaku-jinbutsu.html",
+    "hikaku-jiritsu.html",
+    "hikaku-jiritsu-kata.html",
+    "hikaku-jiritsu-vs.html",
+    "hikaku-jiritsu-ng.html",
+    "hikaku-kaigo-katei.html",
+    "hikaku-icf.html",
 )
 DEPLOY_STATIC = (
     "index.html",
@@ -439,6 +613,8 @@ def prepare_html(content: str, version: str) -> str:
 
 def make_slug(title: str) -> str:
     """安定した短いスラッグ（日本語ファイル名のFTP事故を避ける）。"""
+    if title in THEME_SLUG_OVERRIDES:
+        return THEME_SLUG_OVERRIDES[title]
     digest = hashlib.sha1(title.encode("utf-8")).hexdigest()[:12]
     return digest
 
@@ -477,6 +653,60 @@ def extract_question_ids(text: str) -> list[str]:
     return ids
 
 
+# 第38回は QB 未収録のため、教科書末尾扱いの表記
+QB_ROUND_38_LABEL = "528〜"
+
+
+def load_qb_pages_from_bank() -> dict[str, int | str]:
+    """question_bank_*.txt から id → 教科書ページ番号（または第38回の「528〜」）。
+
+    第29回も含む（表示用。questions.json は更新しない）。
+    """
+    mapping: dict[str, int | str] = {}
+    if not QUESTION_BANK_TXT.is_file():
+        return mapping
+    for raw in QUESTION_BANK_TXT.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        m = RE_QB_PAGE.match(line)
+        if not m:
+            continue
+        qid = f"{int(m.group(1))}-{int(m.group(2))}"
+        mapping[qid] = int(m.group(3))
+    # 第38回はバンクにページが無いので、他年度のあと・問題番号順用にラベルだけ付ける
+    for n in range(1, 126):
+        mapping[f"38-{n}"] = QB_ROUND_38_LABEL
+    return mapping
+
+
+def sort_text_theme_questions_by_qb(questions: list[dict]) -> list[dict]:
+    """テキスト: 科目内は QB ページ順。第38回は末尾・問題番号順。"""
+
+    def sort_key(q: dict) -> tuple:
+        try:
+            round_n = int(q.get("round") or 0)
+        except (TypeError, ValueError):
+            round_n = 0
+        try:
+            number_n = int(q.get("number") or 0)
+        except (TypeError, ValueError):
+            number_n = 0
+        if round_n == 38:
+            return (1, 0, number_n, round_n)
+        qb = q.get("qb")
+        if isinstance(qb, int):
+            page = qb
+        else:
+            try:
+                page = int(qb)  # type: ignore[arg-type]
+            except (TypeError, ValueError):
+                page = 10**9
+        return (0, page, number_n, round_n)
+
+    return sorted(questions, key=sort_key)
+
+
 def is_recent_session_question(question: dict) -> bool:
     raw = question.get("round")
     if raw is None or raw == "":
@@ -502,17 +732,13 @@ def question_has_figure(question: dict) -> bool:
     return any(choice_figs.values())
 
 
-def regenerate_illustration_theme_txt(by_id: dict[str, dict]) -> None:
-    """questions.json から図あり問題を抽出し、イラスト問題.txt を自動生成する。"""
-    items: list[dict] = []
-    for q in by_id.values():
-        if question_has_figure(q):
-            items.append(q)
-    items.sort(
+def _write_appendix_theme_txt(title: str, items: list[dict]) -> None:
+    items = sorted(
+        items,
         key=lambda q: (
             -int(q.get("round") or 0),
             int(q.get("number") or 0),
-        )
+        ),
     )
     lines: list[str] = []
     for q in items:
@@ -522,9 +748,69 @@ def regenerate_illustration_theme_txt(by_id: dict[str, dict]) -> None:
         subject = str(q.get("subject") or "").strip()
         lines.append(f"【{qid}｜{subject}】")
     APPENDIX_SRC_DIR.mkdir(parents=True, exist_ok=True)
-    out = APPENDIX_SRC_DIR / f"{ILLUST_THEME_TITLE}.txt"
+    out = APPENDIX_SRC_DIR / f"{title}.txt"
     out.write_text(("\n".join(lines) + ("\n" if lines else "")), encoding="utf-8")
     print(f"自動生成: appendix_extract/{out.name} → {len(lines)} 問")
+
+
+def regenerate_illustration_theme_txt(by_id: dict[str, dict]) -> None:
+    """questions.json から図あり問題を抽出し、イラスト問題.txt を自動生成する。"""
+    items = [q for q in by_id.values() if question_has_figure(q)]
+    _write_appendix_theme_txt(ILLUST_THEME_TITLE, items)
+
+
+def question_is_inappropriate(question: dict) -> bool:
+    """正答なし、または正答が複数ある不適切問題か。"""
+    answers = question.get("answers")
+    if answers is None:
+        note = str(question.get("note") or "")
+        return "正答なし" in note or "問題不成立" in note
+    if isinstance(answers, list):
+        return len(answers) != 1
+    if isinstance(answers, str):
+        raw = answers.strip()
+        if raw in ("", "なし"):
+            return True
+        return len(parse_answer_like(raw) or []) != 1
+    return False
+
+
+def parse_answer_like(raw: str) -> list[int] | None:
+    """カンマ区切り等の正答セルを番号リストへ（簡易）。"""
+    nums: list[int] = []
+    for part in raw.replace("・", ",").replace("と", ",").replace("/", ",").split(","):
+        part = part.strip()
+        if not part:
+            continue
+        try:
+            n = int(part)
+        except ValueError:
+            continue
+        if n not in nums:
+            nums.append(n)
+    return nums or None
+
+
+def regenerate_inappropriate_theme_txt(by_id: dict[str, dict]) -> None:
+    """正答なし・複数正答の問を抽出し、不適切問題.txt を自動生成する。"""
+    items = [q for q in by_id.values() if question_is_inappropriate(q)]
+    _write_appendix_theme_txt(INAPPROPRIATE_THEME_TITLE, items)
+
+
+def annotate_inappropriate_question(question: dict) -> dict:
+    """不適切の理由が note に無い場合、正答なし／複数正答の注釈を付ける。"""
+    q = rewrite_question_assets(question)
+    note = str(q.get("note") or "").strip()
+    if "正答なし" in note or "問題不成立" in note or "不適切" in note:
+        return q
+    answers = q.get("answers")
+    if answers is None or answers == [] or answers == "なし":
+        q["note"] = "問題不成立のため、正答なし"
+        return q
+    if isinstance(answers, list) and len(answers) > 1:
+        joined = "・".join(str(n) for n in answers)
+        q["note"] = f"不適切問題のため、正答が複数（{joined}）"
+    return q
 
 
 def rewrite_asset_path(path: str) -> str:
@@ -573,6 +859,16 @@ def load_questions_by_id() -> dict[str, dict]:
     return by_id
 
 
+def ensure_bank_html() -> None:
+    """カコモン・バンク用 HTML が無いときだけ雛形をコピーする（手編集を壊さない）。"""
+    BANK_DIR.mkdir(parents=True, exist_ok=True)
+    for name in ("index.html", "view.html"):
+        dest = BANK_DIR / name
+        if dest.is_file():
+            continue
+        raise FileNotFoundError(f"カコモン・バンク HTML がありません: {dest}")
+
+
 def sync_shared_assets(site_dir: Path) -> None:
     shutil.copy2(KAKOMON_DIR / "style.css", site_dir / "style.css")
     ruby_src = KAKOMON_DIR / "ruby.json"
@@ -606,7 +902,8 @@ def build_site(
     *,
     site_dir: Path,
     index_title: str,
-    src_dir: Path,
+    src_dir: Path | None = None,
+    src_dirs: list[Path] | None = None,
     site_label: str,
     flat: bool = False,
     card_low: bool = False,
@@ -614,6 +911,9 @@ def build_site(
     exclude_titles: set[str] | None = None,
     group_order: list[str] | None = None,
     ungrouped_order: list[str] | None = None,
+    letter_map: dict[str, str] | None = None,
+    # True: 全件表示（もっと見るなし）。カコモン・バンク以外は基本 True。
+    show_all_questions: bool = False,
 ) -> list[dict]:
     sync_shared_assets(site_dir)
     data_dir = site_dir / "data"
@@ -622,15 +922,32 @@ def build_site(
         old.unlink()
 
     by_id = load_questions_by_id()
-    if src_dir == THEME_SRC_DIR and only_titles is None:
+    qb_pages = load_qb_pages_from_bank()
+    dirs = list(src_dirs) if src_dirs else ([src_dir] if src_dir else [])
+    if not dirs:
+        raise ValueError(f"{site_label}: src_dir / src_dirs がありません")
+    # 付録の自動テーマは appendix ビルド時に生成（イラストは themes 時にも更新）
+    if THEME_SRC_DIR in dirs and only_titles is None:
         regenerate_illustration_theme_txt(by_id)
-    sources = list_theme_source_files(src_dir, required=src_dir == THEME_SRC_DIR)
+    if APPENDIX_SRC_DIR in dirs and only_titles is None:
+        regenerate_illustration_theme_txt(by_id)
+        regenerate_inappropriate_theme_txt(by_id)
+    sources: list[Path] = []
+    seen_stems: set[str] = set()
+    for directory in dirs:
+        required = directory == THEME_SRC_DIR and len(dirs) == 1
+        for path in list_theme_source_files(directory, required=required):
+            if path.stem in seen_stems:
+                continue
+            seen_stems.add(path.stem)
+            sources.append(path)
     if only_titles is not None:
         sources = [path for path in sources if path.stem in only_titles]
     if exclude_titles:
         sources = [path for path in sources if path.stem not in exclude_titles]
     if not sources:
-        print(f"警告: {site_label}用 .txt がありません → {src_dir}")
+        shown = ", ".join(str(d) for d in dirs)
+        print(f"警告: {site_label}用 .txt がありません → {shown}")
 
     themes: list[dict] = []
     for path in sources:
@@ -644,9 +961,20 @@ def build_site(
             if not src:
                 missing.append(qid)
                 continue
-            questions.append(rewrite_question_assets(src))
+            if title == INAPPROPRIATE_THEME_TITLE:
+                q = annotate_inappropriate_question(src)
+            else:
+                q = rewrite_question_assets(src)
+            # 教科書ページはバンク対応表を正とする（questions.json は変更しない）
+            if qid in qb_pages:
+                q["qb"] = qb_pages[qid]
+            questions.append(q)
 
-        show_all = title in SHOW_ALL_IN_ORDER_TITLES
+        if title == "テキスト":
+            questions = sort_text_theme_questions_by_qb(questions)
+
+        # カコモン・バンク以外は全件表示。バンクのみ直近5年＋「あと5年分見る」。
+        show_all = show_all_questions or title in SHOW_ALL_IN_ORDER_TITLES
         if show_all:
             recent_count = len(questions)
             older_count = 0
@@ -668,7 +996,9 @@ def build_site(
             "recentSessionMax": RECENT_SESSION_MAX,
             # 同じ問題など: もっと見るなし・txt の並びのまま
             "showAllInOrder": show_all,
-            "ids": [q.get("id") or f"{q.get('round')}-{q.get('number')}" for q in questions],
+            "ids": [
+                q.get("id") or f"{q.get('round')}-{q.get('number')}" for q in questions
+            ],
             "missing": missing,
             "questions": questions,
         }
@@ -702,12 +1032,34 @@ def build_site(
             msg += f"（欠番 {len(missing)}: {', '.join(missing[:8])}{'…' if len(missing) > 8 else ''}）"
         print(msg)
 
+    # テキストページ先頭に出す「優先して理解する問題」へのリンク情報
+    by_title = {theme["title"]: theme for theme in themes}
+    if TEXT_THEME_TITLE in by_title and TEXT_LEAD_THEME_TITLE in by_title:
+        text_meta = by_title[TEXT_THEME_TITLE]
+        lead_meta = by_title[TEXT_LEAD_THEME_TITLE]
+        text_path = data_dir / f"{text_meta['slug']}.json"
+        text_payload = json.loads(text_path.read_text(encoding="utf-8"))
+        text_payload["leadTheme"] = {
+            "title": lead_meta["title"],
+            "label": lead_meta.get("label") or lead_meta["title"],
+            "slug": lead_meta["slug"],
+            "count": lead_meta["count"],
+            "displayCount": lead_meta["displayCount"],
+            "href": lead_meta["href"],
+        }
+        text_path.write_text(
+            json.dumps(text_payload, ensure_ascii=False, separators=(",", ":")) + "\n",
+            encoding="utf-8",
+        )
+
     if group_order is not None:
         groups, ungrouped = build_grouped_index(themes)
         by_group = {group["title"]: group for group in groups}
         missing_groups = [name for name in group_order if name not in by_group]
         if missing_groups:
-            raise RuntimeError(f"{site_label} に無いグループ: {', '.join(missing_groups)}")
+            raise RuntimeError(
+                f"{site_label} に無いグループ: {', '.join(missing_groups)}"
+            )
         groups = [by_group[name] for name in group_order]
         by_flat = {theme["title"]: theme for theme in ungrouped}
         wanted_flat = ungrouped_order or []
@@ -726,6 +1078,7 @@ def build_site(
         groups, ungrouped = [], themes
     else:
         groups, ungrouped = build_grouped_index(themes)
+    apply_subject_points(groups, ungrouped, letter_map=letter_map)
     index_payload = {
         "title": index_title,
         "count": len(themes),
@@ -755,6 +1108,48 @@ def ensure_remote_dir(ftps: FTP_TLS, path: str) -> None:
             ftps.cwd(part)
 
 
+def remove_remote_tree(ftps: FTP_TLS, path: str) -> None:
+    """リモートのディレクトリを中身ごと削除（無ければ無視）。"""
+    parts = [p for p in path.strip("/").split("/") if p]
+    if not parts:
+        return
+    parent = "/" + "/".join(parts[:-1])
+    name = parts[-1]
+    try:
+        ftps.cwd(parent)
+    except Exception:
+        print(f"スキップ: リモート無し → {path}")
+        return
+
+    def _wipe(dir_name: str) -> None:
+        try:
+            ftps.cwd(dir_name)
+        except Exception:
+            return
+        for entry in list(ftps.nlst()):
+            if entry in (".", ".."):
+                continue
+            try:
+                ftps.delete(entry)
+                continue
+            except Exception:
+                pass
+            _wipe(entry)
+            try:
+                ftps.rmd(entry)
+            except Exception:
+                pass
+        ftps.cwd("..")
+
+    try:
+        _wipe(name)
+        ftps.cwd(parent)
+        ftps.rmd(name)
+        print(f"リモート削除: {path}")
+    except Exception as err:
+        print(f"警告: リモート削除できず {path}: {err}")
+
+
 def upload_one_site(
     ftps: FTP_TLS,
     *,
@@ -777,7 +1172,7 @@ def upload_one_site(
         else:
             local_path = site_dir / name
         # 攻略ページは重要テーマのみ
-        if name in KORYAKU_HTML_FILES and label != "重要テーマ":
+        if name in KORYAKU_HTML_FILES and label != "テーマ":
             continue
         if not local_path.is_file():
             if name in KORYAKU_HTML_FILES:
@@ -821,7 +1216,7 @@ def upload_sites() -> None:
         public_url=PUBLIC_THEMES_URL,
         html_dir=THEMES_DIR,
         version=version,
-        label="重要テーマ",
+        label="テーマ",
     )
     upload_one_site(
         ftps,
@@ -841,17 +1236,17 @@ def upload_sites() -> None:
         version=version,
         label="付録",
     )
-    for part in PART_SITES:
-        key = part["key"]
-        upload_one_site(
-            ftps,
-            site_dir=KAKOMON_DIR / f"part-{key}",
-            remote_dir=f"{REMOTE_BASE_DIR}/kaigo/kakomon/part-{key}",
-            public_url=f"https://nihongo.site/kaigo/kakomon/part-{key}/",
-            html_dir=KAKOMON_DIR / f"part-{key}",
-            version=version,
-            label=part["label"],
-        )
+    upload_one_site(
+        ftps,
+        site_dir=BANK_DIR,
+        remote_dir=REMOTE_BANK_DIR,
+        public_url=PUBLIC_BANK_URL,
+        html_dir=BANK_DIR,
+        version=version,
+        label=BANK_LABEL,
+    )
+    for key in ("a", "b", "c"):
+        remove_remote_tree(ftps, f"{REMOTE_BASE_DIR}/kaigo/kakomon/part-{key}")
     ftps.quit()
 
 
@@ -877,6 +1272,61 @@ def build_hikaku() -> None:
     subprocess.run([sys.executable, str(script)], check=True)
 
 
+def build_jinbutsu_hikaku() -> None:
+    """福祉の関連人物攻略マップ HTML/JSON。"""
+    script = ROOT / "work" / "study" / "build_jinbutsu_hikaku.py"
+    if not script.is_file():
+        print("警告: 人物攻略の生成スクリプトがありません")
+        return
+    import subprocess
+
+    subprocess.run([sys.executable, str(script)], check=True)
+
+
+def build_jiritsu_hikaku() -> None:
+    """利用者本位・自立支援適切マップ HTML/JSON。"""
+    script = ROOT / "work" / "study" / "build_jiritsu_hikaku.py"
+    if not script.is_file():
+        print("警告: 自立支援攻略の生成スクリプトがありません")
+        return
+    import subprocess
+
+    subprocess.run([sys.executable, str(script)], check=True)
+
+
+def build_jiritsu_ng_hikaku() -> None:
+    """利用者本位・自立支援不適切マップ HTML/JSON。"""
+    script = ROOT / "work" / "study" / "build_jiritsu_ng_hikaku.py"
+    if not script.is_file():
+        print("警告: 自立支援不適切マップの生成スクリプトがありません")
+        return
+    import subprocess
+
+    subprocess.run([sys.executable, str(script)], check=True)
+
+
+def build_kaigo_katei_hikaku() -> None:
+    """介護過程攻略マップ HTML/JSON。"""
+    script = ROOT / "work" / "study" / "build_kaigo_katei_hikaku.py"
+    if not script.is_file():
+        print("警告: 介護過程攻略の生成スクリプトがありません")
+        return
+    import subprocess
+
+    subprocess.run([sys.executable, str(script)], check=True)
+
+
+def build_icf_hikaku() -> None:
+    """ICF攻略マップ HTML/JSON。"""
+    script = ROOT / "work" / "study" / "build_icf_hikaku.py"
+    if not script.is_file():
+        print("警告: ICF攻略の生成スクリプトがありません")
+        return
+    import subprocess
+
+    subprocess.run([sys.executable, str(script)], check=True)
+
+
 def upload_hikaku_only() -> None:
     """比較表ページと、一覧導線に必要な themes 静的ファイルだけ FTP。"""
     version = make_cache_bust_version()
@@ -888,6 +1338,13 @@ def upload_hikaku_only() -> None:
     ensure_remote_dir(ftps, REMOTE_THEMES_DIR)
     names = (
         "hikaku-kaigo-shogai.html",
+        "hikaku-jinbutsu.html",
+        "hikaku-jiritsu.html",
+        "hikaku-jiritsu-kata.html",
+        "hikaku-jiritsu-vs.html",
+        "hikaku-jiritsu-ng.html",
+        "hikaku-kaigo-katei.html",
+        "hikaku-icf.html",
         "app.js",
         "themes.css",
         "style.css",
@@ -905,18 +1362,167 @@ def upload_hikaku_only() -> None:
                 ftps.storbinary(f"STOR {name}", f)
         print(f"[比較表] アップロード完了: {name}")
     ensure_remote_dir(ftps, f"{REMOTE_THEMES_DIR}/data")
-    hikaku_json = THEMES_DIR / "data" / "hikaku-kaigo-shogai.json"
-    if not hikaku_json.is_file():
-        raise FileNotFoundError(f"不足: {hikaku_json}")
-    with hikaku_json.open("rb") as f:
-        ftps.storbinary("STOR hikaku-kaigo-shogai.json", f)
-    print("[比較表] アップロード完了: data/hikaku-kaigo-shogai.json")
+    for json_name in (
+        "hikaku-kaigo-shogai.json",
+        "hikaku-jinbutsu.json",
+        "hikaku-jiritsu.json",
+        "hikaku-jiritsu-kata.json",
+        "hikaku-jiritsu-vs.json",
+        "hikaku-jiritsu-ng.json",
+        "hikaku-kaigo-katei.json",
+        "hikaku-icf.json",
+    ):
+        hikaku_json = THEMES_DIR / "data" / json_name
+        if not hikaku_json.is_file():
+            raise FileNotFoundError(f"不足: {hikaku_json}")
+        with hikaku_json.open("rb") as f:
+            ftps.storbinary(f"STOR {json_name}", f)
+        print(f"[比較表] アップロード完了: data/{json_name}")
+
+    # 付録の導線（言い回しカード削除後の app.js など）
+    sync_shared_assets(APPENDIX_DIR)
+    ensure_remote_dir(ftps, REMOTE_APPENDIX_DIR)
+    for name in ("app.js", "themes.css", "style.css", "ruby.json", "index.html"):
+        local_path = APPENDIX_DIR / name
+        if not local_path.is_file():
+            raise FileNotFoundError(f"不足: {local_path}")
+        if name.endswith(".html"):
+            content = prepare_html(local_path.read_text(encoding="utf-8"), version)
+            ftps.storbinary(f"STOR {name}", io.BytesIO(content.encode("utf-8")))
+        else:
+            with local_path.open("rb") as f:
+                ftps.storbinary(f"STOR {name}", f)
+        print(f"[付録] アップロード完了: {name}")
+    for stale_name in ("hikaku-jiritsu-cards.html", "hikaku-jiritsu-cards.json"):
+        try:
+            if stale_name.endswith(".json"):
+                ensure_remote_dir(ftps, f"{REMOTE_APPENDIX_DIR}/data")
+            else:
+                ensure_remote_dir(ftps, REMOTE_APPENDIX_DIR)
+            ftps.delete(stale_name)
+            print(f"[付録] リモート削除: {stale_name}")
+        except Exception as err:
+            print(f"[付録] リモート削除スキップ {stale_name}: {err}")
+
     ftps.quit()
-    print(f"[比較表] 公開URL: {PUBLIC_THEMES_URL}hikaku-kaigo-shogai.html?_cb={version}")
+    print(
+        f"[比較表] 公開URL: {PUBLIC_THEMES_URL}hikaku-kaigo-shogai.html?_cb={version}"
+    )
+    print(
+        f"[人物攻略] 公開URL: {PUBLIC_THEMES_URL}hikaku-jinbutsu.html?_cb={version}"
+    )
+    print(
+        f"[自立支援適切] 公開URL: {PUBLIC_THEMES_URL}hikaku-jiritsu.html?_cb={version}"
+    )
+    print(
+        f"[自立支援比較] 公開URL: {PUBLIC_THEMES_URL}hikaku-jiritsu-kata.html?_cb={version}"
+    )
+    print(
+        f"[自立支援言い回し対比] 公開URL: {PUBLIC_THEMES_URL}hikaku-jiritsu-vs.html?_cb={version}"
+    )
+    print(
+        f"[自立支援不適切] 公開URL: {PUBLIC_THEMES_URL}hikaku-jiritsu-ng.html?_cb={version}"
+    )
+    print(
+        f"[介護過程攻略] 公開URL: {PUBLIC_THEMES_URL}hikaku-kaigo-katei.html?_cb={version}"
+    )
+    print(
+        f"[ICF攻略] 公開URL: {PUBLIC_THEMES_URL}hikaku-icf.html?_cb={version}"
+    )
+
+
+def build_themes_site() -> None:
+    """テーマ（+攻略・比較表）だけローカル生成。"""
+    build_site(
+        site_dir=THEMES_DIR,
+        index_title="テーマ",
+        src_dir=THEME_SRC_DIR,
+        site_label="テーマ",
+        exclude_titles=all_part_titles(),
+        show_all_questions=True,
+    )
+    # data/ 再生成の後に置く（build_site が data/*.json を消すため）
+    build_kaigo_koryaku()
+    build_hikaku()
+    build_jinbutsu_hikaku()
+    build_jiritsu_hikaku()
+    build_jiritsu_ng_hikaku()
+    build_kaigo_katei_hikaku()
+    build_icf_hikaku()
+
+
+def build_appendix_site() -> None:
+    """付録だけローカル生成。"""
+    build_site(
+        site_dir=APPENDIX_DIR,
+        index_title="付録",
+        src_dir=APPENDIX_SRC_DIR,
+        site_label="付録",
+        show_all_questions=True,
+    )
+
+
+def _open_ftps() -> FTP_TLS:
+    ftps = FTP_TLS()
+    ftps.connect(FTP_HOST, 21, timeout=30)
+    ftps.login(FTP_USER, FTP_PASS)
+    ftps.prot_p()
+    ftps.set_pasv(True)
+    return ftps
+
+
+def upload_themes_site(*, version: str | None = None) -> str:
+    """テーマサイトだけ FTP アップロード。cache-bust 用 version を返す。"""
+    version = version or make_cache_bust_version()
+    ftps = _open_ftps()
+    try:
+        upload_one_site(
+            ftps,
+            site_dir=THEMES_DIR,
+            remote_dir=REMOTE_THEMES_DIR,
+            public_url=PUBLIC_THEMES_URL,
+            html_dir=THEMES_DIR,
+            version=version,
+            label="テーマ",
+        )
+    finally:
+        ftps.quit()
+    return version
+
+
+def upload_appendix_site(*, version: str | None = None) -> str:
+    """付録サイトだけ FTP アップロード。cache-bust 用 version を返す。"""
+    version = version or make_cache_bust_version()
+    ftps = _open_ftps()
+    try:
+        upload_one_site(
+            ftps,
+            site_dir=APPENDIX_DIR,
+            remote_dir=REMOTE_APPENDIX_DIR,
+            public_url=PUBLIC_APPENDIX_URL,
+            html_dir=APPENDIX_DIR,
+            version=version,
+            label="付録",
+        )
+    finally:
+        ftps.quit()
+    return version
+
+
+def deploy_themes_site(*, build_only: bool = False) -> None:
+    build_themes_site()
+    if not build_only:
+        upload_themes_site()
+
+
+def deploy_appendix_site(*, build_only: bool = False) -> None:
+    build_appendix_site()
+    if not build_only:
+        upload_appendix_site()
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="重要テーマ過去問を生成・デプロイ")
+    parser = argparse.ArgumentParser(description="テーマ過去問を生成・デプロイ")
     parser.add_argument(
         "--build-only",
         action="store_true",
@@ -927,30 +1533,45 @@ def main() -> int:
         action="store_true",
         help="対応比較表だけ生成して FTP（他サイトは触らない）",
     )
+    parser.add_argument(
+        "--themes-only",
+        action="store_true",
+        help="テーマ（+攻略）だけ生成・FTP",
+    )
+    parser.add_argument(
+        "--appendix-only",
+        action="store_true",
+        help="付録だけ生成・FTP",
+    )
     args = parser.parse_args()
     try:
         if args.hikaku_only:
             # 問題カード用に攻略 JSON が必要（なければ生成）
-            need_koryaku = not (THEMES_DIR / "data" / "koryaku-kaigo-hoken.json").is_file() or not (
-                THEMES_DIR / "data" / "koryaku-shogai-sogo.json"
-            ).is_file()
+            need_koryaku = (
+                not (THEMES_DIR / "data" / "koryaku-kaigo-hoken.json").is_file()
+                or not (THEMES_DIR / "data" / "koryaku-shogai-sogo.json").is_file()
+            )
             if need_koryaku:
                 build_kaigo_koryaku()
             build_hikaku()
+            build_jinbutsu_hikaku()
+            build_jiritsu_hikaku()
+            build_jiritsu_ng_hikaku()
+            build_kaigo_katei_hikaku()
+            build_icf_hikaku()
             if not args.build_only:
                 upload_hikaku_only()
             return 0
 
-        build_site(
-            site_dir=THEMES_DIR,
-            index_title="重要テーマ",
-            src_dir=THEME_SRC_DIR,
-            site_label="重要テーマ",
-            exclude_titles=all_part_titles(),
-        )
-        # data/ 再生成の後に置く（build_site が data/*.json を消すため）
-        build_kaigo_koryaku()
-        build_hikaku()
+        if args.themes_only:
+            deploy_themes_site(build_only=args.build_only)
+            return 0
+
+        if args.appendix_only:
+            deploy_appendix_site(build_only=args.build_only)
+            return 0
+
+        build_themes_site()
         build_site(
             site_dir=REFERENCE_DIR,
             index_title="参考テーマ",
@@ -958,24 +1579,26 @@ def main() -> int:
             site_label="参考テーマ",
             flat=True,
             card_low=True,
+            show_all_questions=True,
         )
+        build_appendix_site()
+        ensure_bank_html()
         build_site(
-            site_dir=APPENDIX_DIR,
-            index_title="付録",
-            src_dir=APPENDIX_SRC_DIR,
-            site_label="付録",
+            site_dir=BANK_DIR,
+            index_title=BANK_LABEL,
+            src_dirs=[PART_SRC_DIR / part["folder"] for part in PART_SITES],
+            site_label=BANK_LABEL,
+            only_titles=all_part_titles(),
+            group_order=BANK_GROUP_ORDER,
+            ungrouped_order=BANK_UNGROUPED_ORDER,
+            letter_map=SUBJECT_PART_LETTER,
         )
-        for part in PART_SITES:
-            key = part["key"]
-            build_site(
-                site_dir=KAKOMON_DIR / f"part-{key}",
-                index_title=f"{part['label']}",
-                src_dir=PART_SRC_DIR / part["folder"],
-                site_label=part["label"],
-                only_titles=part_titles(part),
-                group_order=part["groups"],
-                ungrouped_order=part["ungrouped"],
-            )
+        # 旧 A/B/C パート公開ディレクトリはローカルからも削除
+        for key in ("a", "b", "c"):
+            old = KAKOMON_DIR / f"part-{key}"
+            if old.is_dir():
+                shutil.rmtree(old)
+                print(f"削除: {old}")
         if not args.build_only:
             upload_sites()
     except Exception as err:

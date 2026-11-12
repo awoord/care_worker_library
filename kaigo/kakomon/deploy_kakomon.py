@@ -51,7 +51,15 @@ REMOTE_BASE_DIR = "/public_html/nihongo.site"
 REMOTE_SITE_DIR = f"{REMOTE_BASE_DIR}/kaigo/kakomon"
 
 DEPLOY_FILES = ("index.html", "style.css", "app.js", "questions.json", "ruby.json")
+NUMBER_DIR = SITE_DIR / "number"
+CHALLENGE_DIR = SITE_DIR / "challenge"
+TYPE_DIR = SITE_DIR / "type"
+TERM_DIR = SITE_DIR / "term"
 FIGURES_DIR = SITE_DIR / "figures"
+# クエスチョン・バンク（メディックメディア）のページ対応表
+QUESTION_BANK_TXT = ROOT / "work" / "question_bank" / "question_bank_2027.txt"
+# 第29回より前は QB ページを付けない（第29回はバンク掲載分を付ける）
+QB_SESSION_MIN = 29
 PUBLIC_URL = "https://nihongo.site/kaigo/kakomon/"
 
 GAS_WORDS_URL = (
@@ -96,6 +104,37 @@ def parse_answer_cell(raw: str) -> list[int] | None:
         if n not in nums:
             nums.append(n)
     return nums or None
+
+
+QB_ROUND_38_LABEL = "528〜"
+
+
+def load_qb_map() -> dict[str, int | str]:
+    """question_bank_*.txt から id → QBページ番号 を読む。
+
+    行形式: 【回-番号｜科目名】 ページ  （科目なし可: 【回-番号】 ページ）
+    第29回以前（QB_SESSION_MIN未満）は読み飛ばす。
+    第38回は未収録のため「528〜」。
+    """
+    mapping: dict[str, int | str] = {}
+    if not QUESTION_BANK_TXT.is_file():
+        print(f"警告: クエスチョン・バンク対応表なし → {QUESTION_BANK_TXT}")
+        return mapping
+    line_re = re.compile(r"【(\d+)-(\d+)(?:｜[^】]*)?】\s*(\d+)")
+    for raw in QUESTION_BANK_TXT.read_text(encoding="utf-8").splitlines():
+        m = line_re.match(raw.strip())
+        if not m:
+            continue
+        session = int(m.group(1))
+        if session < QB_SESSION_MIN:
+            continue
+        number = int(m.group(2))
+        page = int(m.group(3))
+        mapping[f"{session}-{number}"] = page
+    for n in range(1, 126):
+        mapping[f"38-{n}"] = QB_ROUND_38_LABEL
+    print(f"QB対応: {len(mapping)} 問 ← {QUESTION_BANK_TXT.name}")
+    return mapping
 
 
 def load_answers_map() -> tuple[dict[str, list[int]], dict[str, str]]:
@@ -231,6 +270,7 @@ def question_to_json(
     explains_map: dict[str, dict[str, str]] | None = None,
     figures_map: dict[str, list[str]] | None = None,
     choice_figures_map: dict[str, dict[str, str]] | None = None,
+    qb_map: dict[str, int] | None = None,
 ) -> dict:
     body: list[str] = []
     if q.context:
@@ -274,6 +314,8 @@ def question_to_json(
         item["figures"] = figures_map[qid]
     if choice_figures_map and qid in choice_figures_map:
         item["choiceFigures"] = choice_figures_map[qid]
+    if qb_map and qid in qb_map:
+        item["qb"] = qb_map[qid]
     return item
 
 
@@ -284,6 +326,7 @@ def build_payload(
     explains_map: dict[str, dict[str, str]] | None = None,
     figures_map: dict[str, list[str]] | None = None,
     choice_figures_map: dict[str, dict[str, str]] | None = None,
+    qb_map: dict[str, int] | None = None,
 ) -> dict:
     return {
         "title": "過去問検索",
@@ -300,6 +343,7 @@ def build_payload(
                 explains_map,
                 figures_map,
                 choice_figures_map,
+                qb_map,
             )
             for q in questions
         ],
@@ -422,6 +466,7 @@ def build_site() -> Path:
     answers_map, notes_map = load_answers_map()
     explains_map = load_explains_map()
     figures_map, choice_figures_map = load_figures_maps()
+    qb_map = load_qb_map()
     payload = build_payload(
         questions,
         answers_map,
@@ -429,6 +474,7 @@ def build_site() -> Path:
         explains_map,
         figures_map,
         choice_figures_map,
+        qb_map,
     )
     with_answers = sum(1 for q in payload["questions"] if q.get("answers"))
     with_notes = sum(1 for q in payload["questions"] if q.get("note"))
@@ -438,6 +484,7 @@ def build_site() -> Path:
         for q in payload["questions"]
         if q.get("figures") or q.get("choiceFigures")
     )
+    with_qb = sum(1 for q in payload["questions"] if q.get("qb"))
     out = SITE_DIR / "questions.json"
     out.write_text(
         json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + "\n",
@@ -445,7 +492,7 @@ def build_site() -> Path:
     )
     print(
         f"生成: {len(questions)} 問"
-        f"（正解付き {with_answers}、注釈 {with_notes}、解説 {with_explains}、図 {with_figures}） → {out}"
+        f"（正解付き {with_answers}、注釈 {with_notes}、解説 {with_explains}、図 {with_figures}、QB {with_qb}） → {out}"
     )
     write_ruby_json()
     return out
@@ -479,15 +526,40 @@ def upload_site() -> None:
         local_path = SITE_DIR / name
         if not local_path.is_file():
             raise FileNotFoundError(f"不足: {local_path}")
+        # 過去問検索（ルート index.html）は公開停止。共有アセットとサブページのみ上げる
         if name == "index.html":
-            content = prepare_index_html(
-                local_path.read_text(encoding="utf-8"), version
-            )
-            ftps.storbinary("STOR index.html", io.BytesIO(content.encode("utf-8")))
-        else:
-            with local_path.open("rb") as f:
-                ftps.storbinary(f"STOR {name}", f)
+            print("スキップ: index.html（過去問検索はデプロイしない）")
+            continue
+        with local_path.open("rb") as f:
+            ftps.storbinary(f"STOR {name}", f)
         print(f"アップロード完了: {name}")
+
+    for sub_name, sub_dir in (
+        ("number", NUMBER_DIR),
+        ("challenge", CHALLENGE_DIR),
+        ("type", TYPE_DIR),
+        ("term", TERM_DIR),
+    ):
+        if not sub_dir.is_dir():
+            continue
+        ensure_remote_dir(ftps, f"{REMOTE_SITE_DIR}/{sub_name}")
+        sub_index = sub_dir / "index.html"
+        if not sub_index.is_file():
+            continue
+        content = prepare_index_html(sub_index.read_text(encoding="utf-8"), version)
+        # サブディレクトリ用: ../style.css / ../app.js のキャッシュバスターも更新
+        content = re.sub(
+            r'(href="\.\./style\.css)(?:\?v=[^"]*)?"',
+            rf'\1?v={version}"',
+            content,
+        )
+        content = re.sub(
+            r'(src="\.\./app\.js)(?:\?v=[^"]*)?"',
+            rf'\1?v={version}"',
+            content,
+        )
+        ftps.storbinary("STOR index.html", io.BytesIO(content.encode("utf-8")))
+        print(f"アップロード完了: {sub_name}/index.html")
 
     if FIGURES_DIR.is_dir():
         ensure_remote_dir(ftps, f"{REMOTE_SITE_DIR}/figures")
@@ -501,7 +573,11 @@ def upload_site() -> None:
             print(f"アップロード完了: figures/{path.name}")
 
     ftps.quit()
-    print(f"\n公開URL: {PUBLIC_URL}?_cb={version}")
+    print(f"\n（過去問検索ルートはデプロイ対象外）")
+    print(f"番号サーチ: {PUBLIC_URL}number/?_cb={version}")
+    print(f"年度タイプ: {PUBLIC_URL}challenge/?_cb={version}")
+    print(f"出題タイプ: {PUBLIC_URL}type/?_cb={version}")
+    print(f"これ、出た？: {PUBLIC_URL}term/?_cb={version}")
 
 
 def main() -> int:

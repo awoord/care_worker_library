@@ -16,13 +16,18 @@
         --choice-ng-border: #d4a09a;
         --font: "M PLUS Rounded 1c", "Hiragino Sans", "Noto Sans JP", sans-serif;
         /* 全行をルビあり相当の行間に統一（ルビ有無で狭くならないようにする） */
-        --content-line-height: 2.15;
+        --content-line-height: 2.05;
         --ruby-rt-size: 0.5em;
         /* 親字とルビのすき間（大きいほど離れる）。PC */
         --ruby-rt-gap: 0.22em;
         --ruby-color: #5a6478;
         --control-height: 48px;
         --control-radius: 10px;
+        /* 番号／◯✕列と本文のすき間（選択肢文・解説文で共通。emだと解説の字サイズでずれる） */
+        --choice-mark-col: 1.85rem;
+        --choice-body-gap: 12px;
+        /* 番号左のカード余白も開閉ヒットに含める（.question-card の左右 padding と揃える） */
+        --choice-toggle-pad-left: 16px;
 }
 
 * {
@@ -48,7 +53,7 @@ body {
 
 body {
         min-height: 100vh;
-        padding: 16px 8px 64px;
+        padding: 10px 8px 64px;
         overflow-x: hidden;
         overflow-x: clip;
         width: 100%;
@@ -73,8 +78,8 @@ body {
         gap: 8px;
         position: relative;
         z-index: 50;
-        margin: 0 0 10px;
-        padding: 2px 0;
+        margin: 0 0 4px;
+        padding: 0;
 }
 
 /* 1行目: サイト名。ページ見出しより一段小さく、でもスマホでも読めるサイズ */
@@ -82,15 +87,20 @@ body {
         flex: 1 1 auto;
         min-width: 0;
         margin: 0;
-        padding: 0 4px 0 0;
-        font-size: clamp(17px, 4.6vw, 19px);
+        padding: 0;
+        font-size: clamp(16px, 4.6vw, 22px);
         font-weight: 700;
-        line-height: 1.35;
+        line-height: 1.3;
         letter-spacing: 0.01em;
         color: #3d4659;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
+        overflow: visible;
+        white-space: normal;
+        text-decoration: none;
+}
+
+a.site-brand:hover,
+a.site-brand:focus-visible {
+        color: #2a3348;
 }
 
 .site-brand .ruby-pair > rt,
@@ -98,13 +108,124 @@ body {
         display: none;
 }
 
-/* 2行目: ページ見出し。いちばん読んでほしい行 */
+/* 右寄せ: カウントダウン + ▼/▶ */
+.site-bar-end {
+        display: flex;
+        align-items: baseline;
+        flex: 0 0 auto;
+        gap: 2px;
+        margin: 0 0 0 auto;
+}
+
+/* 国試までのカウントダウン（タップ不可） */
+.exam-countdown {
+        flex: 0 0 auto;
+        margin: 0;
+        padding: 0;
+        border: none;
+        background: transparent;
+        font-family: var(--font);
+        font-size: 15px;
+        font-weight: 700;
+        line-height: 1.2;
+        letter-spacing: 0.02em;
+        color: var(--muted);
+        white-space: nowrap;
+}
+
+.exam-countdown-prefix,
+.exam-countdown-unit {
+        font-size: 0.68em;
+        font-weight: 700;
+}
+
+.exam-countdown-unit {
+        margin-left: 0.04em;
+}
+
+.exam-countdown[hidden] {
+        display: none !important;
+}
+
+/* ツールバー表示／非表示（黒記号） */
+.header-chrome-toggle {
+        flex: 0 0 auto;
+        margin: 0;
+        padding: 0 2px;
+        min-width: 28px;
+        min-height: 28px;
+        border: none;
+        background: transparent;
+        font-family: var(--font);
+        font-size: 14px;
+        font-weight: 700;
+        line-height: 1;
+        color: var(--text);
+        cursor: pointer;
+}
+
+.header-chrome-toggle:focus-visible {
+        outline: 2px solid #4c6cb8;
+        outline-offset: 2px;
+        border-radius: 4px;
+}
+
+/* 2行目: インプット／アウトプット・全表示・ルビ */
+.header-tool-row {
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 6px;
+        margin: 2px 0 6px;
+        padding: 0;
+}
+
+.header-tool-row[hidden] {
+        display: none !important;
+}
+
+@media print {
+        /* 右下ページ番号（Firefox / 印刷エンジン向け。Chrome は未対応のため印刷設定の「ヘッダーとフッター」を使う） */
+        @page {
+                size: A4 portrait;
+                margin: 12mm 12mm 16mm;
+                @bottom-right {
+                        content: counter(page);
+                        font-size: 9pt;
+                        color: #5b6578;
+                }
+        }
+
+        .exam-countdown,
+        .header-chrome-toggle,
+        .header-tool-row {
+                display: none !important;
+        }
+
+        /* Chrome は flex 子の break-inside が弱いので、印刷時は block に戻す */
+        .question-list {
+                display: block;
+        }
+
+        .question-card {
+                break-inside: avoid;
+                page-break-inside: avoid;
+                margin-bottom: 18px;
+        }
+
+        .question-card .meta-row {
+                break-after: avoid;
+                page-break-after: avoid;
+        }
+}
+
+/* 3行目: ページ見出し */
 .page-header > h1 {
-        margin: 0 0 14px;
-        padding-top: 0.45em;
+        margin: 0 0 10px;
+        padding-top: 0;
         font-size: clamp(21px, 5.2vw, 26px);
         font-weight: 700;
-        line-height: 1.5;
+        line-height: 1.4;
         letter-spacing: 0.01em;
 }
 
@@ -207,15 +328,10 @@ body {
         font-weight: 700;
 }
 
-.ruby-toggle {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-        margin-left: 0;
-        height: 40px;
-        min-height: 40px;
-        padding: 0 12px;
+/* ルビ・正解・解説で見た目を揃える */
+.ruby-toggle,
+.quiz-reveal-all {
+        appearance: none;
         border: 1px solid var(--border);
         border-radius: 999px;
         background: var(--surface);
@@ -226,25 +342,48 @@ body {
         line-height: 1;
         cursor: pointer;
         box-sizing: border-box;
+        text-decoration: none;
+}
+
+.ruby-toggle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        margin-left: 0;
+        height: 36px;
+        min-height: 36px;
+        padding: 0 11px;
+        font-size: 12.5px;
 }
 
 .ruby-toggle.answer-show-toggle {
         margin-left: 0;
 }
 
-.ruby-toggle:hover {
-        color: var(--accent);
-        border-color: var(--accent);
+.ruby-toggle.header-quick-nav {
+        min-width: 36px;
+        padding: 0 9px;
+        letter-spacing: 0.02em;
 }
 
-.ruby-toggle[aria-pressed="true"] {
-        color: var(--text);
+.ruby-toggle.themes-nav-link.is-current,
+.ruby-toggle.header-quick-nav.is-current {
         background: var(--accent-soft);
-        border-color: #b8c4ef;
-        font-weight: 700;
+        border-color: var(--accent);
+        color: var(--accent);
 }
 
-.ruby-toggle:focus-visible {
+/* ルビON・全表示ONは同じ青ハイライト（取り消し線は使わない） */
+#rubyToggle[aria-pressed="true"],
+.ruby-toggle.explain-all-toggle[aria-pressed="true"] {
+        background: var(--accent-soft);
+        border-color: var(--accent);
+        color: var(--accent);
+}
+
+.ruby-toggle:focus-visible,
+.quiz-reveal-all:focus-visible {
         outline: 2px solid var(--accent);
         outline-offset: 2px;
 }
@@ -259,7 +398,7 @@ body {
 
 h1 {
         margin: 0 0 8px;
-        padding-top: 0.55em;
+        padding-top: 0.2em;
         font-size: clamp(22px, 5.2vw, 30px);
         font-weight: 700;
         line-height: 1.35;
@@ -548,6 +687,141 @@ h1 {
         word-break: break-word;
 }
 
+.term-summary {
+        max-width: 720px;
+        width: 100%;
+        margin: 0 auto 12px;
+        padding: 14px 16px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: var(--surface);
+        box-sizing: border-box;
+}
+
+.term-summary-eyebrow {
+        margin: 0 0 2px;
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        line-height: 1.85;
+        color: var(--muted);
+}
+
+.term-summary-term {
+        margin: 0 0 12px;
+        font-size: 18px;
+        font-weight: 700;
+        line-height: 1.85;
+        color: var(--text);
+        overflow-wrap: anywhere;
+        word-break: break-word;
+}
+
+.term-summary-level {
+        margin: 0 0 6px;
+        font-size: 22px;
+        font-weight: 700;
+        line-height: 1.85;
+}
+
+.term-summary-note-wrap {
+        margin: 0 0 12px;
+}
+
+.term-summary-note-toggle {
+        cursor: pointer;
+        list-style: none;
+        font-size: 13px;
+        font-weight: 600;
+        line-height: 1.65;
+        color: var(--muted);
+        user-select: none;
+}
+
+.term-summary-note-toggle::-webkit-details-marker {
+        display: none;
+}
+
+.term-summary-note-toggle::before {
+        content: "▶";
+        display: inline-block;
+        margin-right: 0.35em;
+        font-size: 0.75em;
+        transform: translateY(-0.05em);
+}
+
+.term-summary-note-wrap[open] > .term-summary-note-toggle::before {
+        content: "▼";
+}
+
+.term-summary-note {
+        margin: 4px 0 0;
+        font-size: 13px;
+        font-weight: 500;
+        line-height: 1.65;
+        color: var(--muted);
+}
+
+.term-summary-high .term-summary-level {
+        color: #1f4f9c;
+}
+
+.term-summary-low .term-summary-level {
+        color: #5c6578;
+}
+
+.term-summary-stats {
+        margin: 0;
+        padding: 0 0 0 1.15em;
+        color: var(--text);
+        font-size: 16px;
+        line-height: 1.55;
+}
+
+.term-summary-stats li {
+        margin: 0 0 4px;
+}
+
+.term-summary-stats li:last-child {
+        margin-bottom: 0;
+}
+
+.term-summary-count {
+        font-size: 22px;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+}
+
+.term-summary-unit {
+        margin-left: 1px;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--muted);
+}
+
+.term-more-wrap {
+        display: flex;
+        justify-content: center;
+        margin: 4px 0 8px;
+}
+
+.term-more-button {
+        appearance: none;
+        border: 1px solid var(--border);
+        background: var(--surface);
+        color: var(--text);
+        border-radius: 999px;
+        padding: 10px 18px;
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+}
+
+.term-more-button:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+}
+
 .status-mode {
         display: inline-flex;
         align-items: center;
@@ -608,46 +882,41 @@ h1 {
         box-sizing: border-box;
 }
 
-.question-card.is-quiz-trial {
-        position: relative;
-}
-
 .meta-row {
         display: flex;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
         gap: 8px;
         align-items: center;
-        margin-bottom: 12px;
-}
-
-.question-card.is-quiz-trial .meta-row {
-        padding-right: 2.75rem;
+        margin-bottom: 8px;
+        min-width: 0;
 }
 
 .quiz-reveal-all {
-        position: absolute;
-        top: 14px;
-        right: 12px;
-        z-index: 3;
         display: inline-grid;
         justify-items: center;
         align-items: center;
-        min-width: 2rem;
-        min-height: 2rem;
-        border: 1px solid var(--border);
-        background: #fff;
-        color: var(--accent);
-        border-radius: 999px;
-        padding: 2px 8px;
-        font: inherit;
-        font-size: 16px;
-        font-weight: 700;
-        cursor: pointer;
+        flex-shrink: 0;
+        min-width: 2.4rem;
+        height: 26px;
+        min-height: 26px;
+        padding: 0 6px;
+        font-size: 12px;
         line-height: 1;
+        white-space: nowrap;
+}
+
+/* display 指定が [hidden] を上書きするため明示。印刷用畳みでも出さない */
+.quiz-reveal-all[hidden],
+.header-chrome-collapsed .quiz-reveal-all {
+        display: none !important;
 }
 
 .quiz-reveal-all > span {
         grid-area: 1 / 1;
+}
+
+.quiz-reveal-all .label-open {
+        color: inherit;
 }
 
 .quiz-reveal-all .label-close {
@@ -662,31 +931,18 @@ h1 {
         visibility: visible;
 }
 
-.quiz-reveal-all:hover {
-        background: #f3f4f6;
-        border-color: #b8bfcd;
-}
-
-.quiz-reveal-all:focus-visible {
-        outline: 2px solid var(--accent);
-        outline-offset: 2px;
-}
-
-.quiz-reveal-all[aria-pressed="true"] {
-        background: #f3f4f6;
-        border-color: #b8bfcd;
-        color: var(--text);
-}
-
 .badge {
         display: inline-flex;
         align-items: center;
-        padding: 3px 8px;
+        flex-shrink: 0;
+        padding: 0.28em 8px 2px;
         border-radius: 6px;
         font-size: 12px;
         font-weight: 500;
+        line-height: 1.35;
         background: #eef1f6;
         color: var(--muted);
+        white-space: nowrap;
 }
 
 .badge-id {
@@ -695,8 +951,44 @@ h1 {
 }
 
 .badge-subject {
+        flex-shrink: 1;
+        min-width: 0;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
         background: #f1f3f7;
         color: var(--muted);
+}
+
+.badge-qb-print {
+        background: #eef1f6;
+        color: #5b6578;
+        font-variant-numeric: tabular-nums;
+        letter-spacing: 0.01em;
+}
+
+.badge-qb {
+        margin-left: auto;
+        background: transparent;
+        color: var(--muted);
+        font-variant-numeric: tabular-nums;
+        letter-spacing: 0.02em;
+}
+
+.jump-hit-label {
+        margin: 0 0 4px;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--muted);
+        line-height: 1.45;
+}
+
+.jump-hit-label + .question-card {
+        margin-top: 0;
+}
+
+.question-card + .jump-hit-label {
+        margin-top: 14px;
 }
 
 .stem {
@@ -768,11 +1060,11 @@ h1 {
         display: block;
         box-sizing: border-box;
         /* margin-left 分を引かないと 100%+余白で横にはみ出す */
-        max-width: min(calc(100% - 1.4em), 360px);
+        max-width: min(calc(100% - var(--choice-mark-col)), 360px);
         width: auto;
         height: auto;
         max-height: none;
-        margin: 0 0 10px 1.4em;
+        margin: 0 0 10px var(--choice-mark-col);
         padding: 8px;
         background: #f8fafc;
         border: 1px solid #e5e7eb;
@@ -823,7 +1115,7 @@ h1 {
 .choice-body {
         display: flex;
         align-items: baseline;
-        gap: 8px;
+        gap: var(--choice-body-gap);
         /* 先頭行ルビ分の余白（全問題共通）。左右は問題文と同じ */
         padding: 14px 0 10px;
         position: relative;
@@ -832,18 +1124,19 @@ h1 {
 }
 
 .choice-n-wrap {
-        flex: 0 0 1.4em;
+        flex: 0 0 var(--choice-mark-col);
+        width: var(--choice-mark-col);
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: flex-start;
         position: relative;
         line-height: inherit;
-        min-height: 1.4em;
+        min-height: var(--choice-mark-col);
 }
 
 .choice-n {
-        font-weight: 700;
+        font-weight: 400;
         color: var(--text);
         line-height: inherit;
         text-align: center;
@@ -864,25 +1157,45 @@ h1 {
 }
 
 .choice.is-tappable {
-        cursor: pointer;
         transition:
                 border-color 0.15s ease,
                 background-color 0.15s ease,
                 transform 0.12s ease;
 }
 
-.choice.is-tappable:active:not(.is-open) {
-        transform: scale(0.995);
+/* 解説開閉: 番号左余白 + 番号・◯✕列 + その下／右すき間 */
+.choice-toggle-hit {
+        position: absolute;
+        left: calc(-1 * var(--choice-toggle-pad-left));
+        top: 0;
+        bottom: 0;
+        width: calc(
+                var(--choice-toggle-pad-left) + var(--choice-mark-col) + var(--choice-body-gap)
+        );
+        z-index: 3;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        border-radius: 12px 0 0 12px;
+        background: transparent;
+        cursor: pointer;
+        appearance: none;
+        -webkit-appearance: none;
 }
 
-.choice.is-tappable:focus-visible {
+.choice-toggle-hit:focus-visible {
         outline: 2px solid #c5cad6;
-        outline-offset: 2px;
+        outline-offset: -2px;
+}
+
+/* 番号・◯✕領域だけフィードバック（本文ホバーでは色を変えない） */
+.choice.is-tappable:has(.choice-toggle-hit:active) {
+        transform: scale(0.995);
 }
 
 /* タッチ端末では :hover が残りやすいので、ホバー可能な環境だけ適用 */
 @media (hover: hover) and (pointer: fine) {
-        .choice.is-tappable:hover:not(.is-open) {
+        .choice.is-tappable:has(.choice-toggle-hit:hover) {
                 border-color: var(--choice-hover-border);
                 background: var(--choice-hover-bg);
         }
@@ -896,10 +1209,10 @@ h1 {
         display: flex;
         align-items: center;
         justify-content: center;
-        /* 大きすぎると番号列の左外へ出て、スマホで横パンの原因になる */
+        /* 番号列内に収まるサイズ（読むモードでは番号の代わり） */
         width: 1.55em;
         height: 1.55em;
-        font-size: 1.55em;
+        font-size: 1.5em;
         font-weight: 700;
         line-height: 1;
         pointer-events: none;
@@ -919,29 +1232,64 @@ h1 {
 }
 
 .choice.is-correct {
-        border-color: var(--choice-ok-border);
-        background: var(--choice-ok-bg);
+        border-color: transparent;
+        background: transparent;
 }
 
 .choice.is-wrong {
-        border-color: var(--choice-ng-border);
-        background: var(--choice-ng-bg);
+        border-color: transparent;
+        background: transparent;
+}
+
+/* 読むモード: 今見ない側は非表示 */
+.question-card.is-read-mode .choice.is-study-hidden,
+.answer-show-on .choice.is-study-hidden {
+        display: none !important;
+}
+
+/* 読む／解説: 正解を上、✕をその下に並べる */
+.question-card.is-read-mode .choices {
+        display: flex;
+        flex-direction: column;
+}
+
+.question-card.is-read-mode .choice.is-correct {
+        order: 1;
+}
+
+.question-card.is-read-mode .choice.is-wrong {
+        order: 2;
+}
+
+/* 解説展開時: 正解ブロックと✕群のあいだを少し空ける（線なし） */
+.question-card.is-read-mode.is-read-all .choice.is-correct {
+        margin-bottom: 6px;
+        padding-bottom: 0;
+}
+
+/* 読むモード: 番号は隠す（全表示時は番号も出す） */
+.question-card.is-read-mode:not(.is-read-all) .choice-n {
+        visibility: hidden;
+}
+
+/* 旧1枚送りナビ（残存DOM用） */
+.wrong-step-nav {
+        display: none !important;
 }
 
 .choice-explain {
         margin: 0;
-        /* 左は番号幅+gap に合わせ、選択肢本文と揃える */
-        padding: 0 12px 10px calc(1.4em + 8px);
-        font-size: 13px;
+        /* 左端は選択肢本文（.choice-text）と必ず揃える */
+        padding: 0 12px 10px calc(var(--choice-mark-col) + var(--choice-body-gap));
+        font-size: 15px;
         font-family: var(--font);
         line-height: var(--content-line-height);
         letter-spacing: -0.01em;
         color: var(--text);
-        border-top: 1px solid transparent;
+        border: none;
 }
 
 .choice.is-open .choice-explain {
-        border-top-color: rgba(46, 56, 86, 0.1);
         padding-top: 10px;
 }
 
@@ -963,78 +1311,88 @@ h1 {
         background: transparent;
         border: none;
         border-radius: 0;
-        border-bottom: 1px solid rgba(46, 56, 86, 0.1);
 }
 
 .question-card.is-quiz-trial .choice:last-child {
-        border-bottom: none;
+        border: none;
 }
 
 .question-card.is-quiz-trial .choice-body {
-        padding: 10px 0;
+        padding: 5px 0;
+        line-height: 1.85;
+}
+
+/* 選択肢と解説は近づける */
+.question-card.is-quiz-trial .choice.is-open .choice-body {
+        padding-bottom: 2px;
 }
 
 .question-card.is-quiz-trial .choice-explain {
-        padding-left: calc(1.4em + 8px);
+        padding-left: calc(var(--choice-mark-col) + var(--choice-body-gap));
         padding-right: 0;
 }
 
-.question-card.is-quiz-trial .choice.is-tappable:active:not(.is-open) {
+.question-card.is-quiz-trial .choice.is-correct,
+.question-card.is-quiz-trial .choice.is-wrong {
+        border: none;
+        border-radius: 0;
+        margin-bottom: 0;
+        background: transparent;
+}
+
+/* 解説開閉中も番号領域のホバー／タップで薄い色（本文側は反応しない） */
+.question-card.is-quiz-trial .choice.is-tappable:has(.choice-toggle-hit:active) {
         transform: none;
         background: var(--choice-hover-bg);
 }
 
 @media (hover: hover) and (pointer: fine) {
-        .question-card.is-quiz-trial .choice.is-tappable:hover:not(.is-open) {
+        .question-card.is-quiz-trial .choice.is-tappable:has(.choice-toggle-hit:hover) {
                 border-color: transparent;
-                border-bottom-color: rgba(46, 56, 86, 0.1);
                 background: var(--choice-hover-bg);
         }
 }
 
-.question-card.is-quiz-trial .choice.is-correct,
-.question-card.is-quiz-trial .choice.is-wrong {
-        border-bottom-color: transparent;
-        border-radius: 0;
-        margin-bottom: 2px;
-        /* 解説まで色が乗らないよう、本体だけに背景を付ける */
-        background: transparent;
-}
-
-.question-card.is-quiz-trial .choice.is-correct .choice-body {
-        background: var(--choice-ok-bg);
-        border-radius: 8px;
-}
-
-/* ✕選択肢の本体は既存どおり赤系。解説は背景なし */
+/* 正誤は ◯✕ の色だけで示す（文言背景は付けない） */
+.question-card.is-quiz-trial .choice.is-correct .choice-body,
 .question-card.is-quiz-trial .choice.is-wrong .choice-body {
-        background: var(--choice-ng-bg);
-        border-radius: 8px;
+        background: transparent;
+        border-radius: 0;
+}
+
+.question-card.is-read-mode .choices {
+        border-bottom: none;
 }
 
 .question-card.is-quiz-trial .choice.is-open + .choice {
         border-top: none;
 }
 
-/* 解説は正誤に関わらず視認しやすい青＋下線（背景なし） */
+/*
+ * 解説: 選択肢より一段落ち着いた色。仕切り線なし。
+ * 選択肢文とは密着、次の選択肢までは余白を取る。
+ */
 .question-card.is-quiz-trial .choice-explain,
 .question-card.is-quiz-trial .choice.is-correct .choice-explain,
 .question-card.is-quiz-trial .choice.is-wrong .choice-explain {
-        color: #1d4ed8;
+        color: #5c6578;
         background: transparent;
-        border-top: none;
-        border-bottom: 1px solid rgba(46, 56, 86, 0.1);
-        padding-top: 8px;
+        border: none;
+        padding-top: 2px;
         padding-bottom: 8px;
-        margin-top: 2px;
+        margin-top: 0;
+        margin-bottom: 0;
+        font-size: 14.5px;
         font-family: var(--font);
         letter-spacing: -0.01em;
+        line-height: 1.65;
 }
 
 /*
  * 短い単位は nowrap。
- * inline-block + ルビ→親字の順: 幅はルビを反映、ベースラインは親字に揃う。
- * すき間は margin（ネイティブ rt の transform/padding は効かないため）。
+ * inline-block + ルビ→親字の順: ベースラインは親字に揃う。
+ * ルビが親字より長い場合は JS(fitRubyReadingToBase) で字間・サイズを圧縮し、
+ * 隣ルビと重ねず、半角スペースも入れない。
  */
 .ruby-pair {
         display: inline-block;
@@ -1043,11 +1401,14 @@ h1 {
         vertical-align: baseline;
         max-width: 100%;
         line-height: 1;
+        /* 親の letter-spacing が負だと隣ルビが重なるので打ち消す */
+        letter-spacing: 0;
 }
 
 .ruby-base {
         display: block;
         line-height: 1;
+        letter-spacing: 0;
 }
 
 .ruby-pair > rt,
@@ -1069,20 +1430,87 @@ h1 {
         -webkit-text-size-adjust: 100%;
 }
 
-/* ルビ非表示（コピペ用）。.ruby-text を消すので選択コピーに読みが混ざりにくい */
+/* ルビOFF: 高さを保ったまま隠す（トグルで行が跳ねない）。選択にも読みが入りにくい */
 body.ruby-off .ruby-pair > rt,
 body.ruby-off .ruby-text {
-        display: none;
-}
-
-body.ruby-off .ruby-pair {
-        line-height: inherit;
+        visibility: hidden;
+        color: transparent;
 }
 
 .vocab-ruby-run {
         display: inline;
         overflow-wrap: anywhere;
         word-break: break-word;
+        /* 隣り合う ruby-pair のあいだを親の負の字間で詰めない */
+        letter-spacing: 0;
+}
+
+.vocab-term {
+        display: inline;
+}
+
+/* ルビONかつシートに英語/意味がある語だけ、ホバー・タップで語義 */
+body:not(.ruby-off) .question-card .vocab-term.has-vocab-gloss,
+body:not(.ruby-off) .koryaku-card .vocab-term.has-vocab-gloss,
+body:not(.ruby-off) .koryaku-problem .vocab-term.has-vocab-gloss,
+body:not(.ruby-off) .hikaku-modal-body .vocab-term.has-vocab-gloss,
+body:not(.ruby-off) .hikaku-table .vocab-term.has-vocab-gloss {
+        cursor: help;
+        border-bottom: 1px dotted rgba(91, 101, 120, 0.45);
+}
+
+body:not(.ruby-off) .question-card .vocab-term.has-vocab-gloss.is-gloss-open,
+body:not(.ruby-off) .koryaku-card .vocab-term.has-vocab-gloss.is-gloss-open,
+body:not(.ruby-off) .koryaku-problem .vocab-term.has-vocab-gloss.is-gloss-open,
+body:not(.ruby-off) .hikaku-modal-body .vocab-term.has-vocab-gloss.is-gloss-open,
+body:not(.ruby-off) .hikaku-table .vocab-term.has-vocab-gloss.is-gloss-open {
+        background: #fef3c7;
+        color: inherit;
+        padding: 0 0.12em;
+        border-radius: 3px;
+        border-bottom-color: transparent;
+        box-decoration-break: clone;
+        -webkit-box-decoration-break: clone;
+}
+
+body:not(.ruby-off) .question-card .vocab-term.has-vocab-gloss.is-gloss-open .ruby-text,
+body:not(.ruby-off) .koryaku-card .vocab-term.has-vocab-gloss.is-gloss-open .ruby-text,
+body:not(.ruby-off) .koryaku-problem .vocab-term.has-vocab-gloss.is-gloss-open .ruby-text,
+body:not(.ruby-off) .hikaku-modal-body .vocab-term.has-vocab-gloss.is-gloss-open .ruby-text,
+body:not(.ruby-off) .hikaku-table .vocab-term.has-vocab-gloss.is-gloss-open .ruby-text {
+        color: #92400e;
+}
+
+.vocab-gloss-popup {
+        position: fixed;
+        z-index: 120;
+        max-width: min(280px, calc(100vw - 24px));
+        padding: 10px 12px;
+        border: 1px solid var(--border, #d5dae6);
+        border-radius: 10px;
+        background: #fff;
+        box-shadow: 0 8px 24px rgba(46, 56, 86, 0.16);
+        color: var(--text, #2a3348);
+        font-size: 14px;
+        line-height: 1.45;
+        pointer-events: none;
+}
+
+.vocab-gloss-en {
+        font-size: 15px;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+        color: #3d4659;
+}
+
+.vocab-gloss-meaning {
+        margin-top: 4px;
+        font-size: 14px;
+        color: var(--muted, #5b6578);
+}
+
+.vocab-gloss-popup[hidden] {
+        display: none !important;
 }
 
 .back-to-top {
@@ -1139,6 +1567,101 @@ body.ruby-off .ruby-pair {
         outline-offset: 2px;
 }
 
+/* 問題文・選択肢を選択 → 「これ、出た？」へ */
+.term-lookup-pop {
+        position: fixed;
+        z-index: 60;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        max-width: min(280px, calc(100vw - 16px));
+        margin: 0;
+        padding: 10px 14px;
+        border: 1px solid #c5d0ea;
+        border-radius: var(--control-radius, 10px);
+        background: #fff;
+        color: var(--text);
+        box-shadow: 0 4px 18px rgba(46, 56, 86, 0.14);
+        font: inherit;
+        font-size: 14px;
+        font-weight: 700;
+        line-height: 1.3;
+        text-decoration: none;
+        white-space: nowrap;
+        cursor: pointer;
+}
+
+.term-lookup-pop[hidden] {
+        display: none !important;
+}
+
+.term-lookup-pop:hover {
+        border-color: var(--accent);
+        background: var(--accent-soft);
+}
+
+.term-lookup-pop:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+}
+
+.term-lookup-tip {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px 12px;
+        max-width: 720px;
+        width: 100%;
+        margin: 0 auto 14px;
+        padding: 12px 14px;
+        border: 1px solid #d5dceb;
+        border-radius: 12px;
+        background: #f5f8fd;
+        color: var(--text);
+        box-sizing: border-box;
+}
+
+.themes-view .term-lookup-tip,
+.koryaku-page .term-lookup-tip,
+.kakomon-challenge .term-lookup-tip,
+.kakomon-number .term-lookup-tip {
+        padding-inline: 14px;
+}
+
+.term-lookup-tip-body {
+        flex: 1 1 auto;
+        min-width: 0;
+        margin: 0;
+        font-size: 14px;
+        font-weight: 500;
+        line-height: 1.65;
+}
+
+.term-lookup-tip-dismiss {
+        flex: 0 0 auto;
+        margin: 0;
+        padding: 6px 10px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: #fff;
+        color: var(--text);
+        font: inherit;
+        font-size: 13px;
+        font-weight: 700;
+        line-height: 1.2;
+        cursor: pointer;
+        white-space: nowrap;
+}
+
+.term-lookup-tip-dismiss:hover {
+        border-color: #c9d0e0;
+        background: #fbfbfd;
+}
+
+.term-lookup-tip-dismiss:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+}
+
 @media (max-width: 1024px) {
         :root {
                 /* タブレット: 中間 */
@@ -1148,7 +1671,7 @@ body.ruby-off .ruby-pair {
 
 @media (max-width: 480px) {
         :root {
-                --content-line-height: 2.05;
+                --content-line-height: 1.98;
                 /* スマホ: PCより寄せる */
                 --ruby-rt-gap: 0.08em;
         }
@@ -1166,7 +1689,27 @@ body.ruby-off .ruby-pair {
         }
 
         .question-card {
-                padding: 18px 14px 16px;
+                padding: 16px 14px 14px;
+        }
+
+        .meta-row {
+                flex-wrap: nowrap;
+                gap: 5px;
+                margin-bottom: 6px;
+        }
+
+        .badge {
+                padding: 0.22em 6px 2px;
+                line-height: 1.3;
+                font-size: 11px;
+        }
+
+        .quiz-reveal-all {
+                height: 24px;
+                min-height: 24px;
+                min-width: 2.2rem;
+                padding: 0 5px;
+                font-size: 11px;
         }
 
         .choice-explain {

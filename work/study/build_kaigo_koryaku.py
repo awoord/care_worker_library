@@ -13,13 +13,14 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent.parent
 QUESTIONS_JSON = ROOT / "kaigo" / "kakomon" / "questions.json"
 THEME_SRC = ROOT / "work" / "theme_extract"
+REFERENCE_SRC = ROOT / "work" / "reference_extract"
 STUDY_DIR = ROOT / "work" / "study"
 THEMES_DIR = ROOT / "kaigo" / "kakomon" / "themes"
 DATA_DIR = THEMES_DIR / "data"
 
 RE_QID = re.compile(r"【\s*(\d+)\s*-\s*(\d+)")
 
-# prefix: theme_extract のファイル名先頭（括弧の直前まで）
+# prefix: theme_extract / reference_extract のファイル名先頭（括弧の直前まで）
 KORYAKU_SPECS = [
     {
         "key": "kaigo-hoken",
@@ -49,14 +50,14 @@ def theme_sort_key(prefix: str, path: Path) -> int:
 
 def list_theme_files(prefix: str) -> list[Path]:
     head = f"{prefix}（"
-    return sorted(
-        [
-            p
-            for p in THEME_SRC.iterdir()
-            if p.is_file() and p.name.startswith(head) and p.suffix == ".txt"
-        ],
-        key=lambda p: theme_sort_key(prefix, p),
-    )
+    found: list[Path] = []
+    for src in (THEME_SRC, REFERENCE_SRC):
+        if not src.is_dir():
+            continue
+        for p in src.iterdir():
+            if p.is_file() and p.name.startswith(head) and p.suffix == ".txt":
+                found.append(p)
+    return sorted(found, key=lambda p: theme_sort_key(prefix, p))
 
 
 def extract_ids(path: Path) -> list[str]:
@@ -101,7 +102,9 @@ def explain_for_answers(explains, answers: list) -> str:
     return ""
 
 
-def load_sections(qmap: dict, prefix: str) -> tuple[list[dict], int]:
+def load_sections(
+    qmap: dict, prefix: str, qb_pages: dict[str, int | str] | None = None
+) -> tuple[list[dict], int]:
     sections: list[dict] = []
     total = 0
     theme_re = re.compile(re.escape(prefix) + r"（(.+)）$")
@@ -120,19 +123,24 @@ def load_sections(qmap: dict, prefix: str) -> tuple[list[dict], int]:
             choices = {c["n"]: c["text"] for c in (q.get("choices") or [])}
             ans_texts = [choices.get(n, f"選択肢{n}") for n in answers]
             parts = body_parts(q.get("body") or [])
-            items.append(
-                {
-                    "id": display_id,
-                    "subject": q.get("subject") or "",
-                    "body": parts,
-                    "jirei": is_jirei(parts),
-                    "answer": "／".join(ans_texts) if ans_texts else "（不明）",
-                    "answerNs": [int(n) for n in answers],
-                    "explain": explain_for_answers(q.get("explains"), answers),
-                    "note": (q.get("note") or "").strip(),
-                    "href": f"/kaigo/kakomon/?round={a}&num={b}",
-                }
-            )
+            item = {
+                "id": display_id,
+                "subject": q.get("subject") or "",
+                "body": parts,
+                "jirei": is_jirei(parts),
+                "answer": "／".join(ans_texts) if ans_texts else "（不明）",
+                "answerNs": [int(n) for n in answers],
+                "explain": explain_for_answers(q.get("explains"), answers),
+                "note": (q.get("note") or "").strip(),
+                "href": f"/kaigo/kakomon/?round={a}&num={b}",
+            }
+            if qb_pages and qid in qb_pages:
+                item["qb"] = qb_pages[qid]
+            elif q.get("qb") is not None:
+                item["qb"] = q["qb"]
+            elif a == 38:
+                item["qb"] = "528〜"
+            items.append(item)
             total += 1
         sections.append({"theme": theme, "items": items})
     return sections, total
@@ -149,7 +157,7 @@ def write_md(spec: dict, sections: list[dict], total: int) -> None:
         "誤選択肢の分析は後回しにして、まず正解の事実を押さえてください。",
         "",
         f"- 公開ページ: `/kaigo/kakomon/themes/{html_name}`（{title}）",
-        f"- 出典: `work/theme_extract/{prefix}（…）.txt`",
+        f"- 出典: `work/theme_extract` または `work/reference_extract` の `{prefix}（…）.txt`",
         f"- 全 {total} 問",
         "",
         "使い方の目安:",
@@ -224,13 +232,12 @@ def write_html(spec: dict, total: int) -> None:
       </button>
       <p class="site-brand" aria-label="介護福祉士国家試験対策">介護福祉士国家試験対策</p>
       <nav id="siteNav" class="site-nav" aria-label="サイト内移動">
-        <a class="site-nav-link" href="/kaigo/kakomon/">過去問検索</a>
-        <a class="site-nav-link is-current" href="/kaigo/kakomon/themes/" aria-current="page">重要テーマ</a>
-        <a class="site-nav-link" href="/kaigo/kakomon/reference/">参考テーマ</a>
+        <a class="site-nav-link" href="/kaigo/kakomon/themes/view.html?t=b146eeffd742">テキスト</a>
+        <a class="site-nav-link" href="/kaigo/kakomon/bank/">カコモン・バンク</a>
+        <a class="site-nav-link is-current" href="/kaigo/kakomon/themes/" aria-current="page">テーマ</a>
+        <a class="site-nav-link" href="/kaigo/kakomon/type/">出題タイプ</a>
+        <a class="site-nav-link" href="/kaigo/kakomon/challenge/">年度タイプ</a>
         <a class="site-nav-link" href="/kaigo/kakomon/appendix/">付録</a>
-        <a class="site-nav-link" href="/kaigo/kakomon/part-a/">Aパート</a>
-        <a class="site-nav-link" href="/kaigo/kakomon/part-b/">Bパート</a>
-        <a class="site-nav-link" href="/kaigo/kakomon/part-c/">Cパート</a>
       </nav>
     </div>
     <h1>{title}</h1>
@@ -256,8 +263,10 @@ def write_html(spec: dict, total: int) -> None:
     (THEMES_DIR / spec["html"]).write_text(doc, encoding="utf-8")
 
 
-def build_one(qmap: dict, spec: dict) -> None:
-    sections, total = load_sections(qmap, spec["prefix"])
+def build_one(
+    qmap: dict, spec: dict, qb_pages: dict[str, int | str] | None = None
+) -> None:
+    sections, total = load_sections(qmap, spec["prefix"], qb_pages)
     write_md(spec, sections, total)
     write_json(spec, sections, total)
     write_html(spec, total)
@@ -272,8 +281,14 @@ def main() -> int:
     for q in raw:
         a, b = q["id"].split("-")
         norm[f"{int(a)}-{int(b)}"] = q
+    try:
+        from build_hikaku import load_qb_page_labels
+
+        qb_pages = load_qb_page_labels()
+    except Exception:
+        qb_pages = None
     for spec in KORYAKU_SPECS:
-        build_one(norm, spec)
+        build_one(norm, spec, qb_pages)
     return 0
 
 

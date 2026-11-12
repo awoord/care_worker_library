@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#F7F6F3">
+  <title>出題タイプ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="../style.css?v=__APP_BUILD__">
+</head>
+
+<body class="kakomon-type" data-kakomon-base="../">
+  <header class="page-header">
+    <div class="site-bar">
+      <button type="button" class="nav-toggle" aria-expanded="false" aria-controls="siteNav" aria-label="メニュー">
+        <span class="nav-toggle-icon" aria-hidden="true"><span></span><span></span><span></span></span>
+      </button>
+      <a class="site-brand" href="/kaigo/kakomon/themes/view.html?t=b146eeffd742" aria-label="介護福祉士国家試験対策">介護福祉士国家試験対策</a>
+      <nav id="siteNav" class="site-nav" aria-label="サイト内移動">
+        <a class="site-nav-link" href="/kaigo/kakomon/themes/view.html?t=b146eeffd742">テキスト</a>
+        <a class="site-nav-link" href="/kaigo/kakomon/bank/">カコモン・バンク</a>
+        <a class="site-nav-link" href="/kaigo/kakomon/themes/">テーマ</a>
+        <a class="site-nav-link is-current" href="/kaigo/kakomon/type/" aria-current="page">出題タイプ</a>
+        <a class="site-nav-link" href="/kaigo/kakomon/challenge/">年度タイプ</a>
+        <a class="site-nav-link" href="/kaigo/kakomon/appendix/">付録</a>
+      </nav>
+    </div>
+    <h1>出題タイプ</h1>
+
+    <section class="panel panel-jump" aria-label="回とタイプの選択">
+      <form id="typeForm" class="search-form" action="#" method="get">
+        <div class="jump-grid">
+          <label class="field-block">
+            <span class="range-caption">回</span>
+            <select id="typeRound" class="range-select subject-select" name="round" aria-label="第何回">
+              <option value="38" selected>38 （2026）</option>
+              <option value="37">37 （2025）</option>
+              <option value="36">36 （2024）</option>
+              <option value="35">35 （2023）</option>
+              <option value="34">34 （2022）</option>
+              <option value="33">33 （2021）</option>
+              <option value="32">32 （2020）</option>
+              <option value="31">31 （2019）</option>
+              <option value="30">30 （2018）</option>
+              <option value="29">29 （2017）</option>
+            </select>
+          </label>
+          <label class="field-block">
+            <span class="range-caption">タイプ</span>
+            <select id="typeSelect" class="range-select subject-select" name="type" aria-label="タイプ">
+              <option value="正しいもの">正しいもの</option>
+              <option value="適切なもの">適切なもの</option>
+              <option value="最も適切なもの" selected>最も適切なもの</option>
+              <option value="そのほか">そのほか</option>
+            </select>
+          </label>
+        </div>
+      </form>
+    </section>
+
+    <p id="searchStatus" class="search-status" aria-live="polite" hidden></p>
+  </header>
+
+  <main id="questionList" class="question-list" aria-live="polite">
+    <p class="hint">読み込み中…</p>
+  </main>
+
+  <button type="button" id="backToTop" class="back-to-top" aria-label="一番上に戻る" hidden>
+    <span aria-hidden="true">⌃</span>
+  </button>
+
+  <script src="../app.js?v=__APP_BUILD__"></script>
+</body>
+
+</html>

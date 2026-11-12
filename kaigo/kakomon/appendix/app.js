@@ -81,6 +81,7 @@ var UI_RUBY_EXTRA = [
   { word: "過去問", ruby: "かこもん" },
   { word: "問題不成立", ruby: "もんだいふせいりつ" },
   { word: "正答", ruby: "せいとう" },
+  { word: "正解", ruby: "せいかい" },
   { word: "全問", ruby: "ぜんもん" },
   { word: "表示", ruby: "ひょうじ" },
   { word: "開始", ruby: "かいし" },
@@ -93,10 +94,21 @@ var UI_RUBY_EXTRA = [
   { word: "見る", ruby: "みる" },
   { word: "本位", ruby: "ほんい" },
   { word: "人体", ruby: "じんたい" },
+  { word: "攻略", ruby: "こうりゃく" },
+  { word: "付録", ruby: "ふろく" },
+  { word: "重要", ruby: "じゅうよう" },
+  { word: "学習中", ruby: "がくしゅうちゅう" },
+  { word: "学習", ruby: "がくしゅう" },
+  /* 過去問バンクの塊ラベル */
+  { word: "必須", ruby: "ひっす" },
+  { word: "介護", ruby: "かいご" },
+  { word: "医療", ruby: "いりょう" },
+  { word: "社会", ruby: "しゃかい" },
   /* 「等」(とう)。長い「等しい」「等しく」を先に取り、「とうしい」にしない */
   { word: "等しい", ruby: "ひとしい" },
   { word: "等しく", ruby: "ひとしく" },
-  { word: "等", ruby: "とう" }
+  { word: "等", ruby: "とう" },
+  { word: "的", ruby: "てき" }
 ];
 
 function isKanaOnlyWord(word) {
@@ -193,7 +205,14 @@ function createRubyPairElement(word, reading) {
 /* 長い語を短い nowrap 単位に分割し、単位の間だけで折り返す（ルビ重なり・横はみ出し防止） */
 var RUBY_CHUNK_MAX_BASE_CHARS = 2;
 
-function splitRubyChunks(word, reading) {
+function isRubyKanaChar(ch) {
+  return /^[\u3041-\u3096\u309D-\u309E\u30A1-\u30F6\u30FD-\u30FFァ-ヶー・･]$/.test(
+    ch || ""
+  );
+}
+
+/* 漢字だけを長さで分割（かな対応が使えないときのフォールバック） */
+function splitRubyChunksByLength(word, reading) {
   var bases = Array.from(word || "");
   var reads = Array.from(reading || "");
   if (!bases.length) {
@@ -238,14 +257,432 @@ function splitRubyChunks(word, reading) {
   return chunks;
 }
 
+/*
+ * 親字の仮名と読みの仮名を揃えて分割する。
+ * 例: 調べた/しらべた → 調=しら + べた（ルビなし）
+ *     優先して押さえる/ゆうせんしておさえる → 優先=ゆうせん + して + 押=お + さえる
+ */
+function splitRubyChunksKanaAligned(word, reading) {
+  var bases = Array.from(word || "");
+  var reads = Array.from(reading || "");
+  if (!bases.length) {
+    return [];
+  }
+  var chunks = [];
+  var bi = 0;
+  var ri = 0;
+
+  while (bi < bases.length) {
+    if (isRubyKanaChar(bases[bi])) {
+      if (ri < reads.length && bases[bi] === reads[ri]) {
+        chunks.push({ word: bases[bi], ruby: "" });
+        bi += 1;
+        ri += 1;
+        continue;
+      }
+      /* 読み側に対応仮名が無い親字仮名はそのまま出す */
+      if (ri >= reads.length || !isRubyKanaChar(reads[ri])) {
+        chunks.push({ word: bases[bi], ruby: "" });
+        bi += 1;
+        continue;
+      }
+      return null;
+    }
+
+    var bj = bi;
+    while (bj < bases.length && !isRubyKanaChar(bases[bj])) {
+      bj += 1;
+    }
+    var kanji = bases.slice(bi, bj).join("");
+    var nextKana = bj < bases.length ? bases[bj] : null;
+    var rj = ri;
+    if (nextKana != null) {
+      var found = -1;
+      for (var k = ri; k < reads.length; k++) {
+        if (reads[k] === nextKana) {
+          found = k;
+          break;
+        }
+      }
+      if (found < 0) {
+        return null;
+      }
+      rj = found;
+    } else {
+      rj = reads.length;
+    }
+    if (rj < ri) {
+      return null;
+    }
+    var ruby = reads.slice(ri, rj).join("");
+    if (!kanji || !ruby) {
+      return null;
+    }
+    var sub = splitRubyChunksByLength(kanji, ruby);
+    for (var s = 0; s < sub.length; s++) {
+      chunks.push(sub[s]);
+    }
+    bi = bj;
+    ri = rj;
+  }
+
+  if (ri !== reads.length) {
+    return null;
+  }
+  return chunks;
+}
+
+function splitRubyChunks(word, reading) {
+  var aligned = splitRubyChunksKanaAligned(word, reading);
+  if (aligned && aligned.length) {
+    return aligned;
+  }
+  return splitRubyChunksByLength(word, reading);
+}
+
 function appendRubyChunks(fragment, word, reading) {
+  var wrap = document.createElement("span");
+  wrap.className = "vocab-term";
+  wrap.setAttribute("data-vocab-word", word);
+  if (vocabGlossByWord && vocabGlossByWord[word]) {
+    wrap.classList.add("has-vocab-gloss");
+  }
   var chunks = splitRubyChunks(word, reading);
   for (var i = 0; i < chunks.length; i++) {
-    fragment.appendChild(createRubyPairElement(chunks[i].word, chunks[i].ruby));
+    if (!chunks[i].ruby) {
+      wrap.appendChild(document.createTextNode(chunks[i].word));
+    } else {
+      wrap.appendChild(createRubyPairElement(chunks[i].word, chunks[i].ruby));
+    }
+  }
+  fragment.appendChild(wrap);
+}
+
+/* ことばアプリ（test）と同じスプレッドシート由来の英語・意味 */
+var VOCAB_GLOSS_GAS_URL =
+  "https://script.google.com/macros/s/AKfycby1hG96pflujpC2yLpK-RhslOoZXgkr_LGBj-IdEG6hnIrcZjp3HUjN4LIp53WJ0S5ceA/exec";
+var VOCAB_GLOSS_ROOT_SEL =
+  ".question-card, .koryaku-card, .koryaku-problem, .hikaku-modal-body, .hikaku-table, .hikaku-main, #questionList";
+var vocabGlossByWord = null;
+var vocabGlossPromise = null;
+var vocabGlossActiveTerm = null;
+
+function formatVocabGlossMeaning(text) {
+  var cleaned = String(text || "").trim();
+  if (!cleaned) return "";
+  return cleaned.replace(/。/g, ".");
+}
+
+function extractVocabGlossWords(payload) {
+  if (!payload) return [];
+  if (payload.data && (payload.data.allWords || payload.data.roadmap)) {
+    return payload.data.allWords || [];
+  }
+  if (payload.allWords) return payload.allWords;
+  return [];
+}
+
+function ensureVocabGlossLoaded() {
+  if (vocabGlossByWord) {
+    return Promise.resolve(vocabGlossByWord);
+  }
+  if (vocabGlossPromise) {
+    return vocabGlossPromise;
+  }
+  vocabGlossPromise = fetch(
+    VOCAB_GLOSS_GAS_URL + "?app=kaigo&_t=" + Date.now()
+  )
+    .then(function (res) {
+      return res.json();
+    })
+    .then(function (raw) {
+      var words = extractVocabGlossWords(raw);
+      var map = Object.create(null);
+      for (var i = 0; i < words.length; i++) {
+        var item = words[i] || {};
+        var w = String(item.word || item.w || "").trim();
+        var en = String(item.english || item.e || "").trim();
+        var meaning = formatVocabGlossMeaning(item.meaning || item.m || "");
+        if (!w || (!en && !meaning)) continue;
+        if (!map[w]) {
+          map[w] = { english: en, meaning: meaning };
+        }
+      }
+      vocabGlossByWord = map;
+      markVocabGlossTerms(document);
+      return map;
+    })
+    .catch(function () {
+      vocabGlossByWord = Object.create(null);
+      return vocabGlossByWord;
+    });
+  return vocabGlossPromise;
+}
+
+function markVocabGlossTerms(root) {
+  if (!vocabGlossByWord) return;
+  var scope = root && root.querySelectorAll ? root : document;
+  var terms = scope.querySelectorAll(".vocab-term[data-vocab-word]");
+  for (var i = 0; i < terms.length; i++) {
+    var el = terms[i];
+    var w = el.getAttribute("data-vocab-word") || "";
+    if (vocabGlossByWord[w]) {
+      el.classList.add("has-vocab-gloss");
+    } else {
+      el.classList.remove("has-vocab-gloss");
+    }
   }
 }
 
+function ensureVocabGlossPopup() {
+  var el = document.getElementById("vocabGlossPopup");
+  if (el) return el;
+  el = document.createElement("div");
+  el.id = "vocabGlossPopup";
+  el.className = "vocab-gloss-popup";
+  el.hidden = true;
+  el.setAttribute("role", "tooltip");
+  document.body.appendChild(el);
+  return el;
+}
+
+function hideVocabGlossPopup() {
+  var el = document.getElementById("vocabGlossPopup");
+  if (el) {
+    el.hidden = true;
+    el.textContent = "";
+  }
+  if (vocabGlossActiveTerm) {
+    vocabGlossActiveTerm.classList.remove("is-gloss-open");
+    vocabGlossActiveTerm = null;
+  }
+}
+
+function positionVocabGlossPopup(popup, anchor) {
+  var rect = anchor.getBoundingClientRect();
+  var pad = 8;
+  popup.hidden = false;
+  var pw = popup.offsetWidth;
+  var ph = popup.offsetHeight;
+  var left = rect.left + rect.width / 2 - pw / 2;
+  var top = rect.bottom + 6;
+  if (left < pad) left = pad;
+  if (left + pw > window.innerWidth - pad) {
+    left = window.innerWidth - pad - pw;
+  }
+  if (top + ph > window.innerHeight - pad && rect.top - ph - 6 > pad) {
+    top = rect.top - ph - 6;
+  }
+  popup.style.left = Math.round(left) + "px";
+  popup.style.top = Math.round(top) + "px";
+}
+
+function showVocabGlossFor(term) {
+  if (isRubyHidden() || !term) return;
+  var word = term.getAttribute("data-vocab-word") || "";
+  var gloss = vocabGlossByWord && vocabGlossByWord[word];
+  if (!gloss) return;
+  if (!term.closest(VOCAB_GLOSS_ROOT_SEL)) return;
+
+  var popup = ensureVocabGlossPopup();
+  popup.textContent = "";
+  if (gloss.english) {
+    var en = document.createElement("div");
+    en.className = "vocab-gloss-en";
+    en.textContent = gloss.english;
+    popup.appendChild(en);
+  }
+  if (gloss.meaning) {
+    var meaning = document.createElement("div");
+    meaning.className = "vocab-gloss-meaning";
+    fillWithRuby(meaning, gloss.meaning);
+    popup.appendChild(meaning);
+  }
+  if (vocabGlossActiveTerm && vocabGlossActiveTerm !== term) {
+    vocabGlossActiveTerm.classList.remove("is-gloss-open");
+  }
+  vocabGlossActiveTerm = term;
+  term.classList.add("is-gloss-open");
+  positionVocabGlossPopup(popup, term);
+}
+
+function wireVocabGlossUi() {
+  if (wireVocabGlossUi.done) return;
+  wireVocabGlossUi.done = true;
+
+  document.addEventListener("mouseover", function (ev) {
+    if (isRubyHidden()) return;
+    if (!window.matchMedia("(hover: hover)").matches) return;
+    var term = ev.target.closest(".vocab-term.has-vocab-gloss");
+    if (!term || !term.closest(VOCAB_GLOSS_ROOT_SEL)) return;
+    showVocabGlossFor(term);
+  });
+
+  document.addEventListener("mouseout", function (ev) {
+    if (!window.matchMedia("(hover: hover)").matches) return;
+    var term = ev.target.closest(".vocab-term.has-vocab-gloss");
+    if (!term) return;
+    var next = ev.relatedTarget;
+    if (next && (term.contains(next) || (next.closest && next.closest("#vocabGlossPopup")))) {
+      return;
+    }
+    if (vocabGlossActiveTerm === term) {
+      hideVocabGlossPopup();
+    }
+  });
+
+  document.addEventListener("click", function (ev) {
+    if (isRubyHidden()) {
+      hideVocabGlossPopup();
+      return;
+    }
+    var popup = document.getElementById("vocabGlossPopup");
+    if (popup && popup.contains(ev.target)) return;
+    var term = ev.target.closest(".vocab-term.has-vocab-gloss");
+    if (term && term.closest(VOCAB_GLOSS_ROOT_SEL)) {
+      ev.stopPropagation();
+      if (vocabGlossActiveTerm === term && popup && !popup.hidden) {
+        hideVocabGlossPopup();
+      } else {
+        showVocabGlossFor(term);
+      }
+      return;
+    }
+    hideVocabGlossPopup();
+  });
+
+  document.addEventListener("keydown", function (ev) {
+    if (ev.key === "Escape") hideVocabGlossPopup();
+  });
+
+  window.addEventListener(
+    "scroll",
+    function () {
+      hideVocabGlossPopup();
+    },
+    true
+  );
+}
+
+function activateVocabGlossIfRubyOn() {
+  wireVocabGlossUi();
+  if (isRubyHidden()) {
+    hideVocabGlossPopup();
+    return;
+  }
+  ensureVocabGlossLoaded();
+}
+
+/* ルビ重なり避け用に入れた「漢字・かな同士の半角スペース」を表示前に除去 */
+function stripRubySpacerSpaces(text) {
+  return String(text || "").replace(
+    /([\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF々〆ヵヶ]) +(?=[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF々〆ヵヶ])/g,
+    "$1"
+  );
+}
+
+/*
+ * ルビ幅を親字幅以下に収める（隣ルビとの重なり禁止・半角スペースなし）。
+ * 字間圧縮 → それでも足りなければフォント縮小。下限でも収まらないときだけ親字より広くする。
+ */
+var MIN_RUBY_FIT_SCALE = 0.75;
+var MIN_RUBY_LETTER_SPACING_EM = -0.38;
+
+function fitRubyReadingToBase(pair) {
+  if (!pair || !pair.getClientRects || !pair.getClientRects().length) {
+    return;
+  }
+  var rt = null;
+  var base = null;
+  for (var i = 0; i < pair.children.length; i++) {
+    var child = pair.children[i];
+    if (child.classList.contains("ruby-text") || child.tagName === "RT") {
+      rt = child;
+    } else if (child.classList.contains("ruby-base")) {
+      base = child;
+    }
+  }
+  if (!rt || !base) {
+    return;
+  }
+
+  rt.style.letterSpacing = "0px";
+  rt.style.fontSize = "";
+
+  var baseW = base.getBoundingClientRect().width;
+  if (!(baseW > 0)) {
+    return;
+  }
+
+  function readingWidth() {
+    return rt.getBoundingClientRect().width;
+  }
+
+  var chars = Array.from(rt.textContent || "");
+  var fontSize = parseFloat(window.getComputedStyle(rt).fontSize) || 0;
+  var rtW = readingWidth();
+  if (!(rtW > baseW + 0.25)) {
+    return;
+  }
+
+  if (chars.length >= 2 && fontSize > 0) {
+    var gaps = chars.length - 1;
+    var need = (rtW - baseW) / gaps;
+    var minLs = MIN_RUBY_LETTER_SPACING_EM * fontSize;
+    rt.style.letterSpacing = Math.max(-need, minLs) + "px";
+    rtW = readingWidth();
+    if (!(rtW > baseW + 0.25)) {
+      return;
+    }
+  }
+
+  if (fontSize > 0) {
+    var scale = Math.max(baseW / Math.max(rtW, 0.01), MIN_RUBY_FIT_SCALE);
+    var fittedSize = fontSize * scale;
+    rt.style.fontSize = fittedSize + "px";
+    rt.style.letterSpacing = "0px";
+    rtW = readingWidth();
+    if (rtW > baseW + 0.25 && chars.length >= 2) {
+      var gaps2 = chars.length - 1;
+      var need2 = (rtW - baseW) / gaps2;
+      var minLs2 = MIN_RUBY_LETTER_SPACING_EM * fittedSize;
+      rt.style.letterSpacing = Math.max(-need2, minLs2) + "px";
+    }
+  }
+}
+
+function scheduleFitRubyIn(root) {
+  var target = root || document;
+  window.requestAnimationFrame(function () {
+    window.requestAnimationFrame(function () {
+      if (!target || !target.querySelectorAll) {
+        return;
+      }
+      var pairs = target.querySelectorAll(".ruby-pair");
+      for (var i = 0; i < pairs.length; i++) {
+        fitRubyReadingToBase(pairs[i]);
+      }
+    });
+  });
+}
+
+function wireRubyFitRefresh() {
+  if (wireRubyFitRefresh.done) {
+    return;
+  }
+  wireRubyFitRefresh.done = true;
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(function () {
+      scheduleFitRubyIn(document);
+    });
+  }
+  window.addEventListener("resize", function () {
+    scheduleFitRubyIn(document);
+  });
+}
+
 function appendTextWithVocabularyRuby(container, text) {
+  text = stripRubySpacerSpaces(text);
   if (!text) {
     return;
   }
@@ -268,7 +705,7 @@ function appendTextWithVocabularyRuby(container, text) {
     if (m.start > cursor) {
       fragment.appendChild(document.createTextNode(text.slice(cursor, m.start)));
     }
-    /* ネイティブ ruby + 短単位分割: 単位内は nowrap（重なり防止）、単位間で折り返し可 */
+    /* 短単位分割: 単位内 nowrap。幅は fit で親字基準（ルビ重なり・スペースなし） */
     appendRubyChunks(fragment, m.word, m.ruby);
     cursor = m.end;
   }
@@ -281,7 +718,8 @@ function appendTextWithVocabularyRuby(container, text) {
 
 function fillWithRuby(el, text) {
   el.textContent = "";
-  appendHighlightedRuby(el, text, activeHighlightTerms);
+  appendHighlightedRuby(el, stripRubySpacerSpaces(text), activeHighlightTerms);
+  scheduleFitRubyIn(el);
 }
 
 /* キーワード検索のハイライト対象（空なら強調なし） */
@@ -425,6 +863,7 @@ function findNextStemBoldMatch(text, from) {
 }
 
 function fillStemWithRuby(el, text) {
+  text = stripRubySpacerSpaces(text);
   if (!text) {
     return;
   }
@@ -448,6 +887,7 @@ function fillStemWithRuby(el, text) {
     el.appendChild(strong);
     cursor = match.end;
   }
+  scheduleFitRubyIn(el);
 }
 
 function normalizeForSearch(text) {
@@ -501,6 +941,90 @@ function findByRoundAndNumber(questions, round, number) {
     }
   }
   return null;
+}
+
+/* 第29〜31回: QB印刷番号は第32型の科目配置。公式番号とは別。 */
+var QB_PRINT_ALIAS_ROUNDS = { 29: 1, 30: 1, 31: 1 };
+var OFFICIAL_RANGES_PRE32 = [
+  ["人間の尊厳と自立", 1, 2],
+  ["人間関係とコミュニケーション", 3, 6],
+  ["社会の理解", 7, 18],
+  ["こころとからだのしくみ", 19, 30],
+  ["発達と老化の理解", 31, 38],
+  ["認知症の理解", 39, 48],
+  ["障害の理解", 49, 58],
+  ["医療的ケア", 59, 63],
+  ["介護の基本", 64, 73],
+  ["コミュニケーション技術", 74, 79],
+  ["生活支援技術", 80, 105],
+  ["介護過程", 106, 113],
+  ["総合問題", 114, 125]
+];
+var QB32_SUBJECT_RANGES = [
+  ["人間の尊厳と自立", 1, 2],
+  ["人間関係とコミュニケーション", 3, 4],
+  ["社会の理解", 5, 16],
+  ["介護の基本", 17, 26],
+  ["コミュニケーション技術", 27, 34],
+  ["生活支援技術", 35, 60],
+  ["介護過程", 61, 68],
+  ["発達と老化の理解", 69, 76],
+  ["認知症の理解", 77, 86],
+  ["障害の理解", 87, 96],
+  ["こころとからだのしくみ", 97, 108],
+  ["医療的ケア", 109, 113],
+  ["総合問題", 114, 125]
+];
+
+function usesQbPrintAlias(round) {
+  return !!QB_PRINT_ALIAS_ROUNDS[Number(round)];
+}
+
+function mapNumberAcrossLayouts(num, fromRanges, toRanges) {
+  var n = Number(num);
+  if (!n || isNaN(n)) {
+    return null;
+  }
+  var toBySubject = {};
+  for (var t = 0; t < toRanges.length; t++) {
+    toBySubject[toRanges[t][0]] = toRanges[t];
+  }
+  for (var i = 0; i < fromRanges.length; i++) {
+    var subject = fromRanges[i][0];
+    var fromStart = fromRanges[i][1];
+    var fromEnd = fromRanges[i][2];
+    if (n < fromStart || n > fromEnd) {
+      continue;
+    }
+    var dest = toBySubject[subject];
+    if (!dest) {
+      return null;
+    }
+    var out = dest[1] + (n - fromStart);
+    if (out > dest[2]) {
+      return null;
+    }
+    return out;
+  }
+  return null;
+}
+
+function qbPrintToOfficialNumber(round, qbNum) {
+  if (!usesQbPrintAlias(round)) {
+    return null;
+  }
+  return mapNumberAcrossLayouts(qbNum, QB32_SUBJECT_RANGES, OFFICIAL_RANGES_PRE32);
+}
+
+function officialToQbPrintNumber(round, officialNum) {
+  if (!usesQbPrintAlias(round)) {
+    return null;
+  }
+  return mapNumberAcrossLayouts(
+    officialNum,
+    OFFICIAL_RANGES_PRE32,
+    QB32_SUBJECT_RANGES
+  );
 }
 
 function questionBodyText(q) {
@@ -947,10 +1471,18 @@ function setChoiceOpen(li, trial, open) {
   var mark = li.querySelector(".choice-mark");
   var explain = li.querySelector(".choice-explain");
 
+  if (open) {
+    li.classList.remove("is-study-hidden");
+  }
   li.classList.toggle("is-open", open);
   li.classList.toggle("is-correct", open && ok);
   li.classList.toggle("is-wrong", open && !ok);
-  li.setAttribute("aria-expanded", open ? "true" : "false");
+  var expanded = open ? "true" : "false";
+  li.setAttribute("aria-expanded", expanded);
+  var hit = li.querySelector(".choice-toggle-hit");
+  if (hit) {
+    hit.setAttribute("aria-expanded", expanded);
+  }
 
   if (mark) {
     mark.hidden = !open;
@@ -969,8 +1501,13 @@ function syncRevealAllButton(card) {
   if (!btn) {
     return;
   }
+  btn.hidden = false;
+  var labelOpen = btn.querySelector(".label-open");
+  if (labelOpen) {
+    labelOpen.textContent = "表示";
+  }
+
   var items = card.querySelectorAll(".choice");
-  /* 正解表示ONでも、全選択肢が開いて初めて「−」。正解だけなら「＋」のまま */
   var openCount = 0;
   for (var i = 0; i < items.length; i++) {
     if (items[i].classList.contains("is-open")) {
@@ -980,29 +1517,77 @@ function syncRevealAllButton(card) {
   var allOpen = items.length > 0 && openCount === items.length;
   btn.setAttribute("aria-pressed", allOpen ? "true" : "false");
   btn.dataset.allOpen = allOpen ? "1" : "0";
-  btn.setAttribute("aria-label", allOpen ? "全て閉じる" : "全て表示");
+  btn.setAttribute("aria-label", allOpen ? "表示を閉じる" : "表示する");
 }
 
 function toggleChoice(li, trial, card) {
+  /* 読むモード: ◯で✕展開／展開中は◯・✕どちらでも閉じる */
+  if (card.classList.contains("is-read-mode")) {
+    if (card.classList.contains("is-read-all")) {
+      showReadCorrectOnly(card, trial);
+      return;
+    }
+    var n = Number(li.getAttribute("data-choice-n"));
+    if (isCorrectChoice(trial, n)) {
+      showReadAllOnCard(card, trial);
+    }
+    return;
+  }
+  li.classList.remove("is-study-hidden");
   var open = !li.classList.contains("is-open");
   setChoiceOpen(li, trial, open);
   syncRevealAllButton(card);
 }
 
-/* 正解表示ON時: 正解だけ ◯・色・解説。誤答は閉じたまま */
-function revealCorrectAnswersOnCard(card, trial, show) {
+function clearReadModeClasses(card) {
+  card.classList.remove("is-read-mode", "is-read-all");
+  var items = card.querySelectorAll(".choice");
+  for (var i = 0; i < items.length; i++) {
+    items[i].classList.remove("is-study-hidden");
+  }
+  /* 旧1枚送りナビが残っていれば隠す */
+  var nav = card.querySelector(".wrong-step-nav");
+  if (nav) {
+    nav.hidden = true;
+  }
+}
+
+/* 読むモード初期: 正解だけ表示 */
+function showReadCorrectOnly(card, trial) {
+  card.classList.add("is-read-mode");
+  card.classList.remove("is-read-all");
   var items = card.querySelectorAll(".choice");
   for (var i = 0; i < items.length; i++) {
     var li = items[i];
     var n = Number(li.getAttribute("data-choice-n"));
     var ok = isCorrectChoice(trial, n);
-    if (!ok) {
-      if (show) {
-        setChoiceOpen(li, trial, false);
-      }
-      continue;
+    if (ok) {
+      li.classList.remove("is-study-hidden");
+      setChoiceOpen(li, trial, true);
+    } else {
+      li.classList.add("is-study-hidden");
+      setChoiceOpen(li, trial, false);
     }
-    setChoiceOpen(li, trial, show);
+  }
+  syncRevealAllButton(card);
+}
+
+/* 解説: 正解を上、✕をその下に全部表示 */
+function showReadAllOnCard(card, trial) {
+  card.classList.add("is-read-mode", "is-read-all");
+  var items = card.querySelectorAll(".choice");
+  for (var i = 0; i < items.length; i++) {
+    items[i].classList.remove("is-study-hidden");
+    setChoiceOpen(items[i], trial, true);
+  }
+  syncRevealAllButton(card);
+}
+
+function exitReadModeOnCard(card, trial) {
+  clearReadModeClasses(card);
+  var items = card.querySelectorAll(".choice");
+  for (var i = 0; i < items.length; i++) {
+    setChoiceOpen(items[i], trial, false);
   }
   syncRevealAllButton(card);
 }
@@ -1010,18 +1595,13 @@ function revealCorrectAnswersOnCard(card, trial, show) {
 function setAllChoices(card, trial, open) {
   if (isAnswerShowOn()) {
     if (open) {
-      /* 正解表示中の「＋」→ 誤答の✕・解説も含めて全部開く */
-      var items = card.querySelectorAll(".choice");
-      for (var i = 0; i < items.length; i++) {
-        setChoiceOpen(items[i], trial, true);
-      }
-      syncRevealAllButton(card);
+      showReadAllOnCard(card, trial);
     } else {
-      /* 「−」→ 正解表示の状態に戻す（正解だけ残す） */
-      revealCorrectAnswersOnCard(card, trial, true);
+      showReadCorrectOnly(card, trial);
     }
     return;
   }
+  clearReadModeClasses(card);
   var allItems = card.querySelectorAll(".choice");
   for (var j = 0; j < allItems.length; j++) {
     setChoiceOpen(allItems[j], trial, open);
@@ -1031,14 +1611,39 @@ function setAllChoices(card, trial, open) {
 
 function applyAnswerShowToAllCards() {
   var cards = document.querySelectorAll(".question-card.is-quiz-trial");
-  var show = isAnswerShowOn();
+  var reading = isAnswerShowOn();
+  var explainAll = isExplainAllOn();
   for (var i = 0; i < cards.length; i++) {
     var card = cards[i];
     var trial = card.__answerTrial;
     if (!trial) {
       continue;
     }
-    revealCorrectAnswersOnCard(card, trial, show);
+    if (reading) {
+      if (explainAll) {
+        showReadAllOnCard(card, trial);
+      } else {
+        showReadCorrectOnly(card, trial);
+      }
+    } else {
+      exitReadModeOnCard(card, trial);
+      if (explainAll) {
+        setAllChoices(card, trial, true);
+      }
+    }
+  }
+}
+
+function applyExplainAllToAllCards() {
+  var cards = document.querySelectorAll(".question-card.is-quiz-trial");
+  var open = isExplainAllOn();
+  for (var i = 0; i < cards.length; i++) {
+    var card = cards[i];
+    var trial = card.__answerTrial;
+    if (!trial) {
+      continue;
+    }
+    setAllChoices(card, trial, open);
   }
 }
 
@@ -1052,13 +1657,13 @@ function wireAnswerCheck(card, q, trial) {
     revealAll.type = "button";
     revealAll.className = "quiz-reveal-all";
     revealAll.setAttribute("aria-pressed", "false");
-    revealAll.setAttribute("aria-label", "全て表示");
+    revealAll.setAttribute("aria-label", "表示する");
     var labelOpen = document.createElement("span");
     labelOpen.className = "label-open";
-    labelOpen.textContent = "＋";
+    labelOpen.textContent = "表示";
     var labelClose = document.createElement("span");
     labelClose.className = "label-close";
-    labelClose.textContent = "−";
+    labelClose.textContent = "閉じる";
     labelClose.setAttribute("aria-hidden", "true");
     revealAll.appendChild(labelOpen);
     revealAll.appendChild(labelClose);
@@ -1068,7 +1673,12 @@ function wireAnswerCheck(card, q, trial) {
       var allOpen = revealAll.dataset.allOpen === "1";
       setAllChoices(card, trial, !allOpen);
     });
-    metaRow.appendChild(revealAll);
+    var qbBadge = metaRow.querySelector(".badge-qb");
+    if (qbBadge) {
+      metaRow.insertBefore(revealAll, qbBadge);
+    } else {
+      metaRow.appendChild(revealAll);
+    }
   }
 
   var choices = card.querySelectorAll(".choice");
@@ -1092,28 +1702,47 @@ function wireAnswerCheck(card, q, trial) {
       (nWrap || li.querySelector(".choice-body") || li).appendChild(mark);
 
       li.classList.add("is-tappable");
-      li.setAttribute("role", "button");
       li.setAttribute("aria-expanded", "false");
-      li.tabIndex = 0;
+
+      var hit = document.createElement("button");
+      hit.type = "button";
+      hit.className = "choice-toggle-hit";
+      hit.setAttribute("aria-label", "解説を開閉");
+      hit.setAttribute("aria-expanded", "false");
+      li.insertBefore(hit, li.firstChild);
 
       function onPick(ev) {
-        if (ev.target && ev.target.closest && ev.target.closest(".quiz-reveal-all")) {
-          return;
+        if (ev) {
+          ev.preventDefault();
+          ev.stopPropagation();
+        }
+        /* 語句選択中は解説トグルしない（「これ、出た？」と衝突しない） */
+        var sel = window.getSelection && window.getSelection();
+        if (sel && !sel.isCollapsed && sel.rangeCount) {
+          try {
+            var node = sel.getRangeAt(0).commonAncestorContainer;
+            var host = node && node.nodeType === 1 ? node : node && node.parentElement;
+            if (host && li.contains(host)) {
+              return;
+            }
+          } catch (err) {
+            /* ignore */
+          }
         }
         toggleChoice(li, trial, card);
       }
-      li.addEventListener("click", onPick);
-      li.addEventListener("keydown", function (ev) {
-        if (ev.key === "Enter" || ev.key === " ") {
-          ev.preventDefault();
-          onPick(ev);
-        }
-      });
+      hit.addEventListener("click", onPick);
     })(choices[c]);
   }
 
   if (isAnswerShowOn()) {
-    revealCorrectAnswersOnCard(card, trial, true);
+    if (isExplainAllOn()) {
+      showReadAllOnCard(card, trial);
+    } else {
+      showReadCorrectOnly(card, trial);
+    }
+  } else if (isExplainAllOn()) {
+    setAllChoices(card, trial, true);
   } else {
     syncRevealAllButton(card);
   }
@@ -1133,6 +1762,20 @@ function kakomonAssetUrl(src) {
   return s;
 }
 
+/* クエスチョン・バンク教科書ページ（第38回は未収録のため 528〜） */
+function resolveQbLabel(q) {
+  if (!q) {
+    return null;
+  }
+  if (q.qb != null && q.qb !== "") {
+    return q.qb;
+  }
+  if (Number(q.round) === 38) {
+    return "528〜";
+  }
+  return null;
+}
+
 function appendQuestionCard(parent, q) {
   if (!parent || !q) {
     return null;
@@ -1149,11 +1792,27 @@ function appendQuestionCard(parent, q) {
   idBadge.textContent = q.round + "-" + q.number;
   metaRow.appendChild(idBadge);
 
+  var qbPrintNum = officialToQbPrintNumber(q.round, q.number);
+  if (qbPrintNum != null && Number(qbPrintNum) !== Number(q.number)) {
+    var printBadge = document.createElement("span");
+    printBadge.className = "badge badge-qb-print";
+    printBadge.textContent = "QB " + q.round + "-" + qbPrintNum;
+    metaRow.appendChild(printBadge);
+  }
+
   if (q.subject) {
     var subBadge = document.createElement("span");
     subBadge.className = "badge badge-subject";
-    subBadge.textContent = q.subject;
+    fillWithRuby(subBadge, q.subject);
     metaRow.appendChild(subBadge);
+  }
+  var qbLabel = resolveQbLabel(q);
+  if (qbLabel != null) {
+    q.qb = qbLabel;
+    var qbBadge = document.createElement("span");
+    qbBadge.className = "badge badge-qb";
+    qbBadge.textContent = "QB." + qbLabel;
+    metaRow.appendChild(qbBadge);
   }
   card.appendChild(metaRow);
 
@@ -1263,6 +1922,343 @@ function renderQuestions(questions) {
   for (var i = 0; i < questions.length; i++) {
     appendQuestionCard(root, questions[i]);
   }
+  markVocabGlossTerms(root);
+  activateVocabGlossIfRubyOn();
+}
+
+/* テキスト: 科目アコーディオン（指導順・区切り付き） */
+var TEXT_THEME_SUBJECT_BLOCKS = [
+  {
+    label: "介護",
+    subjects: [
+      "生活支援技術",
+      "人間の尊厳と自立",
+      "介護の基本",
+      "介護過程",
+      "人間関係とコミュニケーション",
+      "コミュニケーション技術"
+    ]
+  },
+  {
+    label: "医療",
+    subjects: [
+      "こころとからだのしくみ",
+      "発達と老化の理解",
+      "認知症の理解",
+      "障害の理解",
+      "医療的ケア"
+    ]
+  },
+  {
+    label: "社会",
+    subjects: ["社会の理解", "総合問題"]
+  }
+];
+
+var textThemeAllQuestions = null;
+
+function ensureTextThemeSearchPanel() {
+  if (document.getElementById("textThemeSearchPanel")) {
+    return;
+  }
+  var header = document.querySelector(".page-header");
+  if (!header) {
+    return;
+  }
+  var panel = document.createElement("section");
+  panel.id = "textThemeSearchPanel";
+  panel.className = "panel panel-jump text-theme-search-panel";
+  panel.setAttribute("aria-label", "テキストの検索");
+  panel.innerHTML =
+    '<form id="textThemeSearchForm" class="search-form" action="#" method="get">' +
+    '<div class="field-block field-block-search">' +
+    '<label class="range-caption" for="textThemeSearchInput">キーワード</label>' +
+    '<div class="search-row">' +
+    '<div class="search-input-wrap">' +
+    '<input id="textThemeSearchInput" class="search-input" type="search" name="q" ' +
+    'placeholder="例: アセスメント　ノーマライゼーション" maxlength="80" autocomplete="off" enterkeyhint="search">' +
+    '<button type="button" id="textThemeSearchClear" class="search-clear" hidden aria-label="キーワードを消す">×</button>' +
+    "</div>" +
+    '<button type="submit" class="search-button">調べる</button>' +
+    "</div></div></form>" +
+    '<p id="textThemeSearchStatus" class="search-status" aria-live="polite" hidden></p>';
+  header.appendChild(panel);
+
+  var form = document.getElementById("textThemeSearchForm");
+  var input = document.getElementById("textThemeSearchInput");
+  var clearBtn = document.getElementById("textThemeSearchClear");
+  form.addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    applyTextThemeSearch();
+  });
+  input.addEventListener("input", function () {
+    clearBtn.hidden = !String(input.value || "").trim();
+  });
+  clearBtn.addEventListener("click", function () {
+    input.value = "";
+    clearBtn.hidden = true;
+    applyTextThemeSearch();
+    input.focus();
+  });
+}
+
+function questionMatchesTerms(q, terms) {
+  if (!terms || !terms.length) {
+    return true;
+  }
+  var hay = questionSearchText(q);
+  var norms = terms.map(normalizeForSearch).filter(Boolean);
+  for (var i = 0; i < norms.length; i++) {
+    if (hay.indexOf(norms[i]) === -1) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function applyTextThemeSearch() {
+  var input = document.getElementById("textThemeSearchInput");
+  var status = document.getElementById("textThemeSearchStatus");
+  var raw = input ? String(input.value || "") : "";
+  var terms = parseTerms(raw);
+  setActiveHighlightTerms(terms);
+  var all = textThemeAllQuestions || [];
+  var filtered = [];
+  for (var i = 0; i < all.length; i++) {
+    if (questionMatchesTerms(all[i], terms)) {
+      filtered.push(all[i]);
+    }
+  }
+  renderTextThemeBySubject(filtered, {
+    forceOpen: terms.length > 0,
+    emptyMessage: terms.length
+      ? "該当する問題がありません。キーワードを変えて試してください。"
+      : "該当する問題がありません。"
+  });
+  if (status) {
+    if (!terms.length) {
+      status.hidden = true;
+      status.textContent = "";
+    } else {
+      status.hidden = false;
+      status.textContent = "";
+      fillWithRuby(status, filtered.length + " 問ヒット（閉じた科目も含む）");
+    }
+  }
+  setStatus(filtered.length + " 問");
+}
+
+function appendTextThemeSubjectAccordion(parent, subject, questions, forceOpen) {
+  var open = !!forceOpen && questions.length > 0;
+  var panelId =
+    "text-theme-subject-" +
+    String(subject).replace(/[^\w\u3040-\u30ff\u4e00-\u9fff]+/g, "-");
+  var section = document.createElement("section");
+  section.className =
+    "theme-group text-theme-subject" + (open ? " is-open" : "");
+  section.setAttribute("data-subject", subject);
+
+  var toggle = document.createElement("button");
+  toggle.type = "button";
+  toggle.className = "theme-group-toggle text-theme-subject-toggle";
+  toggle.setAttribute("aria-expanded", open ? "true" : "false");
+  toggle.setAttribute("aria-controls", panelId);
+
+  var chevron = document.createElement("span");
+  chevron.className = "theme-group-chevron";
+  chevron.setAttribute("aria-hidden", "true");
+  chevron.textContent = "›";
+  toggle.appendChild(chevron);
+
+  var textWrap = document.createElement("span");
+  textWrap.className = "theme-group-toggle-text";
+  var h2 = document.createElement("span");
+  h2.className = "theme-group-title";
+  fillWithRuby(h2, subject);
+  textWrap.appendChild(h2);
+  var gmeta = document.createElement("span");
+  gmeta.className = "theme-group-meta";
+  fillQuestionCountMeta(gmeta, questions.length);
+  textWrap.appendChild(gmeta);
+  toggle.appendChild(textWrap);
+  section.appendChild(toggle);
+
+  var list = document.createElement("div");
+  list.className = "theme-group-list text-theme-subject-list";
+  list.id = panelId;
+  list.hidden = !open;
+  section.appendChild(list);
+
+  /* 閉じた科目はカード未生成。開いたタイミングで描画して初期表示を速くする */
+  var rendered = false;
+  function ensureCardsRendered() {
+    if (rendered) {
+      return;
+    }
+    rendered = true;
+    var frag = document.createDocumentFragment();
+    for (var i = 0; i < questions.length; i++) {
+      appendQuestionCard(frag, questions[i]);
+    }
+    list.appendChild(frag);
+    markVocabGlossTerms(list);
+    activateVocabGlossIfRubyOn();
+  }
+  if (open) {
+    ensureCardsRendered();
+  }
+
+  toggle.addEventListener("click", function () {
+    var next = !section.classList.contains("is-open");
+    if (next) {
+      ensureCardsRendered();
+    }
+    section.classList.toggle("is-open", next);
+    toggle.setAttribute("aria-expanded", next ? "true" : "false");
+    list.hidden = !next;
+  });
+
+  parent.appendChild(section);
+}
+
+/* テキスト科目内: QBページ順 → 第38回は末尾・問題番号順 */
+function compareTextThemeQuestionsByQb(a, b) {
+  var ra = Number(a && a.round) || 0;
+  var rb = Number(b && b.round) || 0;
+  var a38 = ra === 38 ? 1 : 0;
+  var b38 = rb === 38 ? 1 : 0;
+  if (a38 !== b38) {
+    return a38 - b38;
+  }
+  if (a38) {
+    return (Number(a.number) || 0) - (Number(b.number) || 0);
+  }
+  function qbPage(q) {
+    var v = q && q.qb;
+    if (typeof v === "number" && isFinite(v)) {
+      return v;
+    }
+    var n = Number(v);
+    return isFinite(n) ? n : 1e9;
+  }
+  var pa = qbPage(a);
+  var pb = qbPage(b);
+  if (pa !== pb) {
+    return pa - pb;
+  }
+  if (ra !== rb) {
+    return ra - rb;
+  }
+  return (Number(a.number) || 0) - (Number(b.number) || 0);
+}
+
+var textThemeLeadTheme = null;
+
+function appendTextThemeLeadAndBreak(root) {
+  if (!textThemeLeadTheme) {
+    return;
+  }
+  appendThemeCard(root, textThemeLeadTheme, "");
+  var sepLead = document.createElement("p");
+  sepLead.className = "theme-block-label theme-block-label-break";
+  sepLead.setAttribute("aria-hidden", "true");
+  sepLead.textContent = "-----";
+  root.appendChild(sepLead);
+}
+
+function renderTextThemeBySubject(questions, options) {
+  var root = document.getElementById("questionList");
+  if (!root) {
+    return;
+  }
+  options = options || {};
+  root.textContent = "";
+  root.classList.add("text-theme-question-list");
+
+  var bySubject = {};
+  for (var i = 0; i < questions.length; i++) {
+    var q = questions[i];
+    var sub = String(q.subject || "").trim() || "未分類";
+    if (!bySubject[sub]) {
+      bySubject[sub] = [];
+    }
+    bySubject[sub].push(q);
+  }
+  Object.keys(bySubject).forEach(function (sub) {
+    bySubject[sub].sort(compareTextThemeQuestionsByQb);
+  });
+
+  appendTextThemeLeadAndBreak(root);
+
+  var any = false;
+  for (var b = 0; b < TEXT_THEME_SUBJECT_BLOCKS.length; b++) {
+    var block = TEXT_THEME_SUBJECT_BLOCKS[b];
+    var blockHas = false;
+    for (var s = 0; s < block.subjects.length; s++) {
+      if ((bySubject[block.subjects[s]] || []).length) {
+        blockHas = true;
+        break;
+      }
+    }
+    if (!blockHas) {
+      continue;
+    }
+    if (b > 0) {
+      var sep = document.createElement("p");
+      sep.className = "theme-block-label theme-block-label-break";
+      sep.setAttribute("aria-hidden", "true");
+      sep.textContent = "————";
+      root.appendChild(sep);
+    }
+    for (var si = 0; si < block.subjects.length; si++) {
+      var subject = block.subjects[si];
+      var list = bySubject[subject] || [];
+      if (!list.length) {
+        continue;
+      }
+      any = true;
+      appendTextThemeSubjectAccordion(
+        root,
+        subject,
+        list,
+        !!options.forceOpen
+      );
+      delete bySubject[subject];
+    }
+  }
+
+  var leftovers = Object.keys(bySubject);
+  if (leftovers.length) {
+    if (any) {
+      var sep2 = document.createElement("p");
+      sep2.className = "theme-block-label theme-block-label-break";
+      sep2.setAttribute("aria-hidden", "true");
+      sep2.textContent = "————";
+      root.appendChild(sep2);
+    }
+    leftovers.sort();
+    for (var li = 0; li < leftovers.length; li++) {
+      var sub2 = leftovers[li];
+      any = true;
+      appendTextThemeSubjectAccordion(
+        root,
+        sub2,
+        bySubject[sub2],
+        !!options.forceOpen
+      );
+    }
+  }
+
+  if (!any) {
+    var empty = document.createElement("p");
+    empty.className = "hint";
+    empty.textContent =
+      options.emptyMessage || "該当する問題がありません。";
+    root.appendChild(empty);
+  }
+
+  markVocabGlossTerms(root);
+  activateVocabGlossIfRubyOn();
 }
 
 function applyVocabularyWords(words) {
@@ -1318,15 +2314,19 @@ function setRubyHidden(hidden) {
     document.body.classList.toggle("ruby-off", !!hidden);
   }
   var btn = document.getElementById("rubyToggle");
-  if (!btn) {
-    return;
+  if (btn) {
+    btn.setAttribute("aria-pressed", hidden ? "false" : "true");
+    btn.textContent = "ルビ";
+    btn.setAttribute(
+      "aria-label",
+      hidden ? "ルビを表示する" : "ルビを非表示にする"
+    );
   }
-  btn.setAttribute("aria-pressed", hidden ? "false" : "true");
-  btn.textContent = "ルビ";
-  btn.setAttribute(
-    "aria-label",
-    hidden ? "ルビを表示する" : "ルビを非表示にする"
-  );
+  if (hidden) {
+    hideVocabGlossPopup();
+  } else {
+    activateVocabGlossIfRubyOn();
+  }
 }
 
 function wireSiteNav() {
@@ -1355,21 +2355,349 @@ function wireSiteNav() {
   });
 }
 
+/* 国試日（ローカル日付の差）。2026-11-05 → あと87日 */
+var EXAM_DATE = { y: 2027, m: 0, d: 31 };
+
+function daysUntilExam() {
+  var now = new Date();
+  var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  var exam = new Date(EXAM_DATE.y, EXAM_DATE.m, EXAM_DATE.d);
+  return Math.round((exam.getTime() - today.getTime()) / 86400000);
+}
+
+var EXAM_COUNTDOWN_HIDE_KEY = "kakomon.examCountdown.hidden";
+var HEADER_CHROME_MARK_HIDE = "▼";
+var HEADER_CHROME_MARK_SHOW = "▶";
+
+function isExamCountdownHidden() {
+  try {
+    return sessionStorage.getItem(EXAM_COUNTDOWN_HIDE_KEY) === "1";
+  } catch (err) {
+    return false;
+  }
+}
+
+function setExamCountdownHidden(hidden) {
+  try {
+    if (hidden) {
+      sessionStorage.setItem(EXAM_COUNTDOWN_HIDE_KEY, "1");
+    } else {
+      sessionStorage.removeItem(EXAM_COUNTDOWN_HIDE_KEY);
+    }
+  } catch (err) {
+    /* ignore */
+  }
+}
+
+function fillExamCountdownLabel(el) {
+  var days = daysUntilExam();
+  if (days > 0) {
+    el.textContent = "";
+    var prefix = document.createElement("span");
+    prefix.className = "exam-countdown-prefix";
+    prefix.textContent = "あと";
+    el.appendChild(prefix);
+    el.appendChild(document.createTextNode(String(days)));
+    var unit = document.createElement("span");
+    unit.className = "exam-countdown-unit";
+    unit.textContent = "日";
+    el.appendChild(unit);
+    el.setAttribute(
+      "aria-label",
+      "介護福祉士国家試験まであと" + days + "日（2027年1月31日）"
+    );
+    return true;
+  }
+  if (days === 0) {
+    el.textContent = "本日";
+    el.setAttribute("aria-label", "介護福祉士国家試験は本日です");
+    return true;
+  }
+  el.textContent = "";
+  el.removeAttribute("aria-label");
+  return false;
+}
+
+function unwrapPageTitleRow() {
+  var row = document.getElementById("pageTitleRow");
+  if (!row || !row.parentNode) {
+    return;
+  }
+  var parent = row.parentNode;
+  while (row.firstChild) {
+    parent.insertBefore(row.firstChild, row);
+  }
+  parent.removeChild(row);
+}
+
+function applyHeaderChromeCollapsed(collapsed) {
+  setExamCountdownHidden(collapsed);
+  if (document.body) {
+    document.body.classList.toggle("header-chrome-collapsed", !!collapsed);
+  }
+  var row = document.getElementById("headerToolRow") || ensureHeaderToolRow();
+  if (row) {
+    row.hidden = !!collapsed;
+  }
+  var toggle = document.getElementById("headerChromeToggle");
+  if (toggle) {
+    toggle.textContent = collapsed ? HEADER_CHROME_MARK_SHOW : HEADER_CHROME_MARK_HIDE;
+    toggle.setAttribute("aria-expanded", collapsed ? "false" : "true");
+    toggle.title = collapsed ? "表示切替ボタンを再表示" : "表示切替ボタンを隠す";
+    toggle.setAttribute(
+      "aria-label",
+      collapsed ? "表示切替ボタンを再表示" : "表示切替ボタンを隠す"
+    );
+  }
+}
+
+function ensureSiteBarEnd() {
+  var bar = document.querySelector(".site-bar");
+  if (!bar) {
+    return null;
+  }
+  var end = document.getElementById("siteBarEnd");
+  if (end) {
+    if (end.parentNode !== bar) {
+      bar.appendChild(end);
+    } else if (end.nextSibling) {
+      bar.appendChild(end);
+    }
+    return end;
+  }
+  end = document.createElement("div");
+  end.id = "siteBarEnd";
+  end.className = "site-bar-end";
+  bar.appendChild(end);
+  return end;
+}
+
+function ensureExamCountdown() {
+  unwrapPageTitleRow();
+  var end = ensureSiteBarEnd();
+  if (!end) {
+    return;
+  }
+  var el = document.getElementById("examCountdown");
+  if (!el) {
+    el = document.createElement("span");
+    el.id = "examCountdown";
+    el.className = "exam-countdown";
+  }
+  if (el.parentNode !== end) {
+    end.insertBefore(el, end.firstChild);
+  }
+  if (!fillExamCountdownLabel(el)) {
+    el.hidden = true;
+  } else {
+    el.hidden = false;
+  }
+
+  var toggle = document.getElementById("headerChromeToggle");
+  if (!toggle) {
+    toggle = document.createElement("button");
+    toggle.type = "button";
+    toggle.id = "headerChromeToggle";
+    toggle.className = "header-chrome-toggle";
+    toggle.setAttribute("aria-controls", "headerToolRow");
+    toggle.addEventListener("click", function () {
+      applyHeaderChromeCollapsed(!isExamCountdownHidden());
+    });
+  }
+  if (toggle.parentNode !== end) {
+    end.appendChild(toggle);
+  }
+  applyHeaderChromeCollapsed(isExamCountdownHidden());
+}
+
+/* 2行目: 読む・ルビ。3行目が見出し */
+function ensureHeaderToolRow() {
+  var header = document.querySelector(".page-header");
+  if (!header) {
+    return null;
+  }
+  var row = document.getElementById("headerToolRow");
+  if (row) {
+    return row;
+  }
+  row = document.createElement("div");
+  row.id = "headerToolRow";
+  row.className = "header-tool-row";
+  row.setAttribute("role", "toolbar");
+  row.setAttribute("aria-label", "表示切替");
+  var h1 = header.querySelector(":scope > h1");
+  if (h1) {
+    header.insertBefore(row, h1);
+  } else {
+    header.appendChild(row);
+  }
+  return row;
+}
+
 function wireRubyToggle() {
   setRubyHidden(isRubyHidden());
-  var bar = document.querySelector(".site-bar") || document.querySelector(".site-nav");
-  if (!bar || document.getElementById("rubyToggle")) {
+  var row = ensureHeaderToolRow();
+  if (!row || document.getElementById("rubyToggle")) {
+    activateVocabGlossIfRubyOn();
     return;
   }
   var btn = document.createElement("button");
   btn.type = "button";
   btn.id = "rubyToggle";
   btn.className = "ruby-toggle";
-  bar.appendChild(btn);
+  row.appendChild(btn);
   setRubyHidden(isRubyHidden());
   btn.addEventListener("click", function () {
     setRubyHidden(!isRubyHidden());
   });
+  activateVocabGlossIfRubyOn();
+}
+
+function insertHeaderToolAfter(row, el, afterId) {
+  var after = afterId ? document.getElementById(afterId) : null;
+  if (after && after.parentNode === row) {
+    if (after.nextSibling) {
+      row.insertBefore(el, after.nextSibling);
+    } else {
+      row.appendChild(el);
+    }
+    return;
+  }
+  row.appendChild(el);
+}
+
+function pathIsUnder(prefix) {
+  var path = (location && location.pathname) || "";
+  return path === prefix || path.indexOf(prefix) === 0;
+}
+
+/* ルビの右隣: これ出た？・番号サーチ（全ページ共通） */
+function wireQuickNavLinks() {
+  var row = ensureHeaderToolRow();
+  if (!row) {
+    return;
+  }
+  if (!document.getElementById("termNavLink")) {
+    var term = document.createElement("a");
+    term.id = "termNavLink";
+    term.className = "ruby-toggle themes-nav-link header-quick-nav";
+    term.href = "/kaigo/kakomon/term/";
+    term.textContent = "🔎";
+    term.title = "これ、出た？";
+    term.setAttribute("aria-label", "これ、出た？");
+    if (pathIsUnder("/kaigo/kakomon/term")) {
+      term.setAttribute("aria-current", "page");
+      term.classList.add("is-current");
+    }
+    insertHeaderToolAfter(row, term, "rubyToggle");
+  }
+  if (!document.getElementById("numberNavLink")) {
+    var num = document.createElement("a");
+    num.id = "numberNavLink";
+    num.className = "ruby-toggle themes-nav-link header-quick-nav";
+    num.href = "/kaigo/kakomon/number/";
+    num.textContent = "123";
+    num.title = "番号サーチ";
+    num.setAttribute("aria-label", "番号サーチ");
+    if (pathIsUnder("/kaigo/kakomon/number")) {
+      num.setAttribute("aria-current", "page");
+      num.classList.add("is-current");
+    }
+    insertHeaderToolAfter(row, num, "termNavLink");
+  }
+}
+
+function wireThemesNavLink() {
+  var row = ensureHeaderToolRow();
+  if (!row || document.getElementById("themesNavLink")) {
+    return;
+  }
+  var link = document.createElement("a");
+  link.id = "themesNavLink";
+  link.className = "ruby-toggle themes-nav-link";
+  link.href = "/kaigo/kakomon/themes/";
+  link.textContent = "テーマ";
+  link.setAttribute("aria-label", "テーマ一覧へ");
+  if (pathIsUnder("/kaigo/kakomon/themes")) {
+    link.setAttribute("aria-current", "page");
+    link.classList.add("is-current");
+  }
+  /* ルビ → 🔎 → 123 の右隣 */
+  var afterId = document.getElementById("numberNavLink")
+    ? "numberNavLink"
+    : document.getElementById("termNavLink")
+      ? "termNavLink"
+      : "rubyToggle";
+  insertHeaderToolAfter(row, link, afterId);
+}
+
+/* 適切（◯）／比較（↔）／不適切（✕）マップ切替 */
+var JIRITSU_SEIKAI_URL = "/kaigo/kakomon/themes/hikaku-jiritsu.html";
+var JIRITSU_NG_URL = "/kaigo/kakomon/themes/hikaku-jiritsu-ng.html";
+
+function wireJiritsuMapLinks() {
+  /* ◯/✕ トグルは出さない */
+  return;
+  var row = ensureHeaderToolRow();
+  if (!row || document.getElementById("jiritsuMapToggleGroup")) {
+    return;
+  }
+  var path = (location && location.pathname) || "";
+  var onNg = path.indexOf("hikaku-jiritsu-ng") !== -1;
+  var onSeikai = !onNg && path.indexOf("hikaku-jiritsu") !== -1;
+  if (!onNg && !onSeikai) {
+    return;
+  }
+
+  var group = document.createElement("span");
+  group.id = "jiritsuMapToggleGroup";
+  group.className = "jiritsu-map-toggle-group";
+  group.setAttribute("role", "group");
+  group.setAttribute("aria-label", "◯と✕の切替");
+
+  var specs = [
+    {
+      id: "jiritsuMapToggleOk",
+      href: JIRITSU_SEIKAI_URL,
+      text: "◯",
+      label: "国試で◯になる選択肢",
+      current: onSeikai
+    },
+    {
+      id: "jiritsuMapToggleNg",
+      href: JIRITSU_NG_URL,
+      text: "✕",
+      label: "国試で✕になる選択肢",
+      current: onNg
+    }
+  ];
+
+  for (var i = 0; i < specs.length; i++) {
+    var spec = specs[i];
+    var btn = document.createElement("a");
+    btn.id = spec.id;
+    btn.className = "ruby-toggle themes-nav-link jiritsu-map-toggle";
+    btn.href = spec.href;
+    btn.textContent = spec.text;
+    btn.title = spec.label;
+    btn.setAttribute("aria-label", spec.label);
+    btn.setAttribute("aria-pressed", spec.current ? "true" : "false");
+    if (spec.current) {
+      btn.setAttribute("aria-current", "page");
+    }
+    group.appendChild(btn);
+  }
+
+  var themes = document.getElementById("themesNavLink");
+  var ruby = document.getElementById("rubyToggle");
+  var anchor = themes || ruby;
+  if (anchor && anchor.nextSibling) {
+    row.insertBefore(group, anchor.nextSibling);
+  } else if (anchor) {
+    row.appendChild(group);
+  } else {
+    row.appendChild(group);
+  }
 }
 
 var ANSWER_SHOW_KEY = "kakomon.answerShow.v2";
@@ -1389,21 +2717,29 @@ function setAnswerShowOn(on) {
   } catch (err) {
     /* ignore */
   }
+  if (document.body) {
+    document.body.classList.toggle("answer-show-on", !!on);
+  }
   var btn = document.getElementById("answerShowToggle");
   if (btn) {
+    /* 表示は次に行くモード名: インプット中→「アウトプット」、アウトプット中→「インプット」 */
     btn.setAttribute("aria-pressed", on ? "true" : "false");
-    btn.textContent = "正解";
+    btn.textContent = on ? "アウトプット" : "インプット";
     btn.setAttribute(
       "aria-label",
-      on ? "正解の表示をやめる" : "正解を表示する"
+      on ? "アウトプットモードにする" : "インプットモードにする"
     );
   }
   applyAnswerShowToAllCards();
 }
 
 function wireAnswerShowToggle() {
-  var bar = document.querySelector(".site-bar") || document.querySelector(".site-nav");
-  if (!bar || document.getElementById("answerShowToggle")) {
+  var row = ensureHeaderToolRow();
+  if (!row) {
+    setAnswerShowOn(isAnswerShowOn());
+    return;
+  }
+  if (document.getElementById("answerShowToggle")) {
     setAnswerShowOn(isAnswerShowOn());
     return;
   }
@@ -1411,11 +2747,72 @@ function wireAnswerShowToggle() {
   btn.type = "button";
   btn.id = "answerShowToggle";
   btn.className = "ruby-toggle answer-show-toggle";
-  bar.appendChild(btn);
+  /* 読む → 全表示 → ルビ の順になるよう先頭へ */
+  row.insertBefore(btn, row.firstChild);
   setAnswerShowOn(isAnswerShowOn());
   btn.addEventListener("click", function () {
     setAnswerShowOn(!isAnswerShowOn());
   });
+}
+
+var explainAllOn = false;
+
+function isExplainAllOn() {
+  return !!explainAllOn;
+}
+
+function setExplainAllOn(on) {
+  explainAllOn = !!on;
+  if (document.body) {
+    document.body.classList.toggle("explain-all-on", explainAllOn);
+  }
+  var btn = document.getElementById("explainAllToggle");
+  if (btn) {
+    btn.setAttribute("aria-pressed", explainAllOn ? "true" : "false");
+    btn.textContent = "全表示";
+    btn.setAttribute(
+      "aria-label",
+      explainAllOn ? "すべての解説を閉じる" : "すべての解説を表示する"
+    );
+  }
+  applyExplainAllToAllCards();
+}
+
+function wireExplainAllToggle() {
+  var row = ensureHeaderToolRow();
+  if (!row) {
+    setExplainAllOn(isExplainAllOn());
+    return;
+  }
+  if (document.getElementById("explainAllToggle")) {
+    setExplainAllOn(isExplainAllOn());
+    return;
+  }
+  var btn = document.createElement("button");
+  btn.type = "button";
+  btn.id = "explainAllToggle";
+  btn.className = "ruby-toggle explain-all-toggle";
+  /* 読む → 全表示 → ルビ の順 */
+  var ruby = document.getElementById("rubyToggle");
+  if (ruby) {
+    row.insertBefore(btn, ruby);
+  } else {
+    row.appendChild(btn);
+  }
+  setExplainAllOn(false);
+  btn.addEventListener("click", function () {
+    setExplainAllOn(!isExplainAllOn());
+  });
+}
+
+function wireHeaderChrome() {
+  ensureHeaderToolRow();
+  ensureExamCountdown();
+  wireAnswerShowToggle();
+  wireExplainAllToggle();
+  wireRubyToggle();
+  wireQuickNavLinks();
+  wireThemesNavLink();
 }
 
 function wireBackToTop() {
@@ -1466,18 +2863,169 @@ function tightenThemeIndexSpacing(text) {
   return String(text || "").replace(/(\d)\u3000/g, "$1 ");
 }
 
-function appendThemeCard(parent, t) {
+/* 「科目（下位テーマ）」を親／子に分ける。分かれない場合は null */
+function splitThemeHierarchyTitle(text) {
+  var raw = tightenThemeIndexSpacing(text);
+  var m = raw.match(/^(.+?)（(.+)）$/);
+  if (!m) {
+    return null;
+  }
+  var parent = String(m[1] || "").trim();
+  var child = String(m[2] || "").trim();
+  if (!parent || !child) {
+    return null;
+  }
+  return { parent: parent, child: child };
+}
+
+function fillThemeHierarchyTitle(el, text) {
+  var parts = splitThemeHierarchyTitle(text);
+  el.textContent = "";
+  if (!parts) {
+    fillWithRuby(el, tightenThemeIndexSpacing(text));
+    return;
+  }
+  el.classList.add("has-theme-hierarchy");
+  var parent = document.createElement("span");
+  parent.className = "theme-title-parent";
+  fillWithRuby(parent, parts.parent);
+  el.appendChild(parent);
+  var child = document.createElement("span");
+  child.className = "theme-title-child";
+  fillWithRuby(child, "（" + parts.child + "）");
+  el.appendChild(child);
+}
+
+var THEME_INDEX_RESTORE_KEY = "theme-index-restore";
+
+function themeCardDomId(slug) {
+  return "theme-card-" + String(slug || "").replace(/[^a-zA-Z0-9_-]+/g, "-");
+}
+
+function saveThemeIndexRestore(slug, groupKey) {
+  if (!slug) {
+    return;
+  }
+  try {
+    sessionStorage.setItem(
+      THEME_INDEX_RESTORE_KEY,
+      JSON.stringify({
+        path: location.pathname,
+        slug: String(slug),
+        groupKey: groupKey ? String(groupKey) : ""
+      })
+    );
+  } catch (err) {
+    /* ignore */
+  }
+}
+
+function consumeThemeIndexRestore() {
+  try {
+    var raw = sessionStorage.getItem(THEME_INDEX_RESTORE_KEY);
+    if (!raw) {
+      return null;
+    }
+    var data = JSON.parse(raw);
+    if (!data || data.path !== location.pathname) {
+      return null;
+    }
+    sessionStorage.removeItem(THEME_INDEX_RESTORE_KEY);
+    return data;
+  } catch (err) {
+    return null;
+  }
+}
+
+function openThemeGroupSection(section) {
+  if (!section) {
+    return;
+  }
+  var toggle = section.querySelector(".theme-group-toggle");
+  var list = section.querySelector(".theme-group-list");
+  section.classList.add("is-open");
+  if (toggle) {
+    toggle.setAttribute("aria-expanded", "true");
+  }
+  if (list) {
+    list.hidden = false;
+  }
+}
+
+/* 詳細からブラウザバックしたとき、開いていたテーマ位置へ戻す */
+function restoreThemeIndexPosition() {
+  var data = consumeThemeIndexRestore();
+  if (!data || !data.slug) {
+    return;
+  }
+  var card = document.getElementById(themeCardDomId(data.slug));
+  if (!card) {
+    return;
+  }
+  var section = card.closest(".theme-group");
+  if (section) {
+    openThemeGroupSection(section);
+  }
+  window.requestAnimationFrame(function () {
+    card.classList.add("is-restore-focus");
+    try {
+      card.focus({ preventScroll: true });
+    } catch (err) {
+      try {
+        card.focus();
+      } catch (err2) {
+        /* ignore */
+      }
+    }
+    if (card.scrollIntoView) {
+      card.scrollIntoView({ block: "center", behavior: "auto" });
+    }
+    window.setTimeout(function () {
+      card.classList.remove("is-restore-focus");
+    }, 1800);
+  });
+}
+
+function fillQuestionCountMeta(el, n) {
+  el.textContent = "";
+  var num = document.createElement("span");
+  num.className = "theme-count-num";
+  num.textContent = String(n);
+  var unit = document.createElement("span");
+  unit.className = "theme-count-unit";
+  unit.textContent = "問";
+  el.appendChild(num);
+  el.appendChild(unit);
+}
+
+function themeDisplayLabel(item) {
+  if (item.label) return item.label;
+  var title = item.title || "";
+  if (item.points != null && item.points !== "") {
+    return title + "（" + item.points + "）";
+  }
+  return title;
+}
+
+function appendThemeCard(parent, t, groupKey) {
   var a = document.createElement("a");
   a.className = "theme-card";
   a.href = t.href || ("view.html?t=" + encodeURIComponent(t.slug));
+  if (t.slug) {
+    a.id = themeCardDomId(t.slug);
+    a.setAttribute("data-theme-slug", t.slug);
+  }
+  a.addEventListener("click", function () {
+    saveThemeIndexRestore(t.slug, groupKey || "");
+  });
   var title = document.createElement("h3");
   title.className = "theme-card-title";
-  fillWithRuby(title, tightenThemeIndexSpacing(t.label || t.title || ""));
+  fillWithRuby(title, tightenThemeIndexSpacing(themeDisplayLabel(t)));
   a.appendChild(title);
   var meta = document.createElement("p");
   meta.className = "theme-card-meta";
   var shown = t.displayCount != null ? t.displayCount : t.count || 0;
-  meta.textContent = shown + " 問";
+  fillQuestionCountMeta(meta, shown);
   var onAppendix = location.pathname.indexOf("/appendix/") !== -1;
   // 参考テーマなど cardLow 指定のみ灰色（問数不足では灰色にしない）
   if (!onAppendix && t.cardLow) a.classList.add("theme-card-low");
@@ -1485,8 +3033,23 @@ function appendThemeCard(parent, t) {
   parent.appendChild(a);
 }
 
+var BANK_BLOCK_LABELS = {
+  生活支援技術: "介護",
+  こころとからだのしくみ: "医療",
+  社会の理解: "社会"
+};
+
+function appendBankBlockLabel(root, text, withBreak) {
+  var el = document.createElement("p");
+  el.className =
+    "theme-block-label" + (withBreak ? " theme-block-label-break" : "");
+  fillWithRuby(el, text);
+  root.appendChild(el);
+}
+
 function appendThemeGroup(root, group) {
   var title = group.title || "テーマ";
+  var displayTitle = themeDisplayLabel(group) || title;
   var groupKey = group.id || title;
   /* リロード・ページ遷移では閉じた状態から（開閉は画面内のみ） */
   var open = false;
@@ -1496,7 +3059,8 @@ function appendThemeGroup(root, group) {
 
   var section = document.createElement("section");
   section.className = "theme-group" + (open ? " is-open" : "");
-  section.setAttribute("aria-label", title);
+  section.setAttribute("aria-label", displayTitle);
+  section.setAttribute("data-group-key", String(groupKey));
 
   var toggle = document.createElement("button");
   toggle.type = "button";
@@ -1514,11 +3078,11 @@ function appendThemeGroup(root, group) {
   textWrap.className = "theme-group-toggle-text";
   var h2 = document.createElement("span");
   h2.className = "theme-group-title";
-  h2.textContent = title;
+  fillWithRuby(h2, displayTitle);
   textWrap.appendChild(h2);
   var gmeta = document.createElement("span");
   gmeta.className = "theme-group-meta";
-  gmeta.textContent = qN + " 問";
+  fillQuestionCountMeta(gmeta, qN);
   textWrap.appendChild(gmeta);
   toggle.appendChild(textWrap);
   section.appendChild(toggle);
@@ -1528,7 +3092,7 @@ function appendThemeGroup(root, group) {
   list.id = panelId;
   list.hidden = !open;
   for (var i = 0; i < children.length; i++) {
-    appendThemeCard(list, children[i]);
+    appendThemeCard(list, children[i], groupKey);
   }
   section.appendChild(list);
 
@@ -1542,37 +3106,78 @@ function appendThemeGroup(root, group) {
   root.appendChild(section);
 }
 
-function appendKoryakuIndexCard(parent, href, titleText) {
-  var a = document.createElement("a");
-  a.className = "theme-koryaku-card";
-  a.href = href;
-  var title = document.createElement("h3");
-  title.className = "theme-card-title";
-  title.textContent = titleText;
-  a.appendChild(title);
-  var meta = document.createElement("p");
-  meta.className = "theme-card-meta";
-  meta.textContent = "正解マップ · まず正解だけ押さえる";
-  a.appendChild(meta);
-  parent.appendChild(a);
+var THEMES_KORYAKU_MAPS = {
+  jiritsuVs: {
+    href: "hikaku-jiritsu-vs.html",
+    title: "国試を解くための比較表"
+  },
+  jiritsu: {
+    href: "hikaku-jiritsu.html",
+    title: "国試で◯になる選択肢"
+  },
+  jiritsuNg: {
+    href: "hikaku-jiritsu-ng.html",
+    title: "国試で✕になる選択肢"
+  },
+  kaigoShogai: {
+    href: "hikaku-kaigo-shogai.html",
+    title: "介護保険法・障害者総合支援法攻略マップ"
+  },
+  kaigoKatei: {
+    href: "hikaku-kaigo-katei.html",
+    title: "介護過程攻略マップ"
+  },
+  icf: {
+    href: "hikaku-icf.html",
+    title: "ICF（国際生活機能分類）攻略マップ"
+  },
+  jinbutsu: {
+    href: "hikaku-jinbutsu.html",
+    title: "福祉の関連人物攻略マップ"
+  }
+};
+
+function appendKoryakuIndexCards(parent, mapKeys) {
+  var keys = mapKeys || [
+    "kaigoShogai",
+    "icf",
+    "jinbutsu",
+    "jiritsuVs",
+    "jiritsu",
+    "jiritsuNg"
+  ];
+  for (var i = 0; i < keys.length; i++) {
+    var item = THEMES_KORYAKU_MAPS[keys[i]];
+    if (!item) {
+      continue;
+    }
+    var card = document.createElement("a");
+    card.className = "theme-card";
+    card.href = item.href;
+    var title = document.createElement("h3");
+    title.className = "theme-card-title";
+    fillWithRuby(title, item.title);
+    card.appendChild(title);
+    parent.appendChild(card);
+  }
 }
 
-function appendKoryakuIndexCards(parent) {
-  appendKoryakuIndexCard(parent, "koryaku-kaigo-hoken.html", "介護保険法攻略");
-  appendKoryakuIndexCard(parent, "koryaku-shogai-sogo.html", "障害者総合支援法攻略");
-  var hikaku = document.createElement("a");
-  hikaku.className = "theme-koryaku-card";
-  hikaku.href = "hikaku-kaigo-shogai.html";
-  var hikakuTitle = document.createElement("h3");
-  hikakuTitle.className = "theme-card-title";
-  /* 一覧カードはルビなし（短い案内文。ルビ幅で左にはみ出さない） */
-  hikakuTitle.textContent = "介護保険法・障害者総合支援法攻略マップ";
-  hikaku.appendChild(hikakuTitle);
-  var hikakuMeta = document.createElement("p");
-  hikakuMeta.className = "theme-card-meta";
-  hikakuMeta.textContent = "用語の対応 · 過去問で出た対だけ";
-  hikaku.appendChild(hikakuMeta);
-  parent.appendChild(hikaku);
+function findUngroupedTheme(ungrouped, title) {
+  for (var i = 0; i < ungrouped.length; i++) {
+    if ((ungrouped[i].title || "") === title) {
+      return ungrouped[i];
+    }
+  }
+  return null;
+}
+
+function findThemeGroup(groups, title) {
+  for (var i = 0; i < groups.length; i++) {
+    if ((groups[i].title || "") === title) {
+      return groups[i];
+    }
+  }
+  return null;
 }
 
 function renderThemeIndex(payload) {
@@ -1591,29 +3196,105 @@ function renderThemeIndex(payload) {
   var onThemes =
     location.pathname.indexOf("/themes/") !== -1 ||
     /\/themes\/?$/.test(location.pathname);
-  if (onThemes) {
-    appendKoryakuIndexCards(root);
+  var onBank = location.pathname.indexOf("/bank/") !== -1;
+
+  /* テーマ: 先頭にテキスト、その後は指定カテゴリ・指定順（優先して理解する問題は一覧に出さない） */
+  if (onThemes && (groups.length || ungrouped.length || themes.length)) {
+    var textTheme = findUngroupedTheme(ungrouped, "テキスト");
+    if (!textTheme) {
+      for (var ti = 0; ti < themes.length; ti++) {
+        if ((themes[ti].title || "") === "テキスト") {
+          textTheme = themes[ti];
+          break;
+        }
+      }
+    }
+    if (textTheme) {
+      appendThemeCard(root, textTheme, "");
+    }
+    /* グループ未所属の追加テーマ（テキスト／優先して理解する問題以外） */
+    for (var uiExtra = 0; uiExtra < ungrouped.length; uiExtra++) {
+      var extraTheme = ungrouped[uiExtra];
+      var extraTitle = (extraTheme && extraTheme.title) || "";
+      if (
+        extraTitle === "テキスト" ||
+        extraTitle === "優先して理解する問題"
+      ) {
+        continue;
+      }
+      appendThemeCard(root, extraTheme, "");
+    }
+    var gensokuGroup = findThemeGroup(groups, "原則");
+    if (gensokuGroup) {
+      appendThemeGroup(root, gensokuGroup);
+    }
+    appendKoryakuIndexCards(root, ["jiritsuVs"]);
+    var jiritsuGroup = findThemeGroup(groups, "利用者主体・自立支援");
+    if (jiritsuGroup) {
+      appendThemeGroup(root, jiritsuGroup);
+    }
+    appendKoryakuIndexCards(root, [
+      "kaigoShogai",
+      "kaigoKatei",
+      "icf",
+      "jinbutsu",
+      "jiritsu",
+      "jiritsuNg"
+    ]);
+    var houritsuGroup = findThemeGroup(groups, "法律");
+    if (houritsuGroup) {
+      appendThemeGroup(root, houritsuGroup);
+    }
+    /* theme_extract のその他グループ（上記以外）も一覧に出す */
+    var shownGroupTitles = {
+      "原則": true,
+      "利用者主体・自立支援": true,
+      "法律": true
+    };
+    for (var giExtra = 0; giExtra < groups.length; giExtra++) {
+      var gExtra = groups[giExtra];
+      var gTitle = (gExtra && gExtra.title) || "";
+      if (shownGroupTitles[gTitle]) {
+        continue;
+      }
+      appendThemeGroup(root, gExtra);
+    }
+    restoreThemeIndexPosition();
+    return;
   }
 
   if (groups.length || ungrouped.length) {
-    for (var g = 0; g < groups.length; g++) {
-      appendThemeGroup(root, groups[g]);
+    for (var gi = 0; gi < groups.length; gi++) {
+      var groupTitle = groups[gi].title || "";
+      if (onBank && BANK_BLOCK_LABELS[groupTitle]) {
+        appendBankBlockLabel(
+          root,
+          BANK_BLOCK_LABELS[groupTitle],
+          groupTitle !== "生活支援技術"
+        );
+      }
+      appendThemeGroup(root, groups[gi]);
     }
     if (ungrouped.length) {
       var flat = document.createElement("div");
       flat.className = "theme-ungrouped";
       flat.setAttribute("aria-label", "その他のテーマ");
-      for (var u = 0; u < ungrouped.length; u++) {
-        appendThemeCard(flat, ungrouped[u]);
+      for (var ui = 0; ui < ungrouped.length; ui++) {
+        appendThemeCard(flat, ungrouped[ui], "");
       }
       root.appendChild(flat);
     }
+    restoreThemeIndexPosition();
     return;
   }
 
-  for (var j = 0; j < themes.length; j++) {
-    appendThemeCard(root, themes[j]);
+  if (onThemes) {
+    appendKoryakuIndexCards(root);
   }
+  for (var j = 0; j < themes.length; j++) {
+    appendThemeCard(root, themes[j], "");
+  }
+  restoreThemeIndexPosition();
 }
 
 var THEME_RECENT_SESSION_MIN = 34;
@@ -1675,7 +3356,7 @@ function renderThemeMoreButton(olderQuestions, displayCount) {
   var btn = document.createElement("button");
   btn.type = "button";
   btn.className = "theme-more-btn";
-  btn.textContent = "もっと見る（あと" + olderQuestions.length + "問）";
+  btn.textContent = "あと5年分見る（" + olderQuestions.length + "問）";
   btn.addEventListener("click", function () {
     appendQuestions(olderQuestions);
     wrap.remove();
@@ -1694,22 +3375,30 @@ function getSiteIndexTitle() {
   if (h1 && h1.textContent.trim()) {
     return h1.textContent.trim();
   }
-  return "重要テーマ";
+  return "テーマ";
 }
 
 function applySiteBrandRuby() {
   var brand = document.querySelector(".site-brand");
-  if (brand) {
-    /* 1行目はルビなし。狭い画面でも省略せず全文を出す */
-    brand.setAttribute("aria-label", "介護福祉士国家試験対策");
-    brand.textContent = "介護福祉士国家試験対策";
+  if (!brand) return;
+  var label = "介護福祉士国家試験対策";
+  var href = "/kaigo/kakomon/themes/view.html?t=b146eeffd742";
+  if (brand.tagName !== "A") {
+    var link = document.createElement("a");
+    link.className = brand.className;
+    brand.parentNode.replaceChild(link, brand);
+    brand = link;
   }
+  brand.href = href;
+  brand.setAttribute("aria-label", label);
+  /* 1行目はルビなし。狭い画面でも省略せず全文を出す */
+  brand.textContent = label;
 }
 
 function bootIndex() {
   wireSiteNav();
-  wireRubyToggle();
-  wireAnswerShowToggle();
+  wireHeaderChrome();
+  wireRubyFitRefresh();
   wireBackToTop();
   setStatus("読み込み中…");
   loadRubyThen(function () {
@@ -1739,8 +3428,8 @@ function getThemeSlugFromUrl() {
 
 function bootView() {
   wireSiteNav();
-  wireRubyToggle();
-  wireAnswerShowToggle();
+  wireHeaderChrome();
+  wireRubyFitRefresh();
   wireBackToTop();
   setStatus("読み込み中…");
   var slug = getThemeSlugFromUrl();
@@ -1748,44 +3437,70 @@ function bootView() {
     showError("テーマが指定されていません。一覧から選んでください。");
     return;
   }
-  loadRubyThen(function () {
-    applySiteBrandRuby();
-    fetch("data/" + encodeURIComponent(slug) + ".json?_t=" + Date.now())
-      .then(function (res) {
-        if (!res.ok) throw new Error("テーマデータの読み込みに失敗しました");
-        return res.json();
-      })
-      .then(function (payload) {
-        var title = tightenThemeIndexSpacing(payload.title || "重要テーマ");
-        document.title = title;
-        var h1 = document.getElementById("themeTitle");
-        if (h1) {
-          h1.textContent = "";
-          fillWithRuby(h1, title);
-        }
-        var questions = payload.questions || [];
-        var parts = partitionThemeQuestions(
-          questions,
-          payload.recentSessionMin,
-          payload.recentSessionMax,
-          !!payload.showAllInOrder
-        );
-        var displayCount =
-          payload.displayCount != null
-            ? payload.displayCount
-            : parts.initial.length;
-        setStatus(displayCount + " 問");
+  var bust = "_t=" + Date.now();
+  var rubyPromise = fetch("ruby.json?" + bust)
+    .then(function (res) {
+      return res.ok ? res.json() : [];
+    })
+    .catch(function () {
+      return [];
+    });
+  var dataPromise = fetch(
+    "data/" + encodeURIComponent(slug) + ".json?" + bust
+  ).then(function (res) {
+    if (!res.ok) throw new Error("テーマデータの読み込みに失敗しました");
+    return res.json();
+  });
+  Promise.all([rubyPromise, dataPromise])
+    .then(function (pair) {
+      var rubyWords = pair[0];
+      var payload = pair[1];
+      if (Array.isArray(rubyWords) && rubyWords.length) {
+        applyVocabularyWords(rubyWords.map(normalizeWordItem));
+      }
+      applySiteBrandRuby();
+      var title = tightenThemeIndexSpacing(payload.title || "テーマ");
+      document.title = title;
+      var h1 = document.getElementById("themeTitle");
+      if (h1) {
+        h1.classList.remove("has-theme-hierarchy");
+        fillThemeHierarchyTitle(h1, title);
+      }
+      var questions = payload.questions || [];
+      if (title === "テキスト") {
+        textThemeAllQuestions = questions.slice();
+        textThemeLeadTheme = payload.leadTheme || null;
+        ensureTextThemeSearchPanel();
+        setStatus(questions.length + " 問");
         setActiveHighlightTerms([]);
-        renderQuestions(parts.initial);
-        renderThemeMoreButton(parts.older, displayCount);
+        renderTextThemeBySubject(questions, { forceOpen: false });
+        renderThemeMoreButton([], questions.length);
         if (payload.missing && payload.missing.length) {
           console.warn("欠番", payload.missing);
         }
-      })
-      .catch(function (err) {
-        showError(err && err.message ? err.message : "読み込みに失敗しました");
-      });
-  });
+        return;
+      }
+      var parts = partitionThemeQuestions(
+        questions,
+        payload.recentSessionMin,
+        payload.recentSessionMax,
+        !!payload.showAllInOrder
+      );
+      var displayCount =
+        payload.displayCount != null
+          ? payload.displayCount
+          : parts.initial.length;
+      setStatus(displayCount + " 問");
+      setActiveHighlightTerms([]);
+      renderQuestions(parts.initial);
+      renderThemeMoreButton(parts.older, displayCount);
+      if (payload.missing && payload.missing.length) {
+        console.warn("欠番", payload.missing);
+      }
+    })
+    .catch(function (err) {
+      showError(err && err.message ? err.message : "読み込みに失敗しました");
+    });
 }
 
 function getKoryakuPageConfig() {
@@ -1826,7 +3541,10 @@ function appendKoryakuCard(parent, item) {
   var idLink = document.createElement("a");
   idLink.className = "koryaku-id-link";
   idLink.href = item.href || "#";
-  idLink.textContent = "【" + item.id + "｜" + (item.subject || "") + "】";
+  fillWithRuby(
+    idLink,
+    "【" + item.id + "｜" + (item.subject || "") + "】"
+  );
   idLink.addEventListener("click", function (ev) {
     ev.stopPropagation();
   });
@@ -1858,7 +3576,7 @@ function appendKoryakuCard(parent, item) {
   ansMain.className = "koryaku-answer-main";
   var ansLabel = document.createElement("span");
   ansLabel.className = "koryaku-answer-label";
-  ansLabel.textContent = "正解";
+  fillWithRuby(ansLabel, "正解");
   ansMain.appendChild(ansLabel);
   var ansText = document.createElement("span");
   ansText.className = "koryaku-answer-text";
@@ -1877,7 +3595,7 @@ function appendKoryakuCard(parent, item) {
   explain.hidden = true;
   var exHead = document.createElement("p");
   exHead.className = "koryaku-explain-head";
-  exHead.textContent = "解説";
+  fillWithRuby(exHead, "解説");
   explain.appendChild(exHead);
   var exBody = document.createElement("p");
   exBody.className = "koryaku-explain-body";
@@ -1913,7 +3631,7 @@ function ensureKoryakuNowBar() {
   bar.setAttribute("aria-live", "polite");
   var label = document.createElement("span");
   label.className = "koryaku-now-label";
-  label.textContent = "いま学習中";
+  fillWithRuby(label, "いま学習中");
   bar.appendChild(label);
   var name = document.createElement("span");
   name.className = "koryaku-now-name";
@@ -2032,7 +3750,7 @@ function appendKoryakuSection(root, section, index) {
   textWrap.appendChild(h2);
   var gmeta = document.createElement("span");
   gmeta.className = "theme-group-meta";
-  gmeta.textContent = items.length + " 問";
+  fillQuestionCountMeta(gmeta, items.length);
   textWrap.appendChild(gmeta);
   toggle.appendChild(textWrap);
   sectionEl.appendChild(toggle);
@@ -2083,14 +3801,16 @@ function renderKoryaku(payload) {
     appendKoryakuSection(body, sections[i], i + 1);
   }
 
+  markVocabGlossTerms(body);
+  activateVocabGlossIfRubyOn();
   wireKoryakuScrollSpy();
   updateKoryakuCurrentFromScroll();
 }
 
 function bootKoryaku() {
   wireSiteNav();
-  wireRubyToggle();
-  wireAnswerShowToggle();
+  wireHeaderChrome();
+  wireRubyFitRefresh();
   wireBackToTop();
   setStatus("読み込み中…");
   var cfg = getKoryakuPageConfig();
@@ -2155,12 +3875,13 @@ function applyRubyToTextNodes(root) {
       continue;
     }
     var wrap = document.createElement("span");
-    appendTextWithVocabularyRuby(wrap, text);
+    appendTextWithVocabularyRuby(wrap, stripRubySpacerSpaces(text));
     while (wrap.firstChild) {
       parent.insertBefore(wrap.firstChild, node);
     }
     parent.removeChild(node);
   }
+  scheduleFitRubyIn(root);
 }
 
 var hikakuQuestionIndex = null;
@@ -2193,6 +3914,11 @@ function appendHikakuQuestionCard(parent, item) {
     figures: item.figures || [],
     choiceFigures: item.choiceFigures || {}
   };
+  if (item.qb != null && item.qb !== "") {
+    q.qb = item.qb;
+  } else if (Number(q.round) === 38) {
+    q.qb = "528〜";
+  }
   return appendQuestionCard(parent, q);
 }
 
@@ -2268,12 +3994,52 @@ function wireHikakuModal() {
   }
 }
 
+function wireJiritsuMoreToggles() {
+  var buttons = document.querySelectorAll(".jiritsu-more-toggle");
+  for (var i = 0; i < buttons.length; i++) {
+    (function (btn) {
+      if (btn.getAttribute("data-wired") === "1") {
+        return;
+      }
+      btn.setAttribute("data-wired", "1");
+      var count = Number(btn.getAttribute("data-more-count") || 0) || 0;
+      var labelClosed = "QB以外を見る（" + count + "）";
+      var labelOpen = "QB以外を閉じる";
+      function setToggleLabel(open) {
+        btn.textContent = "";
+        var chev = document.createElement("span");
+        chev.className = "jiritsu-more-chevron";
+        chev.setAttribute("aria-hidden", "true");
+        chev.textContent = open ? "▾" : "▸";
+        btn.appendChild(chev);
+        btn.appendChild(document.createTextNode(open ? labelOpen : labelClosed));
+      }
+      btn.addEventListener("click", function () {
+        var wrap = btn.closest(".jiritsu-more");
+        if (!wrap) {
+          return;
+        }
+        var body = wrap.querySelector(".jiritsu-more-body");
+        var open = btn.getAttribute("aria-expanded") === "true";
+        var next = !open;
+        btn.setAttribute("aria-expanded", next ? "true" : "false");
+        if (body) {
+          body.hidden = !next;
+        }
+        wrap.classList.toggle("is-open", next);
+        setToggleLabel(next);
+      });
+    })(buttons[i]);
+  }
+}
+
 function bootHikaku() {
   wireSiteNav();
-  wireRubyToggle();
-  wireAnswerShowToggle();
+  wireHeaderChrome();
+  wireRubyFitRefresh();
   wireBackToTop();
   wireHikakuModal();
+  wireJiritsuMoreToggles();
   loadRubyThen(function () {
     applySiteBrandRuby();
     var h1 = document.querySelector(".page-header h1");
@@ -2285,7 +4051,12 @@ function bootHikaku() {
       fillWithRuby(status, status.textContent || "");
     }
     applyRubyToTextNodes(document.querySelector(".hikaku-main"));
-    fetch("data/hikaku-kaigo-shogai.json?_t=" + Date.now())
+    markVocabGlossTerms(document.querySelector(".hikaku-main"));
+    activateVocabGlossIfRubyOn();
+    var hikakuJson =
+      (document.body && document.body.getAttribute("data-hikaku-json")) ||
+      "data/hikaku-kaigo-shogai.json";
+    fetch(hikakuJson + (hikakuJson.indexOf("?") >= 0 ? "&" : "?") + "_t=" + Date.now())
       .then(function (res) {
         if (!res.ok) {
           throw new Error("比較表データの読み込みに失敗しました");
@@ -2301,9 +4072,531 @@ function bootHikaku() {
   });
 }
 
+function shuffleCopy(list) {
+  var out = list.slice();
+  for (var i = out.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var tmp = out[i];
+    out[i] = out[j];
+    out[j] = tmp;
+  }
+  return out;
+}
+
+function bootJiritsuCards() {
+  wireSiteNav();
+  wireHeaderChrome();
+  wireRubyFitRefresh();
+  wireBackToTop();
+  wireHikakuModal();
+
+  var qbSelect = document.getElementById("jiritsuCardsQb");
+  var catSelect = document.getElementById("jiritsuCardsCategory");
+  var kindSelect = document.getElementById("jiritsuCardsKind");
+  var shuffleToggle = document.getElementById("jiritsuCardsShuffle");
+  var progressEl = document.getElementById("jiritsuCardsProgress");
+  var cardEl = document.getElementById("jiritsuCard");
+  var revealBtn = document.getElementById("jiritsuCardReveal");
+  var markEl = document.getElementById("jiritsuCardMark");
+  var bodyEl = document.getElementById("jiritsuCardBody");
+  var qidBtn = document.getElementById("jiritsuCardQid");
+  var emptyEl = document.getElementById("jiritsuCardsEmpty");
+  var prevBtn = document.getElementById("jiritsuCardsPrev");
+  var nextBtn = document.getElementById("jiritsuCardsNext");
+
+  var state = {
+    all: [],
+    deck: [],
+    index: 0,
+    revealed: false
+  };
+
+  function fillCategories(categories) {
+    if (!catSelect) {
+      return;
+    }
+    while (catSelect.options.length > 1) {
+      catSelect.remove(1);
+    }
+    for (var i = 0; i < categories.length; i++) {
+      var opt = document.createElement("option");
+      opt.value = categories[i];
+      opt.textContent = categories[i];
+      catSelect.appendChild(opt);
+    }
+  }
+
+  function rebuildDeck() {
+    var qbMode = qbSelect ? qbSelect.value : "qb";
+    var kindMode = kindSelect ? kindSelect.value : "all";
+    var cat = catSelect ? catSelect.value : "";
+    var filtered = [];
+    for (var i = 0; i < state.all.length; i++) {
+      var card = state.all[i];
+      if (qbMode === "qb" && !card.inQb) {
+        continue;
+      }
+      if (kindMode === "ok" && card.kind !== "ok") {
+        continue;
+      }
+      if (kindMode === "ng" && card.kind !== "ng") {
+        continue;
+      }
+      if (cat && card.category !== cat) {
+        continue;
+      }
+      filtered.push(card);
+    }
+    if (shuffleToggle && shuffleToggle.checked) {
+      state.deck = shuffleCopy(filtered);
+    } else {
+      state.deck = filtered;
+    }
+    state.index = 0;
+    state.revealed = false;
+    renderCard();
+  }
+
+  function currentCard() {
+    if (!state.deck.length) {
+      return null;
+    }
+    return state.deck[state.index] || null;
+  }
+
+  function renderCard() {
+    var card = currentCard();
+    if (!card) {
+      if (cardEl) {
+        cardEl.hidden = true;
+      }
+      if (emptyEl) {
+        emptyEl.hidden = false;
+      }
+      if (progressEl) {
+        progressEl.textContent = "0 / 0";
+      }
+      if (prevBtn) {
+        prevBtn.disabled = true;
+      }
+      if (nextBtn) {
+        nextBtn.disabled = true;
+      }
+      return;
+    }
+    if (emptyEl) {
+      emptyEl.hidden = true;
+    }
+    if (cardEl) {
+      cardEl.hidden = false;
+    }
+    if (progressEl) {
+      progressEl.textContent = state.index + 1 + " / " + state.deck.length;
+    }
+    if (bodyEl) {
+      bodyEl.textContent = "";
+      fillWithRuby(bodyEl, card.text || "");
+    }
+    var isOk = card.kind === "ok";
+    if (markEl) {
+      markEl.hidden = !state.revealed;
+      markEl.textContent = isOk ? "◯" : "✕";
+      markEl.className =
+        "jiritsu-card-mark " +
+        (isOk ? "jiritsu-card-mark--ok" : "jiritsu-card-mark--ng");
+    }
+    if (qidBtn) {
+      var parts = String(card.qid || "").split("-");
+      qidBtn.textContent = "【" + (card.qid || "") + "】";
+      qidBtn.setAttribute("data-round", parts[0] || "");
+      qidBtn.setAttribute("data-number", parts[1] || "");
+      qidBtn.hidden = !(state.revealed && card.qid);
+    }
+    if (prevBtn) {
+      prevBtn.disabled = state.index <= 0;
+    }
+    if (nextBtn) {
+      nextBtn.disabled = state.index >= state.deck.length - 1;
+    }
+  }
+
+  function revealAnswer() {
+    if (!currentCard()) {
+      return;
+    }
+    state.revealed = true;
+    renderCard();
+  }
+
+  function go(delta) {
+    if (!state.deck.length) {
+      return;
+    }
+    var next = state.index + delta;
+    if (next < 0 || next >= state.deck.length) {
+      return;
+    }
+    state.index = next;
+    state.revealed = false;
+    renderCard();
+  }
+
+  function onCardActivate() {
+    if (state.revealed) {
+      go(1);
+      return;
+    }
+    revealAnswer();
+  }
+
+  if (revealBtn) {
+    revealBtn.addEventListener("click", function (ev) {
+      if (ev.target && ev.target.closest && ev.target.closest(".jiritsu-card-qid")) {
+        return;
+      }
+      onCardActivate();
+    });
+    revealBtn.addEventListener("keydown", function (ev) {
+      if (ev.key === " " || ev.key === "Enter") {
+        ev.preventDefault();
+        onCardActivate();
+      }
+    });
+  }
+  if (prevBtn) {
+    prevBtn.addEventListener("click", function () {
+      go(-1);
+    });
+  }
+  if (nextBtn) {
+    nextBtn.addEventListener("click", function () {
+      go(1);
+    });
+  }
+  if (qbSelect) {
+    qbSelect.addEventListener("change", rebuildDeck);
+  }
+  if (catSelect) {
+    catSelect.addEventListener("change", rebuildDeck);
+  }
+  if (kindSelect) {
+    kindSelect.addEventListener("change", rebuildDeck);
+  }
+  if (shuffleToggle) {
+    shuffleToggle.addEventListener("change", rebuildDeck);
+  }
+
+  document.addEventListener("keydown", function (ev) {
+    if (ev.defaultPrevented) {
+      return;
+    }
+    var tag = (ev.target && ev.target.tagName) || "";
+    if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA") {
+      return;
+    }
+    if (ev.target === revealBtn) {
+      return;
+    }
+    if (ev.key === "ArrowLeft") {
+      go(-1);
+    } else if (ev.key === "ArrowRight") {
+      go(1);
+    } else if (ev.key === " " || ev.key === "Enter") {
+      ev.preventDefault();
+      onCardActivate();
+    }
+  });
+
+  loadRubyThen(function () {
+    applySiteBrandRuby();
+    var h1 = document.querySelector(".page-header h1");
+    if (h1) {
+      fillWithRuby(h1, h1.textContent || "");
+    }
+    var cardsJson =
+      (document.body && document.body.getAttribute("data-cards-json")) ||
+      (document.body && document.body.getAttribute("data-hikaku-json")) ||
+      "data/hikaku-jiritsu-cards.json";
+    fetch(cardsJson + (cardsJson.indexOf("?") >= 0 ? "&" : "?") + "_t=" + Date.now())
+      .then(function (res) {
+        if (!res.ok) {
+          throw new Error("カードデータの読み込みに失敗しました");
+        }
+        return res.json();
+      })
+      .then(function (payload) {
+        hikakuQuestionIndex = (payload && payload.items) || {};
+        state.all = (payload && payload.cards) || [];
+        fillCategories((payload && payload.categories) || []);
+        rebuildDeck();
+      })
+      .catch(function () {
+        hikakuQuestionIndex = {};
+        state.all = [];
+        rebuildDeck();
+      });
+  });
+}
+
+var TERM_LOOKUP_URL = "/kaigo/kakomon/term/";
+var TERM_LOOKUP_MIN = 2;
+var TERM_LOOKUP_MAX = 80;
+var TERM_LOOKUP_HOST =
+  ".question-card, .koryaku-card, .koryaku-problem, .hikaku-modal-body, .hikaku-table, #questionList, #hikakuModalBody";
+var TERM_LOOKUP_TIP_KEY = "kakomon.termLookupTipDismissed.v1";
+var termLookupTimer = 0;
+
+function isTermLookupTipDismissed() {
+  try {
+    return localStorage.getItem(TERM_LOOKUP_TIP_KEY) === "1";
+  } catch (err) {
+    return false;
+  }
+}
+
+function dismissTermLookupTip() {
+  try {
+    localStorage.setItem(TERM_LOOKUP_TIP_KEY, "1");
+  } catch (err) {
+    /* ignore */
+  }
+  var el = document.getElementById("termLookupTip");
+  if (el && el.parentNode) {
+    el.parentNode.removeChild(el);
+  }
+}
+
+function pageWantsTermLookupTip() {
+  var body = document.body;
+  if (!body) {
+    return false;
+  }
+  return (
+    body.classList.contains("themes-view") ||
+    body.classList.contains("koryaku-page") ||
+    body.classList.contains("kakomon-challenge") ||
+    body.classList.contains("kakomon-number")
+  );
+}
+
+function maybeShowTermLookupTip() {
+  if (!pageWantsTermLookupTip() || isTermLookupTipDismissed()) {
+    return;
+  }
+  if (document.getElementById("termLookupTip")) {
+    return;
+  }
+  var tip = document.createElement("aside");
+  tip.id = "termLookupTip";
+  tip.className = "term-lookup-tip";
+  tip.setAttribute("role", "note");
+
+  var body = document.createElement("p");
+  body.className = "term-lookup-tip-body";
+  body.textContent =
+    "問題文や選択肢の語句を選択すると、「これ、出た？」で出る頻度を調べられます。";
+  tip.appendChild(body);
+
+  var btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "term-lookup-tip-dismiss";
+  btn.textContent = "わかった";
+  btn.addEventListener("click", function () {
+    dismissTermLookupTip();
+  });
+  tip.appendChild(btn);
+
+  var list = document.getElementById("questionList");
+  var main = document.querySelector(".koryaku-main");
+  if (list && list.parentNode) {
+    list.parentNode.insertBefore(tip, list);
+  } else if (main && main.parentNode) {
+    main.parentNode.insertBefore(tip, main);
+  } else {
+    var header = document.querySelector(".page-header");
+    if (header && header.parentNode) {
+      header.parentNode.insertBefore(tip, header.nextSibling);
+    } else {
+      document.body.insertBefore(tip, document.body.firstChild);
+    }
+  }
+}
+
+function selectionTextWithoutRuby(range) {
+  if (!range) {
+    return "";
+  }
+  var wrap = document.createElement("div");
+  wrap.appendChild(range.cloneContents());
+  var drop = wrap.querySelectorAll(".ruby-text, rt, rp");
+  for (var i = 0; i < drop.length; i++) {
+    var node = drop[i];
+    if (node && node.parentNode) {
+      node.parentNode.removeChild(node);
+    }
+  }
+  return String(wrap.textContent || "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function getTermLookupQueryFromSelection() {
+  var sel = window.getSelection && window.getSelection();
+  if (!sel || sel.isCollapsed || !sel.rangeCount) {
+    return "";
+  }
+  var range = sel.getRangeAt(0);
+  var node = range.commonAncestorContainer;
+  var el = node && node.nodeType === 1 ? node : node && node.parentElement;
+  if (!el || !el.closest) {
+    return "";
+  }
+  if (el.closest("button, a, input, select, textarea, .site-nav, .nav-toggle, .term-lookup-pop")) {
+    return "";
+  }
+  if (!el.closest(TERM_LOOKUP_HOST)) {
+    return "";
+  }
+  var text = selectionTextWithoutRuby(range);
+  if (text.length > TERM_LOOKUP_MAX) {
+    text = text.slice(0, TERM_LOOKUP_MAX);
+  }
+  if (text.length < TERM_LOOKUP_MIN) {
+    return "";
+  }
+  return text;
+}
+
+function ensureTermLookupPop() {
+  var pop = document.getElementById("termLookupPop");
+  if (pop) {
+    return pop;
+  }
+  pop = document.createElement("a");
+  pop.id = "termLookupPop";
+  pop.className = "term-lookup-pop";
+  pop.hidden = true;
+  pop.addEventListener("pointerdown", function (ev) {
+    /* 選択解除でポップが消える前に遷移できるようにする */
+    ev.preventDefault();
+  });
+  pop.addEventListener("click", function (ev) {
+    var href = pop.getAttribute("href");
+    if (!href) {
+      ev.preventDefault();
+      return;
+    }
+    window.location.href = href;
+  });
+  document.body.appendChild(pop);
+  return pop;
+}
+
+function hideTermLookupPop() {
+  var pop = document.getElementById("termLookupPop");
+  if (pop) {
+    pop.hidden = true;
+  }
+}
+
+function placeTermLookupPop(pop, rect) {
+  var edge = 8;
+  /* スマホのOS選択メニュー（コピー／調べる等）と重ならないよう、上に余白を多めに取る */
+  var touch =
+    window.matchMedia &&
+    window.matchMedia("(hover: none), (pointer: coarse)").matches;
+  var aboveGap = touch ? 56 : 8;
+  var w = pop.offsetWidth || 160;
+  var h = pop.offsetHeight || 40;
+  var top = rect.top - h - aboveGap;
+  if (top < edge) {
+    /* 上に出せないときだけ下へ（通常は上を維持） */
+    top = rect.bottom + (touch ? 28 : edge);
+  }
+  if (top + h > window.innerHeight - edge) {
+    top = Math.max(edge, window.innerHeight - h - edge);
+  }
+  var left = rect.left + rect.width / 2 - w / 2;
+  left = Math.max(edge, Math.min(left, window.innerWidth - w - edge));
+  pop.style.top = Math.round(top) + "px";
+  pop.style.left = Math.round(left) + "px";
+}
+
+function updateTermLookupPop() {
+  var text = getTermLookupQueryFromSelection();
+  if (!text) {
+    hideTermLookupPop();
+    return;
+  }
+  var sel = window.getSelection();
+  if (!sel || !sel.rangeCount) {
+    hideTermLookupPop();
+    return;
+  }
+  var rect = sel.getRangeAt(0).getBoundingClientRect();
+  if (!rect || (rect.width === 0 && rect.height === 0)) {
+    hideTermLookupPop();
+    return;
+  }
+  var pop = ensureTermLookupPop();
+  pop.href = TERM_LOOKUP_URL + "?q=" + encodeURIComponent(text);
+  pop.textContent = "これ、出た？";
+  pop.setAttribute("aria-label", "「" + text + "」をこれ、出た？で調べる");
+  pop.hidden = false;
+  placeTermLookupPop(pop, rect);
+  dismissTermLookupTip();
+}
+
+function scheduleTermLookupPop() {
+  if (termLookupTimer) {
+    window.clearTimeout(termLookupTimer);
+  }
+  termLookupTimer = window.setTimeout(function () {
+    termLookupTimer = 0;
+    updateTermLookupPop();
+  }, 80);
+}
+
+function wireTermLookupFromSelection() {
+  if (window.__termLookupWired) {
+    return;
+  }
+  window.__termLookupWired = true;
+  document.addEventListener("selectionchange", scheduleTermLookupPop);
+  document.addEventListener("mouseup", scheduleTermLookupPop);
+  document.addEventListener(
+    "touchend",
+    function () {
+      scheduleTermLookupPop();
+    },
+    { passive: true }
+  );
+  window.addEventListener(
+    "scroll",
+    function () {
+      if (document.getElementById("termLookupPop") && !document.getElementById("termLookupPop").hidden) {
+        updateTermLookupPop();
+      }
+    },
+    { passive: true }
+  );
+  window.addEventListener("resize", hideTermLookupPop);
+  document.addEventListener("keydown", function (ev) {
+    if (ev.key === "Escape") {
+      hideTermLookupPop();
+    }
+  });
+  maybeShowTermLookupTip();
+}
+
 function boot() {
+  wireTermLookupFromSelection();
   if (document.body.classList.contains("koryaku-page")) {
     bootKoryaku();
+    return;
+  }
+  if (document.body.classList.contains("hikaku-page--jiritsu-cards")) {
+    bootJiritsuCards();
     return;
   }
   if (document.body.classList.contains("hikaku-page")) {

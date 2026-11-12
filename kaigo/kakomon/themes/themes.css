@@ -1,3 +1,65 @@
+/* テキスト問題: 科目アコーディオン（縦だけコンパクト） */
+.themes-view .text-theme-search-panel {
+        margin: 0 0 8px;
+        padding: 10px 14px;
+}
+
+.themes-view .text-theme-search-panel .field-block {
+        gap: 4px;
+}
+
+.themes-view .text-theme-search-panel .search-row {
+        gap: 8px;
+}
+
+.themes-view .text-theme-search-panel .search-input,
+.themes-view .text-theme-search-panel .search-button {
+        height: 40px;
+        min-height: 40px;
+}
+
+.themes-view .text-theme-search-panel .search-button {
+        margin-bottom: 0;
+}
+
+.themes-view .text-theme-search-panel .search-status {
+        margin: 6px 0 0;
+        min-height: 0;
+}
+
+.themes-view .text-theme-question-list {
+        display: grid;
+        gap: 8px;
+}
+
+.themes-view .text-theme-subject-toggle {
+        padding: 8px 14px;
+        border-radius: 8px;
+        gap: 6px;
+}
+
+.themes-view .text-theme-subject .theme-group-title {
+        font-size: 14px;
+        font-weight: 650;
+}
+
+.themes-view .text-theme-subject .theme-group-meta .theme-count-num {
+        font-size: 14px;
+}
+
+.themes-view .text-theme-subject-list {
+        margin: 4px 0 0;
+        gap: 8px;
+}
+
+.themes-view .text-theme-question-list > .theme-block-label {
+        margin: 4px 0 0;
+        padding: 0;
+        letter-spacing: 0.12em;
+        font-size: 12px;
+        font-weight: 500;
+}
+
 .theme-back-wrap {
         margin: 0 0 8px;
         padding-inline: 16px;
@@ -21,26 +83,44 @@
         min-width: 0;
         margin: 0 auto;
         display: grid;
-        gap: 22px;
+        gap: 10px;
         padding-inline: 16px;
         box-sizing: border-box;
 }
 
 .theme-group {
+        /* 入れ子左端: パート記号列 − card左pad（縦線なし） */
+        --theme-nest-inset: calc(14px + 15px + 8px - 14px);
         display: grid;
         gap: 0;
         min-width: 0;
 }
 
+/* 過去問バンク: 指導順の塊ラベル（必須／介護／医療／社会） */
+.theme-block-label {
+        margin: 0;
+        padding: 0.2em 2px 0;
+        font-size: 14px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        line-height: 1.45;
+        color: var(--muted);
+}
+
+/* theme-list の gap 10px に加えて 10px → 直前カテゴリから合計 20px */
+.theme-block-label-break {
+        margin-top: 10px;
+}
+
 .theme-group-toggle {
         display: flex;
         align-items: center;
-        gap: 10px;
+        gap: 8px;
         width: 100%;
         margin: 0;
-        padding: 22px 16px;
+        padding: 12px 14px;
         border: 1px solid var(--border);
-        border-radius: 12px;
+        border-radius: 10px;
         background: var(--surface);
         color: inherit;
         font: inherit;
@@ -61,11 +141,12 @@
 
 .theme-group-chevron {
         flex: 0 0 auto;
-        width: 1.1em;
+        width: 15px;
         color: var(--muted);
-        font-size: 18px;
+        font-size: 15px;
         font-weight: 700;
         line-height: 1;
+        text-align: center;
         transform: rotate(0deg);
         transition: transform 0.15s ease;
 }
@@ -88,23 +169,46 @@
         margin: 0;
         font-size: 16px;
         font-weight: 700;
-        letter-spacing: 0.02em;
+        letter-spacing: 0.01em;
+        line-height: 1.3;
         color: var(--text);
 }
 
-.theme-group-meta {
+.theme-group-meta,
+.theme-card-meta {
         margin: 0;
+        flex: 0 0 auto;
+        display: inline-flex;
+        align-items: baseline;
+        gap: 0.2em;
         font-size: 12px;
+        color: var(--muted);
+        white-space: nowrap;
+}
+
+.theme-group-meta .theme-count-num,
+.theme-card-meta .theme-count-num {
+        font-size: 16px;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+        color: var(--muted);
+}
+
+.theme-group-meta .theme-count-unit,
+.theme-card-meta .theme-count-unit {
+        font-size: 11px;
+        font-weight: 400;
         color: var(--muted);
 }
 
 .theme-group-list {
         display: grid;
-        gap: 8px;
+        gap: 5px;
         min-width: 0;
-        margin: 8px 0 0;
-        padding: 0 0 0 12px;
-        border-left: 3px solid #c5cede;
+        /* 左だけ入れ子、右端は親カテゴリと揃える（灰色縦線なし） */
+        margin: 6px 0 0 var(--theme-nest-inset);
+        padding: 0;
+        box-sizing: border-box;
 }
 
 .theme-group-list[hidden] {
@@ -112,21 +216,27 @@
 }
 
 .theme-group-list .theme-card {
-        padding: 18px 14px;
-        border-radius: 10px;
+        /* 右余白は親トグル（14px）に合わせ、問数の位置を揃える */
+        padding: 10px 14px;
+        border-radius: 8px;
         background: var(--surface);
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+        gap: 4px 12px;
 }
 
 .theme-group-list .theme-card-title {
         font-size: 15px;
         font-weight: 600;
+        line-height: 1.3;
 }
 
 .theme-ungrouped {
         display: grid;
-        gap: 8px;
+        gap: 5px;
         min-width: 0;
-        margin-top: 4px;
+        margin-top: 0;
 }
 
 .theme-card {
@@ -134,11 +244,11 @@
         flex-wrap: nowrap;
         align-items: baseline;
         justify-content: space-between;
-        gap: 8px 12px;
-        padding: 18px 16px;
+        gap: 4px 12px;
+        padding: 12px 14px;
         background: var(--surface);
         border: 1px solid var(--border);
-        border-radius: 12px;
+        border-radius: 10px;
         color: inherit;
         text-decoration: none;
         box-shadow: 0 1px 2px rgba(46, 56, 86, 0.04);
@@ -147,6 +257,14 @@
 .theme-card:hover {
         border-color: #c9d0e0;
         background: #fbfbfd;
+}
+
+.theme-card:focus-visible,
+.theme-card.is-restore-focus {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+        border-color: #9bb0ef;
+        background: #f5f7ff;
 }
 
 .theme-card-low,
@@ -167,28 +285,23 @@
         min-width: 0;
         font-size: 16px;
         font-weight: 700;
-        line-height: 1.45;
-}
-
-.theme-card-meta {
-        margin: 0;
-        flex: 0 0 auto;
-        color: var(--muted);
-        font-size: 13px;
-        white-space: nowrap;
+        line-height: 1.3;
 }
 
 /* メインが 16px 内側のページは、ヘッダー（バー・見出し）も同じだけ内側にする */
 .themes-index .site-bar,
 .themes-index .page-header > h1,
+.themes-index .page-header > .header-tool-row,
 .themes-index .page-header > .search-status,
 .themes-index .eyebrow,
 .koryaku-page .site-bar,
 .koryaku-page .page-header > h1,
+.koryaku-page .page-header > .header-tool-row,
 .koryaku-page .page-header > .search-status,
 .koryaku-page .theme-back-wrap,
 .hikaku-page .site-bar,
-.hikaku-page .page-header > h1 {
+.hikaku-page .page-header > h1,
+.hikaku-page .page-header > .header-tool-row {
         padding-inline: 16px;
 }
 
@@ -201,6 +314,32 @@
 
 .themes-view .theme-back-wrap {
         padding-inline: 0;
+}
+
+/* 科目（親）＋下位テーマ（子）の階層見出し（1段・子だけ小さく） */
+.themes-view #themeTitle.has-theme-hierarchy {
+        display: block;
+        line-height: 1.35;
+}
+
+.themes-view #themeTitle .theme-title-parent {
+        font-size: 1em;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+}
+
+.themes-view #themeTitle .theme-title-child {
+        font-size: 0.78em;
+        font-weight: 500;
+        letter-spacing: 0.01em;
+        color: var(--muted);
+}
+
+/* 一覧のグループ内カードも下位テーマとして少し小さく */
+.theme-group-list .theme-card-title {
+        font-size: 15px;
+        font-weight: 600;
+        color: #3a3a3a;
 }
 
 .themes-index #searchStatus:empty {
@@ -637,14 +776,17 @@ body.hikaku-page {
 
         .themes-index .site-bar,
         .themes-index .page-header > h1,
+        .themes-index .page-header > .header-tool-row,
         .themes-index .page-header > .search-status,
         .themes-index .eyebrow,
         .koryaku-page .site-bar,
         .koryaku-page .page-header > h1,
+        .koryaku-page .page-header > .header-tool-row,
         .koryaku-page .page-header > .search-status,
         .koryaku-page .theme-back-wrap,
         .hikaku-page .site-bar,
-        .hikaku-page .page-header > h1 {
+        .hikaku-page .page-header > h1,
+        .hikaku-page .page-header > .header-tool-row {
                 padding-inline: 0;
         }
 
@@ -653,6 +795,36 @@ body.hikaku-page {
         .hikaku-page .site-nav {
                 left: 0;
                 right: 0;
+        }
+
+        /* › とカテゴリー名のあいだを少し詰めて1行に収める */
+        .theme-group-toggle {
+                gap: 4px;
+                padding-inline: 12px;
+        }
+
+        .theme-group-chevron {
+                width: 0.9em;
+                font-size: 16px;
+        }
+
+        .theme-group {
+                /* パート記号列 − card左pad */
+                --theme-nest-inset: calc(12px + 0.9em + 4px - 12px);
+        }
+
+        .theme-group-title {
+                letter-spacing: 0;
+        }
+
+        /* サブカテゴリー行の縦幅を少し狭く */
+        .theme-group-list .theme-card {
+                padding: 11px 12px;
+        }
+
+        .theme-group-list {
+                gap: 6px;
+                margin-top: 6px;
         }
 }
 
@@ -667,6 +839,22 @@ body.hikaku-page {
         background: var(--surface);
 }
 
+/*
+ * 適切／不適切マップ: table-wrap が flex:1 で伸びると、
+ * 最終行の下（QB以外を見るの下）に枠内の空白だけ残る。
+ * 枠は内容高さに合わせ、縦スクロールは main 側で行う。
+ */
+body.hikaku-page--seikai .hikaku-main,
+body.hikaku-page--futekisetsu .hikaku-main {
+        overflow: auto;
+        -webkit-overflow-scrolling: touch;
+}
+
+body.hikaku-page--seikai .hikaku-table-wrap,
+body.hikaku-page--futekisetsu .hikaku-table-wrap {
+        flex: 0 1 auto;
+}
+
 .hikaku-table {
         width: 100%;
         min-width: 760px;
@@ -675,6 +863,9 @@ body.hikaku-page {
         border-spacing: 0;
         font-size: 16px;
         line-height: 1.45;
+        /* iOS が長文セルだけ文字を拡大しないようにする */
+        -webkit-text-size-adjust: 100%;
+        text-size-adjust: 100%;
 }
 
 .hikaku-table th,
@@ -737,9 +928,1140 @@ body.hikaku-page {
 }
 
 .hikaku-table th:nth-child(4),
-.hikaku-table td:nth-child(4) {
+.hikaku-table td:nth-child(4),
+.hikaku-table--jinbutsu th:last-child,
+.hikaku-table--jinbutsu td:last-child,
+.hikaku-table--jiritsu th:last-child,
+.hikaku-table--jiritsu td:last-child,
+.hikaku-table--icf th:last-child,
+.hikaku-table--icf td:last-child {
         width: 8.2em;
         max-width: 8.2em;
+}
+
+/* 人物攻略マップ（3列: 人物｜キーワード｜過去問） */
+.hikaku-table--jinbutsu {
+        font-size: 16px;
+}
+
+.hikaku-table--jinbutsu tbody .hikaku-sticky-col::before {
+        content: none;
+        counter-increment: none;
+}
+
+/* 1列目: 適切／不適切マップとも本文色・太字（青にしない） */
+.hikaku-table--jinbutsu .hikaku-sticky-col,
+.hikaku-table--jiritsu-seikai .hikaku-sticky-col,
+.hikaku-table--jiritsu-ng .hikaku-sticky-col {
+        color: var(--text);
+        font-weight: 700;
+}
+
+.hikaku-table--jinbutsu .hikaku-sticky-col strong,
+.hikaku-table--jiritsu-seikai .hikaku-sticky-col strong,
+.hikaku-table--jiritsu-ng .hikaku-sticky-col strong {
+        color: var(--text);
+        font-weight: 700;
+}
+
+@media (min-width: 481px) {
+        /* 1列目は適切マップと同じ幅 */
+        .hikaku-table--jinbutsu .hikaku-sticky-col,
+        .hikaku-table--jinbutsu .hikaku-corner {
+                width: 9.5em;
+                min-width: 9.5em;
+                max-width: 9.5em;
+                white-space: normal;
+        }
+}
+
+.hikaku-table--jinbutsu .jinbutsu-en {
+        display: inline-block;
+        font-size: 0.78em;
+        font-weight: 500;
+        letter-spacing: 0;
+        color: var(--muted);
+}
+
+.hikaku-table--jinbutsu .jinbutsu-fact {
+        color: var(--text);
+}
+
+.hikaku-table--jinbutsu .jinbutsu-fact strong {
+        /* 適切マップのリード行（jiritsu-lead）と同じ青 */
+        color: #1a5fb4;
+}
+
+.hikaku-table--jinbutsu .hikaku-qid,
+.hikaku-table--jinbutsu .hikaku-qid--muted {
+        font-size: 0.92em;
+        font-weight: 500;
+        vertical-align: baseline;
+        color: var(--muted);
+        text-decoration: none;
+}
+
+.hikaku-table--jinbutsu .hikaku-qid:hover,
+.hikaku-table--jinbutsu .hikaku-qid:focus-visible,
+.hikaku-table--jinbutsu .hikaku-qid--muted:hover,
+.hikaku-table--jinbutsu .hikaku-qid--muted:focus-visible {
+        color: #1a5fb4;
+        text-decoration: underline;
+}
+
+/* 利用者本位・自立支援 適切／不適切マップ */
+.jiritsu-page-lead {
+        margin: 0 0 14px;
+        padding-inline: 16px;
+        max-width: 52em;
+        font-size: 15px;
+        line-height: 1.65;
+        color: var(--muted);
+}
+
+.jiritsu-page-lead strong {
+        color: var(--text);
+        font-weight: 700;
+}
+
+.jiritsu-page-lead--sub {
+        margin-bottom: 10px;
+}
+
+.jiritsu-sibling-link {
+        display: inline-block;
+        margin-left: 0.6em;
+        color: #1a5fb4;
+        font-weight: 600;
+        text-decoration: underline;
+        text-underline-offset: 2px;
+}
+
+.jiritsu-sibling-link:hover,
+.jiritsu-sibling-link:focus-visible {
+        color: #0d3f7a;
+}
+
+.jiritsu-subhead {
+        margin: 28px 0 8px;
+        padding-inline: 16px;
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: var(--text);
+}
+
+/*
+ * 型対比ページ: main 全体をスクロールする。
+ * （旧レイアウトは table-wrap だけが flex:1 + overflow。
+ *  複数ブロックだと wrap が高さ0に潰れて型表が見えなくなる）
+ */
+body.hikaku-page--jiritsu-kata .hikaku-main {
+        overflow: auto;
+        -webkit-overflow-scrolling: touch;
+}
+
+body.hikaku-page--jiritsu-kata .jiritsu-page-lead,
+body.hikaku-page--jiritsu-kata .jiritsu-examples-section {
+        flex: 0 0 auto;
+}
+
+/* 型の対比（第一画面） */
+.jiritsu-kata-wrap {
+        flex: 0 0 auto;
+        min-height: auto;
+        max-height: none;
+        overflow: visible;
+        margin: 0 0 8px;
+        -webkit-overflow-scrolling: auto;
+}
+
+.hikaku-table--jiritsu-kata {
+        width: 100%;
+        min-width: 0;
+        table-layout: fixed;
+}
+
+.hikaku-table--jiritsu-kata thead th.jiritsu-col-ok {
+        color: #1a5fb4;
+}
+
+.hikaku-table--jiritsu-kata thead th.jiritsu-col-ng {
+        color: #c01c28;
+}
+
+/* 過去問列用の 8.2em 制限を外し、左右を均等に */
+.hikaku-table--jiritsu-kata th,
+.hikaku-table--jiritsu-kata td,
+.hikaku-table--jiritsu-kata th:last-child,
+.hikaku-table--jiritsu-kata td:last-child {
+        width: 50%;
+        max-width: none;
+        vertical-align: top;
+}
+
+.jiritsu-kata-title {
+        display: flex;
+        align-items: baseline;
+        gap: 0.35em;
+        margin: 0 0 0.35em;
+        font-size: 1em;
+        line-height: 1.45;
+}
+
+.jiritsu-kata-title strong {
+        font-weight: 700;
+        color: var(--text);
+}
+
+.jiritsu-kata-mark {
+        flex: none;
+        font-weight: 700;
+}
+
+.jiritsu-kata-mark--ok {
+        color: #1a5fb4;
+}
+
+.jiritsu-kata-mark--ng {
+        color: #c01c28;
+}
+
+.jiritsu-kata-summary {
+        margin: 0;
+        font-size: 0.95em;
+        line-height: 1.55;
+}
+
+.jiritsu-kata-summary--ok {
+        color: #1a5fb4;
+        font-weight: 600;
+}
+
+.jiritsu-kata-summary--ng {
+        color: #8a3038;
+        font-weight: 500;
+}
+
+.jiritsu-kata-ok {
+        background: #f5f8fc;
+}
+
+.jiritsu-kata-ng {
+        background: #fcf6f6;
+}
+
+/* 言い回しカード（付録と同じ 720px 幅） */
+body.hikaku-page--jiritsu-cards .page-header,
+body.hikaku-page--jiritsu-cards .hikaku-main {
+        max-width: 720px;
+}
+
+body.hikaku-page--jiritsu-cards .hikaku-main {
+        overflow: auto;
+        -webkit-overflow-scrolling: touch;
+        gap: 12px;
+        padding-bottom: 28px;
+}
+
+.jiritsu-cards-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px 14px;
+        align-items: flex-end;
+}
+
+.jiritsu-cards-field {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        min-width: 0;
+        flex: 1 1 140px;
+}
+
+.jiritsu-cards-field-label {
+        font-size: 12px;
+        color: var(--muted);
+        font-weight: 600;
+}
+
+.jiritsu-cards-field select {
+        font: inherit;
+        font-size: 14px;
+        padding: 8px 10px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--surface);
+        color: inherit;
+}
+
+.jiritsu-cards-shuffle {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        padding: 8px 0;
+        cursor: pointer;
+        user-select: none;
+}
+
+.jiritsu-card {
+        margin: 56px 0 0;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        background: var(--surface);
+        overflow: hidden;
+}
+
+.jiritsu-card-face {
+        display: flex;
+        align-items: center;
+        width: 100%;
+        margin: 0;
+        padding: 48px;
+        border: 0;
+        background: transparent;
+        text-align: left;
+        cursor: pointer;
+        font: inherit;
+        color: inherit;
+        box-sizing: border-box;
+}
+
+.jiritsu-card-face:focus-visible {
+        outline: 2px solid var(--accent, #1a6b5a);
+        outline-offset: -2px;
+}
+
+.jiritsu-card-text {
+        margin: 0;
+        width: 100%;
+        font-size: clamp(1.35rem, 4.8vw, 1.7rem);
+        font-weight: 700;
+        line-height: 1.55;
+        letter-spacing: 0.01em;
+}
+
+.jiritsu-card-mark {
+        display: inline-block;
+        margin-right: 0.3em;
+        font-size: 1.35em;
+        font-weight: 700;
+        line-height: 1;
+        vertical-align: -0.08em;
+}
+
+.jiritsu-card-mark[hidden] {
+        display: none !important;
+}
+
+.jiritsu-card-mark--ok {
+        color: #1a6b5a;
+}
+
+.jiritsu-card-mark--ng {
+        color: #b42318;
+}
+
+.jiritsu-card-qid {
+        margin: 0 0 0 0.35em;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        font-size: 11px;
+        font-weight: 500;
+        line-height: 1;
+        vertical-align: baseline;
+        color: var(--muted, #8a93a6);
+        cursor: pointer;
+}
+
+.jiritsu-card-qid[hidden] {
+        /* .hikaku-qid { display:inline } が [hidden] を潰すため */
+        display: none !important;
+}
+
+.jiritsu-card-qid:hover,
+.jiritsu-card-qid:focus-visible {
+        color: #5a6a8a;
+        text-decoration: underline;
+}
+
+.jiritsu-cards-progress {
+        margin: 10px 0 0;
+        font-size: 13px;
+        color: var(--muted);
+        text-align: center;
+}
+
+.jiritsu-cards-empty {
+        margin: 24px 0 0;
+        text-align: center;
+        color: var(--muted);
+        font-size: 14px;
+}
+
+.jiritsu-cards-nav {
+        display: flex;
+        gap: 10px;
+        margin-top: auto;
+        padding-top: 4px;
+}
+
+.jiritsu-cards-nav-btn {
+        flex: 1 1 0;
+        font: inherit;
+        font-size: 15px;
+        font-weight: 700;
+        padding: 12px 14px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: var(--surface);
+        color: inherit;
+        cursor: pointer;
+}
+
+.jiritsu-cards-nav-btn:disabled {
+        opacity: 0.4;
+        cursor: default;
+}
+
+.jiritsu-cards-nav-btn--next {
+        background: #1a6b5a;
+        border-color: #1a6b5a;
+        color: #fff;
+}
+
+.jiritsu-cards-nav-btn--next:disabled {
+        background: #1a6b5a;
+        border-color: #1a6b5a;
+        color: #fff;
+}
+
+.jiritsu-cards-nav-btn:focus-visible {
+        outline: 2px solid var(--accent, #1a6b5a);
+        outline-offset: 2px;
+}
+
+@media (max-width: 520px) {
+        .jiritsu-cards-field {
+                flex: 1 1 calc(50% - 8px);
+        }
+}
+
+/* ◯✕言い回し対比（カテゴリ見出し＋2列／スマホは縦積み） */
+body.hikaku-page--jiritsu-vs .hikaku-main {
+        /* hikaku-page は body overflow:hidden なので、ここで縦スクロールする */
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow: auto;
+        -webkit-overflow-scrolling: touch;
+        display: flex;
+        flex-direction: column;
+        align-content: flex-start;
+        gap: 18px;
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 0 12px 28px;
+        box-sizing: border-box;
+}
+
+body.hikaku-page--jiritsu-vs .jiritsu-page-lead {
+        flex: 0 0 auto;
+        margin: 0;
+        font-size: 14px;
+        color: var(--muted);
+        line-height: 1.55;
+}
+
+.jiritsu-vs-section {
+        flex: 0 0 auto;
+        margin: 0;
+        padding: 0;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: var(--surface);
+        overflow: visible;
+}
+
+.jiritsu-vs-solo-note {
+        display: inline;
+        margin-left: 0.4em;
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--muted);
+}
+
+.jiritsu-vs-cols {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0;
+}
+
+.jiritsu-vs-cols--solo {
+        grid-template-columns: 1fr;
+}
+
+.jiritsu-vs-col {
+        padding: 12px 14px 14px;
+        min-width: 0;
+}
+
+.jiritsu-vs-col--ok {
+        background: #fafbfd;
+}
+
+.jiritsu-vs-col--ng {
+        background: #fcfafa;
+        border-left: 1px solid var(--border);
+}
+
+.jiritsu-vs-col-title {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 0.3em;
+        margin: 0 0 0.55em;
+        padding-bottom: 0.4em;
+        border-bottom: 1px solid var(--border);
+        /* h1（最大20px）より小さく、本文より少し大きく */
+        font-size: 16px;
+        font-weight: 700;
+        line-height: 1.4;
+}
+
+.jiritsu-vs-col-title--ok {
+        color: #1a5fb4;
+}
+
+.jiritsu-vs-col-title--ng {
+        color: #c01c28;
+}
+
+.jiritsu-vs-empty {
+        margin: 0;
+        font-size: 13px;
+        color: var(--muted);
+}
+
+body.hikaku-page--jiritsu-vs .jiritsu-ok,
+body.hikaku-page--jiritsu-vs .jiritsu-ng {
+        display: block;
+        margin: 0.45em 0 0;
+        line-height: 1.75;
+}
+
+body.hikaku-page--jiritsu-vs .jiritsu-idx {
+        font-weight: 500;
+        color: var(--muted);
+        margin-right: 0.35em;
+        white-space: nowrap;
+}
+
+body.hikaku-page--jiritsu-vs .jiritsu-text {
+        margin-right: 0.35em;
+}
+
+/* 【回-番号】は補助情報なので文言より弱く */
+body.hikaku-page--jiritsu-vs .hikaku-qid,
+body.hikaku-page--jiritsu-vs .hikaku-qid--muted {
+        font-weight: 500;
+        font-size: 0.88em;
+        color: #8a93a6;
+}
+
+body.hikaku-page--jiritsu-vs .hikaku-qid:hover,
+body.hikaku-page--jiritsu-vs .hikaku-qid:focus-visible,
+body.hikaku-page--jiritsu-vs .hikaku-qid--muted:hover,
+body.hikaku-page--jiritsu-vs .hikaku-qid--muted:focus-visible {
+        color: #5a6a8a;
+        text-decoration: underline;
+}
+
+@media (max-width: 720px) {
+        .jiritsu-vs-cols {
+                grid-template-columns: 1fr;
+        }
+
+        .jiritsu-vs-col--ng {
+                border-left: none;
+                border-top: 1px solid var(--border);
+                padding-top: 14px;
+        }
+
+        .jiritsu-vs-col-title {
+                font-size: 15px;
+        }
+}
+
+/* お手本の言い回し（折りたたみ） */
+.jiritsu-examples-section {
+        padding-bottom: 24px;
+}
+
+.jiritsu-examples {
+        margin: 0 16px 8px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: var(--surface);
+        overflow: hidden;
+}
+
+.jiritsu-examples > summary {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 12px 14px;
+        cursor: pointer;
+        list-style: none;
+        font-size: 15px;
+        color: var(--text);
+}
+
+.jiritsu-examples > summary::-webkit-details-marker {
+        display: none;
+}
+
+.jiritsu-examples > summary::before {
+        content: "▸";
+        margin-right: 0.4em;
+        color: var(--muted);
+}
+
+.jiritsu-examples[open] > summary::before {
+        content: "▾";
+}
+
+.jiritsu-examples-count {
+        flex: none;
+        font-size: 13px;
+        color: var(--muted);
+        font-weight: 500;
+}
+
+.jiritsu-examples-body {
+        padding: 4px 14px 14px;
+        border-top: 1px solid #e4e8f0;
+}
+
+.jiritsu-examples-body .jiritsu-ok {
+        display: block;
+        margin-top: 0.55em;
+        line-height: var(--content-line-height);
+}
+
+.jiritsu-examples-body .jiritsu-idx {
+        color: var(--muted);
+        font-size: 0.85em;
+        font-weight: 500;
+}
+
+.jiritsu-examples-body .jiritsu-text {
+        color: var(--text);
+}
+
+.jiritsu-examples-body .hikaku-qid,
+.jiritsu-examples-body .hikaku-qid--muted {
+        color: var(--muted);
+        font-weight: 500;
+        vertical-align: baseline;
+        text-decoration: none;
+}
+
+.jiritsu-examples-body .hikaku-qid:hover,
+.jiritsu-examples-body .hikaku-qid:focus-visible,
+.jiritsu-examples-body .hikaku-qid--muted:hover,
+.jiritsu-examples-body .hikaku-qid--muted:focus-visible {
+        color: #1a5fb4;
+        text-decoration: underline;
+}
+
+@media (max-width: 480px) {
+        body.hikaku-page--jiritsu-kata .jiritsu-page-lead,
+        body.hikaku-page--jiritsu-kata .jiritsu-subhead,
+        body.hikaku-page--jiritsu-kata .jiritsu-page-lead--sub {
+                padding-inline: 8px;
+        }
+
+        .hikaku-table-wrap.jiritsu-kata-wrap {
+                flex: 0 0 auto;
+                min-height: auto;
+                overflow: visible;
+                border: none;
+                border-radius: 0;
+                background: transparent;
+        }
+
+        /* 汎用 .hikaku-table--jiritsu のカード化より先に、型表専用を確定 */
+        .hikaku-table.hikaku-table--jiritsu-kata {
+                display: block;
+                min-width: 0;
+                width: 100%;
+                table-layout: auto;
+                border-collapse: separate;
+                border-spacing: 0;
+        }
+
+        .hikaku-table--jiritsu-kata thead {
+                display: none;
+        }
+
+        .hikaku-table--jiritsu-kata tbody,
+        .hikaku-table--jiritsu-kata tr,
+        .hikaku-table--jiritsu-kata td {
+                display: block;
+                width: 100%;
+                max-width: none;
+                min-width: 0;
+                box-sizing: border-box;
+        }
+
+        .hikaku-table--jiritsu-kata tbody tr {
+                margin: 0 0 12px;
+                border: 1px solid var(--border);
+                border-radius: 12px;
+                overflow: hidden;
+                background: var(--surface);
+                box-shadow: 0 1px 2px rgba(46, 56, 86, 0.04);
+        }
+
+        .hikaku-table--jiritsu-kata tbody tr:last-child {
+                margin-bottom: 0;
+        }
+
+        .hikaku-table--jiritsu-kata .jiritsu-kata-ok,
+        .hikaku-table--jiritsu-kata .jiritsu-kata-ng {
+                width: 100%;
+                max-width: none;
+                padding: 12px 14px;
+                border-right: none;
+                border-bottom: none;
+        }
+
+        .hikaku-table--jiritsu-kata .jiritsu-kata-ok {
+                border-bottom: 1px solid #e4e8f0;
+        }
+
+        .jiritsu-examples {
+                margin-inline: 0;
+        }
+}
+
+.hikaku-table--jiritsu {
+        font-size: 16px;
+}
+
+@media (min-width: 481px) {
+        .hikaku-table--jiritsu .hikaku-sticky-col,
+        .hikaku-table--jiritsu .hikaku-corner {
+                width: 13.5em;
+                min-width: 11.5em;
+                max-width: 11.5em;
+        }
+
+        /* 適切マップ: 1列目は短めだが読みやすさ優先でやや広め */
+        .hikaku-table--jiritsu-seikai .hikaku-sticky-col,
+        .hikaku-table--jiritsu-seikai .hikaku-corner {
+                width: 9.5em;
+                min-width: 9.5em;
+                max-width: 9.5em;
+                white-space: normal;
+        }
+}
+
+.hikaku-table--jiritsu thead th.jiritsu-col-ok {
+        color: #1a5fb4;
+}
+
+.hikaku-table--jiritsu thead th.jiritsu-col-ng {
+        color: #c01c28;
+}
+
+/* 適切／不適切マップ: 見出しは1列目の行と同じ文字色 */
+.hikaku-table--jiritsu-seikai thead th,
+.hikaku-table--jiritsu-seikai thead th.jiritsu-col-ok,
+.hikaku-table--jiritsu-seikai thead th.hikaku-corner,
+.hikaku-table--jiritsu-ng thead th,
+.hikaku-table--jiritsu-ng thead th.jiritsu-col-ng,
+.hikaku-table--jiritsu-ng thead th.hikaku-corner {
+        color: var(--text);
+}
+
+.hikaku-table--jiritsu .jiritsu-fact {
+        color: var(--text);
+        line-height: var(--content-line-height);
+}
+
+.hikaku-table--jiritsu .jiritsu-fact strong {
+        color: #2a3f7a;
+}
+
+.hikaku-table--jiritsu .jiritsu-lead,
+.hikaku-table--jiritsu .jiritsu-ng-lead {
+        display: block;
+        margin: 0 0 0.15em;
+        font-weight: 700;
+        line-height: inherit;
+}
+
+/* 正答マップ: カテゴリ列の自動連番はオフ（行内 1-1 と二重になるため） */
+.hikaku-table--jiritsu-seikai tbody .hikaku-sticky-col::before {
+        content: none;
+        counter-increment: none;
+}
+
+.hikaku-table--jiritsu-seikai .jiritsu-lead {
+        color: #1a5fb4;
+        margin-bottom: 0.45em;
+}
+
+.hikaku-table--jiritsu-seikai th:last-child,
+.hikaku-table--jiritsu-seikai td:last-child {
+        width: auto;
+        max-width: none;
+}
+
+.hikaku-table--jiritsu-seikai .jiritsu-ok {
+        display: block;
+        margin: 0.35em 0 0;
+        padding: 0;
+        line-height: 1.7;
+}
+
+.hikaku-table--jiritsu-seikai .jiritsu-lead + .jiritsu-ok {
+        margin-top: 0.2em;
+}
+
+/* QB掲載を先出し、それ以外は折りたたみ */
+.hikaku-table--jiritsu .jiritsu-more,
+body.hikaku-page--jiritsu-vs .jiritsu-more {
+        display: block;
+        margin-top: 0.45em;
+        /* ルビ用の大きな line-height を継承すると、折りたたみ時にトグル下へ余白が残る */
+        line-height: 1.4;
+}
+
+.hikaku-table--jiritsu .jiritsu-more-toggle,
+body.hikaku-page--jiritsu-vs .jiritsu-more-toggle {
+        display: flex;
+        align-items: center;
+        gap: 0.3em;
+        margin: 0;
+        padding: 0;
+        border: none;
+        background: none;
+        color: var(--muted);
+        font: inherit;
+        font-size: 13px;
+        font-weight: 600;
+        line-height: 1.4;
+        cursor: pointer;
+        text-decoration: none;
+}
+
+.hikaku-table--jiritsu .jiritsu-more-chevron,
+body.hikaku-page--jiritsu-vs .jiritsu-more-chevron {
+        display: inline-block;
+        font-size: 0.95em;
+        text-decoration: none;
+        transform: translateY(-0.05em);
+}
+
+.hikaku-table--jiritsu .jiritsu-more-toggle:hover,
+.hikaku-table--jiritsu .jiritsu-more-toggle:focus-visible,
+body.hikaku-page--jiritsu-vs .jiritsu-more-toggle:hover,
+body.hikaku-page--jiritsu-vs .jiritsu-more-toggle:focus-visible {
+        color: var(--accent, #1a6b5a);
+}
+
+.hikaku-table--jiritsu .jiritsu-more-body,
+body.hikaku-page--jiritsu-vs .jiritsu-more-body {
+        margin-top: 0.25em;
+}
+
+.hikaku-table--jiritsu .jiritsu-more-body[hidden],
+body.hikaku-page--jiritsu-vs .jiritsu-more-body[hidden] {
+        display: none;
+}
+
+.hikaku-table--jiritsu-seikai .jiritsu-idx {
+        font-weight: 500;
+        font-size: inherit;
+        color: var(--muted);
+        margin-right: 0.35em;
+        white-space: nowrap;
+}
+
+.hikaku-table--jiritsu-seikai .jiritsu-text {
+        margin-right: 0.35em;
+        color: var(--text);
+}
+
+.hikaku-table--jiritsu-seikai .hikaku-qid,
+.hikaku-table--jiritsu-seikai .hikaku-qid--muted {
+        font-size: 0.92em;
+        font-weight: 500;
+        vertical-align: baseline;
+        color: var(--muted);
+        text-decoration: none;
+}
+
+.hikaku-table--jiritsu-seikai .hikaku-qid:hover,
+.hikaku-table--jiritsu-seikai .hikaku-qid:focus-visible,
+.hikaku-table--jiritsu-seikai .hikaku-qid--muted:hover,
+.hikaku-table--jiritsu-seikai .hikaku-qid--muted:focus-visible {
+        color: #1a5fb4;
+        text-decoration: underline;
+}
+
+/* 不適切マップ: 適切マップと同型（番号＋文言＋【】） */
+.hikaku-table--jiritsu-ng tbody .hikaku-sticky-col::before {
+        content: none;
+        counter-increment: none;
+}
+
+.hikaku-table--jiritsu-ng .jiritsu-ng-lead {
+        color: #c01c28;
+        margin-bottom: 0.45em;
+}
+
+.hikaku-table--jiritsu-ng th:last-child,
+.hikaku-table--jiritsu-ng td:last-child {
+        width: auto;
+        max-width: none;
+}
+
+.hikaku-table--jiritsu-ng .jiritsu-ng {
+        display: block;
+        margin: 0.35em 0 0;
+        padding: 0;
+        line-height: 1.7;
+        color: var(--text);
+}
+
+.hikaku-table--jiritsu-ng .jiritsu-ng-lead + .jiritsu-ng {
+        margin-top: 0.2em;
+}
+
+.hikaku-table--jiritsu-ng .jiritsu-idx {
+        font-weight: 500;
+        font-size: inherit;
+        color: var(--muted);
+        margin-right: 0.35em;
+        white-space: nowrap;
+}
+
+.hikaku-table--jiritsu-ng .jiritsu-text {
+        margin-right: 0.35em;
+        color: var(--text);
+}
+
+.hikaku-table--jiritsu-ng .hikaku-qid,
+.hikaku-table--jiritsu-ng .hikaku-qid--muted {
+        font-size: 0.92em;
+        font-weight: 500;
+        vertical-align: baseline;
+        color: var(--muted);
+        text-decoration: none;
+}
+
+.hikaku-table--jiritsu-ng .hikaku-qid:hover,
+.hikaku-table--jiritsu-ng .hikaku-qid:focus-visible,
+.hikaku-table--jiritsu-ng .hikaku-qid--muted:hover,
+.hikaku-table--jiritsu-ng .hikaku-qid--muted:focus-visible {
+        color: #c01c28;
+        text-decoration: underline;
+}
+
+@media (min-width: 481px) {
+        .hikaku-table--jiritsu-ng .hikaku-sticky-col,
+        .hikaku-table--jiritsu-ng .hikaku-corner {
+                width: 9.5em;
+                min-width: 9.5em;
+                max-width: 9.5em;
+                white-space: normal;
+        }
+}
+
+.hikaku-table--jiritsu .jiritsu-ok {
+        color: var(--text);
+}
+
+/* スマホ: ◯／✕マップはカード型（上=カテゴリ、下=言葉）。横スクロールなし
+   ※型対比表（--jiritsu-kata）は専用ルール。ここでは除外する */
+@media (max-width: 480px) {
+        .hikaku-table-wrap:has(.hikaku-table--jiritsu):not(.jiritsu-kata-wrap) {
+                /* body が overflow:hidden のため、ここを visible にするとスクロール不能になる */
+                overflow: auto;
+                -webkit-overflow-scrolling: touch;
+                border: none;
+                border-radius: 0;
+                background: transparent;
+        }
+
+        .hikaku-table.hikaku-table--jiritsu:not(.hikaku-table--jiritsu-kata) {
+                display: block;
+                min-width: 0;
+                width: 100%;
+                table-layout: auto;
+                border-collapse: separate;
+                border-spacing: 0;
+        }
+
+        .hikaku-table--jiritsu:not(.hikaku-table--jiritsu-kata) thead {
+                display: none;
+        }
+
+        .hikaku-table--jiritsu:not(.hikaku-table--jiritsu-kata) tbody,
+        .hikaku-table--jiritsu:not(.hikaku-table--jiritsu-kata) tr,
+        .hikaku-table--jiritsu:not(.hikaku-table--jiritsu-kata) th,
+        .hikaku-table--jiritsu:not(.hikaku-table--jiritsu-kata) td {
+                display: block;
+                width: 100%;
+                max-width: none;
+                min-width: 0;
+                box-sizing: border-box;
+        }
+
+        .hikaku-table--jiritsu:not(.hikaku-table--jiritsu-kata) tbody tr {
+                margin: 0 0 12px;
+                border: 1px solid var(--border);
+                border-radius: 12px;
+                background: var(--surface);
+                overflow: hidden;
+                box-shadow: 0 1px 2px rgba(46, 56, 86, 0.04);
+        }
+
+        .hikaku-table--jiritsu:not(.hikaku-table--jiritsu-kata) tbody tr:last-child {
+                margin-bottom: 0;
+        }
+
+        .hikaku-table.hikaku-table--jiritsu:not(.hikaku-table--jiritsu-kata) .hikaku-sticky-col {
+                position: static;
+                left: auto;
+                z-index: auto;
+                width: 100%;
+                min-width: 0;
+                max-width: none;
+                margin: 0;
+                padding: 12px 14px 10px;
+                border-right: none;
+                border-bottom: 1px solid #e4e8f0;
+                background: #f7f8fb;
+                box-shadow: none;
+                white-space: normal;
+                overflow-wrap: break-word;
+                word-break: normal;
+        }
+
+        /* 過去問列用の 8.2em 制限を言葉列から外す */
+        .hikaku-table.hikaku-table--jiritsu:not(.hikaku-table--jiritsu-kata) th:last-child,
+        .hikaku-table.hikaku-table--jiritsu:not(.hikaku-table--jiritsu-kata) td:last-child,
+        .hikaku-table.hikaku-table--jiritsu:not(.hikaku-table--jiritsu-kata) .jiritsu-fact {
+                width: 100%;
+                max-width: none;
+                padding: 10px 14px 10px;
+                border-right: none;
+                border-bottom: none;
+                overflow-wrap: break-word;
+                word-break: normal;
+        }
+
+        .hikaku-table--jiritsu-seikai .jiritsu-ok,
+        .hikaku-table--jiritsu-ng .jiritsu-ng {
+                overflow-wrap: break-word;
+                word-break: normal;
+        }
+}
+
+/* ICF攻略マップ（人物／適切マップに色を揃える） */
+.hikaku-table--icf {
+        font-size: 16px;
+}
+
+.hikaku-table--icf tbody .hikaku-sticky-col::before {
+        content: none;
+        counter-increment: none;
+}
+
+.hikaku-table--icf .hikaku-sticky-col {
+        color: var(--text);
+        font-weight: 700;
+        line-height: 1.45;
+}
+
+.hikaku-table--icf .hikaku-sticky-col strong {
+        color: var(--text);
+        font-weight: 700;
+}
+
+.hikaku-table--icf .icf-group {
+        display: inline-block;
+        margin-top: 0.15em;
+        font-size: 0.82em;
+        font-weight: 500;
+        letter-spacing: 0;
+        color: var(--muted);
+}
+
+@media (min-width: 481px) {
+        .hikaku-table--icf .hikaku-sticky-col,
+        .hikaku-table--icf .hikaku-corner {
+                width: 11em;
+                min-width: 11em;
+                max-width: 11em;
+                white-space: normal;
+        }
+}
+
+.hikaku-table--icf .icf-fact {
+        color: var(--text);
+        line-height: var(--content-line-height);
+}
+
+/* 1行目（定義）は全文青。その下は正答例（strong）だけ青 */
+.hikaku-table--icf .icf-fact .icf-lead,
+.hikaku-table--icf .icf-fact .icf-lead strong {
+        display: block;
+        margin: 0 0 0.45em;
+        color: #1a5fb4;
+        font-weight: 700;
+        line-height: inherit;
+}
+
+/* 適切／不適切マップの .jiritsu-ok / .jiritsu-ng と同じ行間 */
+.hikaku-table--icf .icf-fact .icf-ex {
+        display: block;
+        margin: 0.35em 0 0;
+        padding: 0;
+        line-height: 1.7;
+}
+
+.hikaku-table--icf .icf-fact .icf-lead + .icf-ex {
+        margin-top: 0.2em;
+}
+
+.hikaku-table--icf .icf-fact strong {
+        color: #1a5fb4;
+        font-weight: 700;
+}
+
+.hikaku-table--icf .hikaku-qid,
+.hikaku-table--icf .hikaku-qid--muted {
+        font-size: 0.92em;
+        font-weight: 500;
+        vertical-align: baseline;
+        color: var(--muted);
+        text-decoration: none;
+}
+
+.hikaku-table--icf .hikaku-qid:hover,
+.hikaku-table--icf .hikaku-qid:focus-visible,
+.hikaku-table--icf .hikaku-qid--muted:hover,
+.hikaku-table--icf .hikaku-qid--muted:focus-visible {
+        color: #1a5fb4;
+        text-decoration: underline;
 }
 
 .hikaku-table .hikaku-corner {
@@ -972,9 +2294,15 @@ body.hikaku-modal-open {
 
 /* 印刷／PDF（A4優先） */
 @media print {
+        /* 右下ページ番号（Firefox / 印刷エンジン向け。Chrome は未対応） */
         @page {
                 size: A4 portrait;
-                margin: 8mm;
+                margin: 12mm 12mm 16mm;
+                @bottom-right {
+                        content: counter(page);
+                        font-size: 9pt;
+                        color: #5b6578;
+                }
         }
 
         body.hikaku-page {
@@ -1032,14 +2360,15 @@ body.hikaku-modal-open {
                 border-radius: 0;
         }
 
+        /* 頻出テーマのマップ（hikaku）印刷。過去問一覧（themes-view）は対象外 */
         .hikaku-table {
                 min-width: 0;
                 width: 100%;
                 table-layout: fixed;
                 border-collapse: collapse;
                 border-spacing: 0;
-                font-size: 7.2pt;
-                line-height: 1.25;
+                font-size: 10pt;
+                line-height: 1.4;
         }
 
         .hikaku-table th,
@@ -1087,6 +2416,51 @@ body.hikaku-modal-open {
         .hikaku-table th:nth-child(4),
         .hikaku-table td:nth-child(4) {
                 width: 20%;
+        }
+
+        /* ◯／✕になる言葉マップ（2列）: 印刷は 10pt */
+        .hikaku-table--jiritsu-seikai,
+        .hikaku-table--jiritsu-ng {
+                font-size: 10pt;
+                line-height: 1.4;
+        }
+
+        .hikaku-table--jiritsu-seikai .hikaku-sticky-col,
+        .hikaku-table--jiritsu-seikai .hikaku-corner,
+        .hikaku-table--jiritsu-ng .hikaku-sticky-col,
+        .hikaku-table--jiritsu-ng .hikaku-corner {
+                width: 12%;
+                max-width: 28mm;
+                white-space: normal;
+                word-break: keep-all;
+                overflow-wrap: anywhere;
+                font-size: 10pt;
+                line-height: 1.4;
+                vertical-align: top;
+        }
+
+        .hikaku-table--jiritsu-seikai th:nth-child(2),
+        .hikaku-table--jiritsu-seikai td:nth-child(2),
+        .hikaku-table--jiritsu-seikai th:last-child,
+        .hikaku-table--jiritsu-seikai td:last-child,
+        .hikaku-table--jiritsu-ng th:nth-child(2),
+        .hikaku-table--jiritsu-ng td:nth-child(2),
+        .hikaku-table--jiritsu-ng th:last-child,
+        .hikaku-table--jiritsu-ng td:last-child {
+                width: auto;
+                max-width: none;
+        }
+
+        .hikaku-table--jiritsu-seikai tbody tr,
+        .hikaku-table--jiritsu-ng tbody tr {
+                break-inside: avoid;
+                page-break-inside: avoid;
+        }
+
+        .hikaku-table--jiritsu-seikai .jiritsu-ok,
+        .hikaku-table--jiritsu-ng .jiritsu-ng {
+                line-height: 1.4;
+                margin-top: 0.2em;
         }
 
         .hikaku-qid {
